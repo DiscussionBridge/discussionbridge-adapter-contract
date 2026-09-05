@@ -1,0 +1,15 @@
+{
+  "bridge_record": {
+    "direction": "to_discourse",
+    "external_id": "post:site-7:482",
+    "canonical_url": "https://publisher.example/articles/community-guide/",
+    "title": "Community Guide",
+    "content_html": "<p>Use this guide to join the community discussion.</p>",
+    "published": true,
+    "visibility": "unlisted",
+    "lane": "articles",
+    "adapter_id": "wordpress-discussionbridge",
+    "adapter_version": "0.1.0-alpha.1",
+    "correlation_id": "delivery-01JEXAMPLE"
+  }
+}

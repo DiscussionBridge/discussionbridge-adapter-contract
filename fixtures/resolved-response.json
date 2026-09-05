@@ -1,0 +1,10 @@
+{
+  "outcome": "resolved",
+  "reason": "existing_bridge_record",
+  "resource_id": "63bad04c-1c2e-4c38-80ce-b379137dbb2c",
+  "topic_id": 7,
+  "topic_url": "https://forum.example/t/community-guide/7",
+  "direction": "to_discourse",
+  "core_fallback": false
+}
+

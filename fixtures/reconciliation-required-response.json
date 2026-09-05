@@ -1,0 +1,10 @@
+{
+  "outcome": "reconciliation_required",
+  "reason": "binding_identity_conflict",
+  "resource_id": null,
+  "topic_id": null,
+  "topic_url": null,
+  "direction": "to_discourse",
+  "core_fallback": false
+}
+

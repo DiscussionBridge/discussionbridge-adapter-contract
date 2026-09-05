@@ -1,0 +1,61 @@
+{
+  "contract": "discussionbridge-adapter",
+  "version": "0.2.0-alpha.3",
+  "authentication": {
+    "connection_header": "X-DiscussionBridge-Connection",
+    "secret_header": "X-DiscussionBridge-Secret",
+    "connection_id_pattern": "^dbc_[a-f0-9]{24}$"
+  },
+  "resolve": {
+    "method": "POST",
+    "path": "/discussion-bridge/v1/bridge-records/resolve.json",
+    "content_type": "application/json",
+    "maximum_json_bytes": 65536,
+    "required_fields": [
+      "direction",
+      "external_id",
+      "canonical_url",
+      "title",
+      "content_html",
+      "published"
+    ],
+    "optional_fields": [
+      "lane",
+      "adapter_id",
+      "adapter_version",
+      "correlation_id",
+      "visibility",
+      "source_authors",
+      "primary_source_author_id",
+      "existing_topic_id"
+    ],
+    "field_rules": {
+      "direction": ["to_discourse"],
+      "external_id_maximum_bytes": 255,
+      "canonical_url_maximum_bytes": 2048,
+      "title_maximum_bytes": 1024,
+      "content_html_maximum_bytes": 49152,
+      "published": [true],
+      "lane_maximum_bytes": 64,
+      "adapter_id_maximum_bytes": 100,
+      "adapter_version_maximum_bytes": 100,
+      "correlation_id_maximum_bytes": 200,
+      "visibility": ["unlisted"],
+      "source_authors_maximum_items": 20,
+      "source_author_id_maximum_bytes": 255,
+      "source_author_name_maximum_bytes": 200,
+      "existing_topic_id": "positive signed 64-bit integer; accepted only for an exact available unlisted Discourse Core embed of canonical_url"
+    },
+    "outcomes": {
+      "201": "created",
+      "200": "resolved",
+      "409": "reconciliation_required"
+    }
+  },
+  "records": {
+    "index_path": "/discussion-bridge/v1/bridge-records.json",
+    "show_path": "/discussion-bridge/v1/bridge-records/{resource_id}.json",
+    "maximum_page": 10000,
+    "records_per_page": 100
+  }
+}

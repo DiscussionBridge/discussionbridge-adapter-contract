@@ -1,0 +1,20 @@
+{
+  "bridge_record": {
+    "resource_id": "a4965d46-e657-4af4-af47-6439e544eeb9",
+    "direction": "from_discourse",
+    "state": "healthy",
+    "title": "Forum-Originated Roadmap",
+    "topic_id": 8,
+    "topic_url": "https://forum.example/t/forum-originated-roadmap/8",
+    "content_html": "<p>This discussion started in Discourse.</p>",
+    "bindings": [
+      {
+        "role": "presentation",
+        "state": "active",
+        "external_id": "page:site-7:roadmap",
+        "canonical_url": "https://publisher.example/roadmap/"
+      }
+    ]
+  }
+}
+
