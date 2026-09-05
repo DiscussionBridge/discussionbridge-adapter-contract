@@ -1,9 +1,10 @@
-# DiscussionBridge Adapter Contract
+# DiscussionBridge Adapter Protocol
 
-This directory is the small, platform-neutral publishing-adapter contract for
-the DiscussionBridge Alpha product. The receiving Discourse plugin is the
-runtime authority. These fixtures describe its current public adapter boundary;
-they do not introduce a broker, installer, control plane, or shared runtime.
+This repository contains the small, platform-neutral protocol used by
+DiscussionBridge publishing adapters. **The Bridge — DiscussionBridge for
+Discourse** is the runtime authority. The contract and conformance fixtures in
+this repository describe its current public adapter boundary; they do not
+introduce a broker, installer, control plane, or shared runtime.
 
 ## Connection authentication
 
