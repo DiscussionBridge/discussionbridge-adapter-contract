@@ -1,6 +1,6 @@
 {
   "contract": "discussionbridge-adapter",
-  "version": "0.2.0-alpha.3",
+  "version": "0.2.0-alpha.19",
   "authentication": {
     "connection_header": "X-DiscussionBridge-Connection",
     "secret_header": "X-DiscussionBridge-Secret",
