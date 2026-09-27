@@ -1,0 +1,5 @@
+{
+  "request": {"snapshot": "dbs_22222222222222222222222222222222", "cursor": "cursor_page_2_policy_1"},
+  "cursor_binding": {"snapshot": "dbs_11111111111111111111111111111111", "policy_revision": "policy:2026-09-27:1"},
+  "expected_error": "cursor_snapshot_mismatch"
+}

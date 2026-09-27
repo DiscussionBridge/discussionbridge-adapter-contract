@@ -1,0 +1,114 @@
+{
+  "contract": "discussionbridge-operator-service",
+  "version": "0.2.0-alpha.21",
+  "relationship": {
+    "maximum_active_providers_per_forum": 1,
+    "current_provider": "discussionbridge",
+    "future_provider_rule": "A partner provider must be explicitly approved and separately enrolled by the customer forum.",
+    "content_connection_separation": "An Operator Service entitlement never grants, replaces, reveals, or expands a Content Connection credential or scope."
+  },
+  "issuer": {
+    "authority": "discussionbridge entitlement issuer",
+    "public_key_algorithm": "Ed25519",
+    "trusted_key_source": "Forum-local protected configuration installed through an explicit customer-approved enrollment; never fetched from an entitlement-controlled URL.",
+    "key_rotation_rule": "A new trusted public key is enrolled by a separate customer-approved action before it signs active entitlements. Old public keys remain available to verify retained audit history and may not issue new entitlements after their configured retirement time.",
+    "key_revocation_rule": "Revoking a trusted key immediately disables every active entitlement signed only by that key and records a forum-local audit event."
+  },
+  "entitlement": {
+    "format": "signed canonical JSON",
+    "signature_algorithm": "Ed25519",
+    "required_fields": [
+      "entitlement_version",
+      "entitlement_id",
+      "provider_id",
+      "provider_name",
+      "forum_id",
+      "issuer_id",
+      "issued_at",
+      "not_before",
+      "expires_at",
+      "grace_until",
+      "scopes",
+      "key_id",
+      "signature"
+    ],
+    "entitlement_version": 1,
+    "entitlement_id_pattern": "^dbe_[a-f0-9]{32}$",
+    "provider_id_pattern": "^dbp_[a-f0-9]{32}$",
+    "forum_id_pattern": "^dbf_[a-f0-9]{32}$",
+    "issuer_id_pattern": "^dbi_[a-f0-9]{32}$",
+    "provider_name_maximum_bytes": 200,
+    "key_id_maximum_bytes": 200,
+    "signature_encoding": "base64url without padding",
+    "timestamp_format": "RFC 3339 UTC with Z suffix and optional fractional seconds",
+    "maximum_lifetime_seconds": 31536000,
+    "maximum_grace_seconds": 604800,
+    "allowed_scopes": [
+      "observe_health",
+      "observe_publication",
+      "retry_retryable_work",
+      "prepare_reconciliation",
+      "apply_customer_approved_reconciliation",
+      "prepare_connection_change",
+      "apply_customer_approved_connection_change",
+      "request_backup",
+      "prepare_upgrade",
+      "apply_customer_approved_upgrade"
+    ]
+  },
+  "states": [
+    "pending_enrollment",
+    "active",
+    "grace_read_only",
+    "expired",
+    "revoked",
+    "replaced"
+  ],
+  "state_transitions": {
+    "pending_enrollment": ["active", "revoked"],
+    "active": ["grace_read_only", "expired", "revoked", "replaced"],
+    "grace_read_only": ["active", "expired", "revoked", "replaced"],
+    "expired": [],
+    "revoked": [],
+    "replaced": []
+  },
+  "rules": [
+    "Enrollment is explicit, customer-authorized, and default-off.",
+    "A newly activated entitlement replaces any prior active entitlement for the forum and records the replacement chain.",
+    "During grace_read_only, mutation scopes are disabled and only entitled observation remains available.",
+    "Expired, revoked, replaced, invalidly signed, not-yet-valid, wrong-forum, or unknown-key entitlements grant no mutation authority.",
+    "prepare scopes create a bounded customer-visible proposal and never apply it.",
+    "apply_customer_approved scopes require an exact unexpired customer approval bound to the proposal, provider, forum, scope, and operation hash.",
+    "No entitlement authorizes changing the central contract, widening connection scope without customer approval, exporting secrets, changing credentials invisibly, or adding installation-specific product behavior.",
+    "Provider removal leaves the forum and ordinary DiscussionBridge operation functional without the service."
+  ],
+  "audit": {
+    "required_fields": [
+      "event_id",
+      "occurred_at",
+      "forum_id",
+      "provider_id",
+      "entitlement_id",
+      "actor",
+      "scope",
+      "action",
+      "target_type",
+      "target_id",
+      "operation_sha256",
+      "customer_approval_id",
+      "outcome"
+    ],
+    "event_id_pattern": "^dba_[a-f0-9]{32}$",
+    "operation_sha256_pattern": "^[a-f0-9]{64}$",
+    "outcomes": [
+      "prepared",
+      "approved",
+      "applied",
+      "rejected",
+      "failed",
+      "revoked"
+    ],
+    "secret_rule": "Audit records contain identifiers, hashes, and sanitized outcomes only; never Content Connection secrets, signing private keys, lease tokens, or exported credentials.",
+    "retention_rule": "Audit history survives entitlement replacement and provider removal under the forum's approved retention policy."
+  }
+}

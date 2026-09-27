@@ -1,0 +1,6 @@
+{
+  "entitlement": {"expires_at": "2026-09-27T18:00:00Z", "grace_until": "2026-09-27T19:00:00Z"},
+  "request_at": "2026-09-27T19:00:00.001Z",
+  "requested_scope": "retry_retryable_work",
+  "expected_error": "entitlement_expired"
+}

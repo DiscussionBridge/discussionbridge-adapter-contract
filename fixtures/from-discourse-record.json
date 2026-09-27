@@ -6,13 +6,35 @@
     "title": "Forum-Originated Roadmap",
     "topic_id": 8,
     "topic_url": "https://forum.example/t/forum-originated-roadmap/8",
-    "content_html": "<p>This discussion started in Discourse.</p>",
+    "source_revision": "post:12:version:4",
+    "source_revision_sequence": 4,
+    "source_created_at": "2026-09-01T16:00:00Z",
+    "source_updated_at": "2026-09-27T18:30:00Z",
+    "content_disposition": "complete",
+    "content_transport": {
+      "mode": "inline",
+      "media_type": "text/html; charset=utf-8",
+      "byte_length": 44,
+      "sha256": "6a53e7c575a7b194305b793db9d549e43effbc443e3a9106629b2305884c63e6",
+      "content_html": "<p>This discussion started in Discourse.</p>"
+    },
     "bindings": [
       {
+        "binding_id": "dbb_11111111111111111111111111111111",
+        "connection_id": "dbc_111111111111111111111111",
         "role": "presentation",
         "state": "active",
         "external_id": "page:site-7:roadmap",
-        "canonical_url": "https://publisher.example/roadmap/"
+        "canonical_url": "https://publisher.example/roadmap/",
+        "presentation_mode": "interactive",
+        "applied_source_revision": "post:12:version:4",
+        "publication_revision": "statamic:entry:roadmap:revision:7",
+        "content_disposition": "complete",
+        "synchronized_at": "2026-09-27T18:31:00Z",
+        "deployment_state": "deployed",
+        "deployed_at": "2026-09-27T18:31:30Z",
+        "verification_state": "verified",
+        "publicly_verified_at": "2026-09-27T18:32:00Z"
       }
     ]
   }

@@ -5,6 +5,7 @@
   "topic_id": null,
   "topic_url": null,
   "direction": "to_discourse",
+  "conflict_fields": ["external_id", "canonical_url"],
   "core_fallback": false
 }
 

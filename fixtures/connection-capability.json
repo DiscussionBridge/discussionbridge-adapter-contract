@@ -1,0 +1,11 @@
+{
+  "contract_version": "0.2.0-alpha.21",
+  "connection_id": "dbc_111111111111111111111111",
+  "enabled": true,
+  "directions": ["from_discourse"],
+  "lanes": ["articles"],
+  "forum_name": "Community Forum",
+  "allowed_presentation_modes": ["simple", "full", "interactive"],
+  "catalog_required": true,
+  "policy_revision": "policy:2026-09-27:1"
+}

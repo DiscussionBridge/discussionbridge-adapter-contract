@@ -1,0 +1,20 @@
+{
+  "publication_work": [
+    {
+      "work_id": "dbw_22222222222222222222222222222222",
+      "resource_id": "a4965d46-e657-4af4-af47-6439e544eeb9",
+      "connection_id": "dbc_111111111111111111111111",
+      "action": "restore",
+      "source_revision": "post:12:version:6",
+      "source_revision_sequence": 6,
+      "policy_revision": "policy:2026-09-27:1",
+      "presentation_mode": "interactive",
+      "lease_token": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "lease_expires_at": "2026-09-27T20:05:00Z",
+      "attempt_count": 1,
+      "correlation_id": "work-restore-01"
+    }
+  ],
+  "claimed_at": "2026-09-27T20:00:00Z",
+  "correlation_id": "work-restore-01"
+}

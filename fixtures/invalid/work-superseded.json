@@ -1,0 +1,5 @@
+{
+  "leased_work": {"source_revision": "post:12:version:4", "policy_revision": "policy:2026-09-27:1", "state": "leased"},
+  "authoritative": {"source_revision": "post:12:version:5", "policy_revision": "policy:2026-09-27:2"},
+  "expected_error": "work_superseded"
+}

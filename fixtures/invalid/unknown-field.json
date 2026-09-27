@@ -1,0 +1,4 @@
+{
+  "bridge_record": {"unexpected_control": "expand_scope"},
+  "expected_error": "unknown_field"
+}

@@ -1,0 +1,19 @@
+{
+  "lease_token": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "resource_id": "b4965d46-e657-4af4-af47-6439e544eeb8",
+  "source_revision": "post:18:version:7",
+  "source_revision_sequence": 7,
+  "policy_revision": "policy:2026-09-27:1",
+  "action": "update",
+  "destination_binding": {
+    "binding_id": "dbb_22222222222222222222222222222222",
+    "external_id": "content/large-source-topic.md",
+    "canonical_url": "https://static.example/large-source-topic/",
+    "publication_revision": "build:20260927:42",
+    "content_disposition": "complete"
+  },
+  "synchronized_at": "2026-09-27T18:31:00Z",
+  "deployment_state": "pending",
+  "verification_state": "pending",
+  "correlation_id": "work-static-01"
+}

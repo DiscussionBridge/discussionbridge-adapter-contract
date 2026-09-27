@@ -1,0 +1,9 @@
+{
+  "work_id": "dbw_33333333333333333333333333333333",
+  "prior_state": "leased",
+  "error_code": "destination_unavailable",
+  "attempt_count": 3,
+  "automatic_attempt_limit": 3,
+  "resulting_state": "operator_attention",
+  "next_retry_at": null
+}

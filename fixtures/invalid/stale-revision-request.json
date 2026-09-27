@@ -1,0 +1,5 @@
+{
+  "stored": {"external_id": "post:site-7:482", "source_revision": "revision:10", "source_revision_sequence": 10},
+  "incoming": {"external_id": "post:site-7:482", "source_revision": "revision:9", "source_revision_sequence": 9},
+  "expected_error": "revision_conflict"
+}

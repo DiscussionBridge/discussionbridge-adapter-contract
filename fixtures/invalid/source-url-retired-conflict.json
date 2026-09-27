@@ -1,0 +1,6 @@
+{
+  "moving_resource_id": "b4965d46-e657-4af4-af47-6439e544eeb8",
+  "to_url": "https://publisher.example/retired/",
+  "retired_binding": {"resource_id": "a4965d46-e657-4af4-af47-6439e544eeb9", "canonical_url": "https://publisher.example/retired/", "state": "retired"},
+  "expected_error": "url_retired"
+}

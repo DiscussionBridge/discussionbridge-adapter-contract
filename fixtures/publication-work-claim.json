@@ -1,0 +1,20 @@
+{
+  "publication_work": [
+    {
+      "work_id": "dbw_11111111111111111111111111111111",
+      "resource_id": "a4965d46-e657-4af4-af47-6439e544eeb9",
+      "connection_id": "dbc_111111111111111111111111",
+      "action": "update",
+      "source_revision": "post:12:version:4",
+      "source_revision_sequence": 4,
+      "policy_revision": "policy:2026-09-27:1",
+      "presentation_mode": "interactive",
+      "lease_token": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "lease_expires_at": "2026-09-27T18:35:00Z",
+      "attempt_count": 1,
+      "correlation_id": "work-01"
+    }
+  ],
+  "claimed_at": "2026-09-27T18:30:00Z",
+  "correlation_id": "work-01"
+}

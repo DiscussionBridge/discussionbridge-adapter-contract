@@ -1,0 +1,32 @@
+{
+  "resource_id": "d4965d46-e657-4af4-af47-6439e544eeb6",
+  "topic_id": 202,
+  "topic_url": "https://chapter.example/t/chapter-program-update/202",
+  "title": "Chapter Program Update",
+  "source_revision": "post:702:version:3",
+  "source_revision_sequence": 3,
+  "source_created_at": "2026-09-10T16:00:00Z",
+  "source_updated_at": "2026-09-28T01:30:00Z",
+  "source_authors": [],
+  "categories": [],
+  "tags": [],
+  "presentation_mode": "interactive",
+  "content_disposition": "complete",
+  "content_transport": {
+    "mode": "inline",
+    "media_type": "text/html; charset=utf-8",
+    "byte_length": 30,
+    "sha256": "be8e8dcab34f123ede8a2bf79eb6caaa5f9da5b8d9fdbb550bc16403c5ba1370",
+    "content_html": "<p>Chapter program update.</p>"
+  },
+  "network_provenance": {
+    "origin_forum_id": "dbf_22222222222222222222222222222222",
+    "origin_forum_name": "Regional Chapter",
+    "origin_topic_url": "https://chapter.example/t/chapter-program-update/202",
+    "content_authority_forum_id": "dbf_22222222222222222222222222222222",
+    "relationship": "spoke_to_hub",
+    "operation_id": "dbo_22222222222222222222222222222222",
+    "route_forum_ids": ["dbf_22222222222222222222222222222222"],
+    "managed_scope": "first_post"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "request": {
+    "lease_token": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "requested_lease_seconds": 900,
+    "correlation_id": "work-01-renew-1"
+  },
+  "response": {
+    "work_id": "dbw_11111111111111111111111111111111",
+    "lease_expires_at": "2026-09-27T18:50:00Z",
+    "total_lease_seconds": 1200,
+    "correlation_id": "work-01-renew-1"
+  }
+}

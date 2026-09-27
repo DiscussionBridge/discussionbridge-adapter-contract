@@ -1,0 +1,9 @@
+{
+  "bridge_record": {
+    "canonical_url": "https://publisher.example/articles/source/",
+    "content_disposition": "excerpt",
+    "content_html": "<p>Excerpt without the required canonical Read More link.</p>",
+    "read_more_url": "https://wrong.example/"
+  },
+  "expected_error": "validation_failed"
+}

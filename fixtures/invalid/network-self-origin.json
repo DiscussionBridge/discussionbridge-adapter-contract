@@ -1,0 +1,5 @@
+{
+  "local_forum_id": "dbf_11111111111111111111111111111111",
+  "network_provenance": {"origin_forum_id": "dbf_11111111111111111111111111111111", "route_forum_ids": []},
+  "expected_error": "direction_denied"
+}

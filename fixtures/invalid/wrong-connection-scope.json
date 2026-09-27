@@ -1,0 +1,5 @@
+{
+  "connection": {"id": "dbc_111111111111111111111111", "lanes": ["articles"]},
+  "request": {"connection_id": "dbc_111111111111111111111111", "lane": "private"},
+  "expected_error": "scope_denied"
+}

@@ -1,0 +1,12 @@
+{
+  "catalog_revision": "catalog:ghost:2026-09-27:1",
+  "platform_profile": "ghost",
+  "segment_type": "presentation_modes",
+  "items": [
+    {"id": "simple", "name": "Simple"},
+    {"id": "full", "name": "Full"},
+    {"id": "interactive", "name": "Interactive"}
+  ],
+  "next_cursor": null,
+  "complete": true
+}

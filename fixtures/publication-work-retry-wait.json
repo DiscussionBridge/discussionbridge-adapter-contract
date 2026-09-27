@@ -1,0 +1,10 @@
+{
+  "work_id": "dbw_66666666666666666666666666666666",
+  "prior_state": "leased",
+  "error_code": "destination_unavailable",
+  "attempt_count": 1,
+  "resulting_state": "retry_wait",
+  "failed_at": "2026-09-27T18:31:00Z",
+  "next_retry_at": "2026-09-27T18:32:00Z",
+  "backoff_seconds": 60
+}

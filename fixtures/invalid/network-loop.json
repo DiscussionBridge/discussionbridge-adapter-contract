@@ -1,0 +1,17 @@
+{
+  "local_forum_id": "dbf_22222222222222222222222222222222",
+  "network_provenance": {
+    "origin_forum_id": "dbf_11111111111111111111111111111111",
+    "origin_forum_name": "National Organization",
+    "origin_topic_url": "https://national.example/t/update/101",
+    "content_authority_forum_id": "dbf_11111111111111111111111111111111",
+    "relationship": "hub_to_spoke",
+    "operation_id": "dbo_11111111111111111111111111111111",
+    "route_forum_ids": [
+      "dbf_11111111111111111111111111111111",
+      "dbf_22222222222222222222222222222222"
+    ],
+    "managed_scope": "first_post"
+  },
+  "expected_error": "scope_denied"
+}

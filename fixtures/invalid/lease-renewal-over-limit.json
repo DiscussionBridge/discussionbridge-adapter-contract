@@ -1,0 +1,6 @@
+{
+  "current_total_lease_seconds": 13800,
+  "requested_lease_seconds": 900,
+  "maximum_total_lease_seconds": 14400,
+  "expected_error": "lease_limit_exceeded"
+}

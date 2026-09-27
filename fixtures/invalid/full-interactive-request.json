@@ -1,0 +1,7 @@
+{
+  "bridge_record": {
+    "direction": "to_discourse",
+    "presentation_mode": "fullInteractive"
+  },
+  "expected_error": "validation_failed"
+}

@@ -1,0 +1,5 @@
+{
+  "lease_expires_at": "2026-09-27T18:35:00Z",
+  "request_received_at": "2026-09-27T18:35:00.001Z",
+  "expected_error": "work_expired"
+}

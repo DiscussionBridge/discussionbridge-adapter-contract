@@ -1,0 +1,6 @@
+{
+  "moving_resource_id": "a4965d46-e657-4af4-af47-6439e544eeb9",
+  "to_url": "https://publisher.example/c/",
+  "existing_binding": {"resource_id": "b4965d46-e657-4af4-af47-6439e544eeb8", "canonical_url": "https://publisher.example/c/"},
+  "expected_error": "destination_collision"
+}

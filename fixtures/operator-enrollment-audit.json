@@ -1,0 +1,15 @@
+{
+  "event_id": "dba_22222222222222222222222222222222",
+  "occurred_at": "2026-09-27T18:00:00Z",
+  "forum_id": "dbf_11111111111111111111111111111111",
+  "provider_id": "dbp_11111111111111111111111111111111",
+  "entitlement_id": "dbe_11111111111111111111111111111111",
+  "actor": "customer_admin:42",
+  "scope": "provider_enrollment",
+  "action": "enroll_entitlement",
+  "target_type": "operator_entitlement",
+  "target_id": "dbe_11111111111111111111111111111111",
+  "operation_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "customer_approval_id": "approval:2026-09-27:1",
+  "outcome": "approved"
+}

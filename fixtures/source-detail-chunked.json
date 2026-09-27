@@ -1,0 +1,24 @@
+{
+  "resource_id": "b4965d46-e657-4af4-af47-6439e544eeb8",
+  "topic_id": 12,
+  "topic_url": "https://forum.example/t/large-source-topic/12",
+  "title": "Large Source Topic",
+  "source_revision": "post:18:version:7",
+  "source_revision_sequence": 7,
+  "source_created_at": "2026-09-01T16:00:00Z",
+  "source_updated_at": "2026-09-27T18:30:00Z",
+  "source_authors": [],
+  "categories": [],
+  "tags": [],
+  "presentation_mode": "full",
+  "content_disposition": "complete",
+  "content_transport": {
+    "mode": "chunked",
+    "media_type": "text/html; charset=utf-8",
+    "byte_length": 70000,
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "chunk_count": 3,
+    "decoded_chunk_maximum_bytes": 32768
+  },
+  "network_provenance": null
+}

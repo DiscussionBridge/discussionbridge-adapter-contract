@@ -1,0 +1,5 @@
+{
+  "connection": {"directions": ["from_discourse"]},
+  "request": {"direction": "to_discourse"},
+  "expected_error": "direction_denied"
+}

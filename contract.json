@@ -1,10 +1,73 @@
 {
   "contract": "discussionbridge-adapter",
-  "version": "0.2.0-alpha.20",
+  "version": "0.2.0-alpha.21",
+  "authority": {
+    "runtime": "discussionbridge-for-discourse",
+    "scope_rule": "The authenticated Content Connection is the only adapter authorization and scope authority.",
+    "catalog_rule": "Catalog, adapter, presentation, provenance, and body fields never expand authenticated connection scope."
+  },
   "authentication": {
     "connection_header": "X-DiscussionBridge-Connection",
     "secret_header": "X-DiscussionBridge-Secret",
-    "connection_id_pattern": "^dbc_[a-f0-9]{24}$"
+    "contract_header": "X-DiscussionBridge-Contract",
+    "contract_header_value": "0.2.0-alpha.21",
+    "connection_id_pattern": "^dbc_[a-f0-9]{24}$",
+    "adapter_identity_role": "diagnostic_only",
+    "version_rule": "Every authenticated Alpha.21 request supplies the exact contract header. A missing or different value fails before mutation and never triggers compatibility behavior."
+  },
+  "profiles": [
+    "astro",
+    "ghost",
+    "hugo",
+    "statamic_db",
+    "statamic_flat",
+    "statamic_ssg",
+    "wordpress",
+    "discourse_as_publisher"
+  ],
+  "configuration": {
+    "presentation_modes": ["simple", "full", "interactive"],
+    "presentation_rule": "No other presentation value, alias, normalization, fallback, or compatibility path is valid.",
+    "forum_name": {
+      "environment_variable": "DISCUSSIONBRIDGE_FORUM_NAME",
+      "type": "nonblank UTF-8 string",
+      "maximum_bytes": 200,
+      "required_for": ["from_discourse", "discourse_network"],
+      "optional_for": ["to_discourse_without_public_forum_label"],
+      "fallback": null,
+      "meaning": "Human-readable forum name for platform-native headings, provenance, links, and accessible labels; never identity or authorization."
+    }
+  },
+  "common": {
+    "timestamp_format": "RFC 3339 UTC with Z suffix and optional fractional seconds",
+    "sha256_pattern": "^[a-f0-9]{64}$",
+    "uuid_pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    "source_revision_maximum_bytes": 255,
+    "policy_revision_maximum_bytes": 255,
+    "publication_revision_maximum_bytes": 255,
+    "correlation_id_maximum_bytes": 200,
+    "error_detail_maximum_bytes": 2048,
+    "network_route_maximum_forums": 8,
+    "request_object_rule": "Unknown request fields are rejected unless an endpoint explicitly declares an extensible metadata object.",
+    "timestamp_null_rule": "A required timestamp is never null. An optional event timestamp is absent until the event occurs; JSON null is not a substitute."
+  },
+  "connection_capability": {
+    "method": "GET",
+    "path": "/discussion-bridge/v1/connection.json",
+    "required_fields": [
+      "contract_version",
+      "connection_id",
+      "enabled",
+      "directions",
+      "lanes",
+      "forum_name",
+      "allowed_presentation_modes",
+      "catalog_required",
+      "policy_revision"
+    ],
+    "authority_rule": "The response reports the authenticated connection's effective receiver policy. It never expands the stored connection scope, and the adapter cannot override it with request or catalog data.",
+    "cache_control": "private, no-store",
+    "etag_rule": "No capability response is reused across authentication, connection, or policy revision boundaries."
   },
   "resolve": {
     "method": "POST",
@@ -17,7 +80,15 @@
       "canonical_url",
       "title",
       "content_html",
-      "published"
+      "published",
+      "presentation_mode",
+      "source_revision",
+      "source_revision_sequence",
+      "source_created_at",
+      "source_updated_at",
+      "content_disposition",
+      "source_content_bytes",
+      "source_content_sha256"
     ],
     "optional_fields": [
       "lane",
@@ -27,7 +98,8 @@
       "visibility",
       "source_authors",
       "primary_source_author_id",
-      "existing_topic_id"
+      "existing_topic_id",
+      "read_more_url"
     ],
     "field_rules": {
       "direction": ["to_discourse"],
@@ -36,6 +108,16 @@
       "title_maximum_bytes": 1024,
       "content_html_maximum_bytes": 49152,
       "published": [true],
+      "presentation_mode": ["simple", "full", "interactive"],
+      "source_revision_maximum_bytes": 255,
+      "source_revision_sequence": "positive integer that increases for every authoritative revision of one stable source external_id",
+      "source_created_at": "RFC 3339 UTC timestamp set by the authoritative source and unchanged across revisions",
+      "source_updated_at": "RFC 3339 UTC timestamp set by the authoritative source for this exact revision; not adapter synchronization time",
+      "content_disposition": ["complete", "excerpt"],
+      "source_content_bytes": "nonnegative integer describing the authoritative complete UTF-8 HTML source",
+      "source_content_sha256": "SHA-256 of the authoritative complete UTF-8 HTML source",
+      "complete_rule": "When content_disposition is complete, content_html is the complete authoritative source and read_more_url is absent.",
+      "excerpt_rule": "When content_disposition is excerpt, content_html is structurally valid bounded HTML with an explicit excerpt notice and prominent Read More link; read_more_url is required and exactly equals canonical_url.",
       "lane_maximum_bytes": 64,
       "adapter_id_maximum_bytes": 100,
       "adapter_version_maximum_bytes": 100,
@@ -46,16 +128,438 @@
       "source_author_name_maximum_bytes": 200,
       "existing_topic_id": "positive signed 64-bit integer; accepted only for an exact available unlisted Discourse Core embed of canonical_url"
     },
+    "revision_rules": [
+      "The stable platform-native external_id is independent of canonical_url.",
+      "An exact source_revision replay is idempotent.",
+      "A greater source_revision_sequence with a new source_revision updates the existing Bridge Record and topic without changing identity.",
+      "The same source_revision_sequence with different revision or content identity fails closed.",
+      "A stale, ambiguous, identity-conflicting, or unverified URL-changing request fails closed.",
+      "Normal and wiki edits use the same revision and identity rules."
+    ],
     "outcomes": {
       "201": "created",
       "200": "resolved",
-      "409": "reconciliation_required"
-    }
+      "409": "reconciliation_required",
+      "422": "validation_failed"
+    },
+    "success_response_required_fields": [
+      "outcome",
+      "reason",
+      "resource_id",
+      "topic_id",
+      "topic_url",
+      "direction",
+      "accepted_source_revision",
+      "accepted_source_revision_sequence",
+      "core_fallback"
+    ],
+    "reconciliation_response_required_fields": [
+      "outcome",
+      "reason",
+      "resource_id",
+      "topic_id",
+      "topic_url",
+      "direction",
+      "conflict_fields",
+      "core_fallback"
+    ]
   },
   "records": {
     "index_path": "/discussion-bridge/v1/bridge-records.json",
     "show_path": "/discussion-bridge/v1/bridge-records/{resource_id}.json",
     "maximum_page": 10000,
-    "records_per_page": 100
+    "records_per_page": 100,
+    "required_record_fields": [
+      "resource_id",
+      "direction",
+      "state",
+      "title",
+      "topic_id",
+      "topic_url",
+      "source_revision",
+      "source_revision_sequence",
+      "source_created_at",
+      "source_updated_at",
+      "bindings"
+    ],
+    "binding_states": [
+      "pending",
+      "active",
+      "held",
+      "withdrawn",
+      "reconciliation_required",
+      "operator_attention",
+      "retired"
+    ],
+    "binding_id_pattern": "^dbb_[a-f0-9]{32}$",
+    "binding_roles": ["source", "presentation"],
+    "binding_transitions": {
+      "pending": ["active", "held", "reconciliation_required", "operator_attention", "retired"],
+      "active": ["held", "withdrawn", "reconciliation_required", "operator_attention", "retired"],
+      "held": ["active", "withdrawn", "reconciliation_required", "operator_attention", "retired"],
+      "withdrawn": ["active", "held", "reconciliation_required", "operator_attention", "retired"],
+      "reconciliation_required": ["pending", "active", "held", "withdrawn", "operator_attention", "retired"],
+      "operator_attention": ["pending", "active", "held", "withdrawn", "reconciliation_required", "retired"],
+      "retired": []
+    },
+    "destination_binding_fields": [
+      "binding_id",
+      "connection_id",
+      "role",
+      "state",
+      "external_id",
+      "canonical_url",
+      "presentation_mode",
+      "applied_source_revision",
+      "publication_revision",
+      "content_disposition",
+      "synchronized_at",
+      "deployment_state",
+      "deployed_at",
+      "verification_state",
+      "publicly_verified_at"
+    ],
+    "deployment_states": ["not_required", "pending", "deployed", "failed"],
+    "deployment_transitions": {
+      "not_required": [],
+      "pending": ["deployed", "failed"],
+      "deployed": ["pending", "failed"],
+      "failed": ["pending", "deployed"]
+    },
+    "verification_states": ["not_required", "pending", "verified", "failed"],
+    "verification_transitions": {
+      "not_required": [],
+      "pending": ["verified", "failed"],
+      "verified": ["pending", "failed"],
+      "failed": ["pending", "verified"]
+    },
+    "source_url_migration_attestation": {
+      "method": "GET",
+      "path": "/discussion-bridge/v1/bridge-records/{resource_id}/source-url-proof.json",
+      "query": ["from_url", "to_url"],
+      "maximum_transitions": 20,
+      "permanent_redirect_statuses": [301, 308],
+      "required_response_fields": [
+        "resource_id",
+        "topic_id",
+        "external_id",
+        "from_url",
+        "to_url",
+        "verified",
+        "transition_count",
+        "verified_at",
+        "transitions"
+      ],
+      "identity_rule": "resource_id, topic_id, and source external_id are identical before and after every verified transition",
+      "failure_rule": "Missing links, cycles, wrong ownership, destination collision, retired binding conflict, nonpermanent redirect, or over-limit ancestry fails closed as reconciliation_required.",
+      "retired_url_rule": "Every replaced source URL remains reserved to the same resource until an explicit operator-approved rollback or retirement action.",
+      "origin_rule": "The final URL must match an origin authorized by the connection's exact policy revision. Cross-origin migration is accepted only when the operator-approved migration record names both origins.",
+      "rollback_rule": "Rollback creates a new verified transition to the prior URL; it never deletes ancestry or releases an intervening retired binding."
+    }
+  },
+  "source_publication": {
+    "inventory": {
+      "method": "GET",
+      "path": "/discussion-bridge/v1/source-topics.json",
+      "query": ["cursor", "limit", "snapshot"],
+      "default_limit": 25,
+      "maximum_limit": 100,
+      "cursor": "opaque, connection-scoped, restart-safe, and bound to one immutable snapshot and policy_revision",
+      "minimum_snapshot_retention_seconds": 2592000,
+      "inactivity_expiry_rule": "The receiver retains a snapshot for at least 30 days after its most recent successful page read. Expiry returns HTTP 410 snapshot_expired without mutating publication state; the adapter starts a new snapshot and deduplicates by stable resource_id and source_revision.",
+      "required_response_fields": ["snapshot", "policy_revision", "items", "next_cursor", "complete"],
+      "required_item_fields": ["resource_id", "topic_id", "topic_url", "title", "source_revision", "source_revision_sequence", "source_created_at", "source_updated_at"],
+      "high_water_rule": "A completed snapshot fixes the initial high-water mark. Later changes arrive through publication work and are not hidden by reopening the snapshot."
+    },
+    "detail": {
+      "method": "GET",
+      "path": "/discussion-bridge/v1/source-topics/{topic_id}.json",
+      "query": ["source_revision"],
+      "required_fields": [
+        "resource_id",
+        "topic_id",
+        "topic_url",
+        "title",
+        "source_revision",
+        "source_revision_sequence",
+        "source_created_at",
+        "source_updated_at",
+        "source_authors",
+        "categories",
+        "tags",
+        "presentation_mode",
+        "content_transport",
+        "content_disposition",
+        "network_provenance"
+      ],
+      "source_authors_maximum_items": 20,
+      "categories_maximum_items": 20,
+      "tags_maximum_items": 100,
+      "revision_rule": "The receiver returns the requested exact revision or HTTP 410 revision_superseded / HTTP 404 revision_not_found; it never substitutes a different revision silently."
+    },
+    "content_transport": {
+      "inline": {
+        "maximum_content_html_bytes": 49152,
+        "required_fields": ["mode", "media_type", "byte_length", "sha256", "content_html"]
+      },
+      "chunked": {
+        "method": "GET",
+        "path": "/discussion-bridge/v1/source-topics/{topic_id}/content.json",
+        "query": ["source_revision", "chunk"],
+        "decoded_chunk_maximum_bytes": 32768,
+        "encoding": "base64",
+        "required_descriptor_fields": [
+          "mode",
+          "media_type",
+          "byte_length",
+          "sha256",
+          "chunk_count",
+          "decoded_chunk_maximum_bytes"
+        ],
+        "required_chunk_fields": [
+          "source_revision",
+          "chunk",
+          "chunk_count",
+          "decoded_bytes",
+          "chunk_sha256",
+          "content_base64"
+        ],
+        "integrity_rule": "The adapter verifies every decoded chunk hash, exact total byte_length, and the complete SHA-256 before parsing or publishing the reassembled UTF-8 HTML.",
+        "total_size_rule": "The protocol imposes no universal destination-content ceiling; each response is bounded and the finite exact source byte_length governs completion."
+      }
+    },
+    "revocations": {
+      "method": "GET",
+      "index_path": "/discussion-bridge/v1/source-revocations.json",
+      "show_path": "/discussion-bridge/v1/source-revocations/{resource_id}.json",
+      "query": ["cursor", "limit"],
+      "default_limit": 25,
+      "maximum_limit": 100,
+      "required_fields": ["resource_id", "source_revision", "source_revision_sequence", "reason", "effective_at", "restorable"],
+      "reasons": ["source_unpublished", "source_deleted", "scope_removed", "policy_removed", "operator_hold"],
+      "retention_rule": "A revocation remains readable until every affected destination binding acknowledges it or is retired, and never for less than 90 days after effective_at.",
+      "restore_rule": "Restoration is a new higher source revision delivered as restore work against the same resource and destination identity."
+    }
+  },
+  "publication_work": {
+    "claim": {
+      "method": "POST",
+      "path": "/discussion-bridge/v1/publication-work/claim.json",
+      "request_fields": ["maximum_items", "requested_lease_seconds", "worker_id", "correlation_id"],
+      "default_maximum_items": 1,
+      "maximum_items": 32,
+      "default_lease_seconds": 300,
+      "maximum_requested_lease_seconds": 3600,
+      "maximum_total_lease_seconds": 14400,
+      "response_required_fields": ["publication_work", "claimed_at", "correlation_id"]
+    },
+    "renew": {
+      "method": "POST",
+      "path": "/discussion-bridge/v1/publication-work/{work_id}/renew.json",
+      "required_fields": ["lease_token", "requested_lease_seconds", "correlation_id"],
+      "response_required_fields": ["work_id", "lease_expires_at", "total_lease_seconds", "correlation_id"],
+      "rule": "Renewal succeeds only for the active lease and cannot make total lease time exceed 14400 seconds. Expired, superseded, wrong-token, or over-limit renewal fails without changing work or destination state."
+    },
+    "acknowledgement": {
+      "method": "PUT",
+      "path": "/discussion-bridge/v1/publication-work/{work_id}/acknowledgement.json",
+      "required_fields": [
+        "lease_token",
+        "resource_id",
+        "source_revision",
+        "source_revision_sequence",
+        "policy_revision",
+        "action",
+        "destination_binding",
+        "synchronized_at",
+        "deployment_state",
+        "verification_state",
+        "correlation_id"
+      ],
+      "conditional_fields": ["deployed_at", "publicly_verified_at"],
+      "rule": "Acknowledgement is accepted only for the exact active lease, source revision, policy revision, action, connection, and destination binding after the native operation succeeds. Dynamic destinations use deployment_state not_required. Static destinations remain pending until deployed; deployed_at is required for deployed, and publicly_verified_at is required only after the exact deployed revision is verified."
+    },
+    "failure": {
+      "method": "PUT",
+      "path": "/discussion-bridge/v1/publication-work/{work_id}/failure.json",
+      "required_fields": ["lease_token", "error_code", "error_detail", "failed_at", "correlation_id"],
+      "error_detail_maximum_bytes": 2048,
+      "rule": "Detail is sanitized, secret-free, and never controls retryability; the receiver classifies the registered error_code."
+    },
+    "work_required_fields": [
+      "work_id",
+      "resource_id",
+      "connection_id",
+      "action",
+      "source_revision",
+      "source_revision_sequence",
+      "policy_revision",
+      "presentation_mode",
+      "lease_token",
+      "lease_expires_at",
+      "attempt_count",
+      "correlation_id"
+    ],
+    "work_id_pattern": "^dbw_[a-f0-9]{32}$",
+    "lease_token_pattern": "^[a-f0-9]{64}$",
+    "worker_id_maximum_bytes": 200,
+    "actions": ["publish", "update", "hold", "unpublish", "restore", "verify"],
+    "lifecycle_states": ["available", "leased", "acknowledged", "retry_wait", "operator_attention", "superseded"],
+    "lifecycle_transitions": {
+      "available": ["leased", "superseded"],
+      "leased": ["acknowledged", "retry_wait", "available", "operator_attention", "superseded"],
+      "acknowledged": [],
+      "retry_wait": ["available", "operator_attention", "superseded"],
+      "operator_attention": ["available", "superseded"],
+      "superseded": []
+    },
+    "maximum_automatic_attempts": 3,
+    "retry_backoff_seconds": [60, 300, 900],
+    "rules": [
+      "Only one worker may own an item during an active lease.",
+      "Expired unacknowledged work returns to available or retry_wait without changing destination identity.",
+      "A changed source or policy revision supersedes unacknowledged older work and never mutates its active lease.",
+      "A worker never invents a replacement Bridge Record, topic, or native object after conflict.",
+      "After initial synchronization, recurring workers consume publication work instead of rescanning the complete source corpus.",
+      "Manual retry requires an authorized operator action, preserves the same work/resource/destination identity, creates a new lease only after the terminal condition is corrected, and never retries authentication, scope, identity, collision, or reconciliation failures unchanged."
+    ]
+  },
+  "failure_registry": {
+    "retryable": [
+      "transport_timeout",
+      "source_unavailable",
+      "destination_unavailable",
+      "rate_limited",
+      "build_failed",
+      "deploy_failed",
+      "public_verification_failed",
+      "internal_error"
+    ],
+    "terminal": [
+      "authentication_failed",
+      "scope_denied",
+      "validation_failed",
+      "content_unsupported",
+      "identity_conflict",
+      "destination_collision",
+      "reconciliation_required",
+      "operator_action_required"
+    ],
+    "rule": "Only the receiver registry controls automatic retry. Exhausting maximum attempts changes retryable work to operator_attention.",
+    "http_statuses": {
+      "transport_timeout": 503,
+      "source_unavailable": 503,
+      "destination_unavailable": 503,
+      "rate_limited": 429,
+      "build_failed": 422,
+      "deploy_failed": 422,
+      "public_verification_failed": 422,
+      "internal_error": 500,
+      "authentication_failed": 401,
+      "scope_denied": 403,
+      "validation_failed": 422,
+      "content_unsupported": 422,
+      "identity_conflict": 409,
+      "destination_collision": 409,
+      "reconciliation_required": 409,
+      "operator_action_required": 409
+    }
+  },
+  "platform_catalog": {
+    "enabled": true,
+    "show_method": "GET",
+    "show_path": "/discussion-bridge/v1/platform-catalog.json",
+    "update_method": "PUT",
+    "update_path": "/discussion-bridge/v1/platform-catalog.json",
+    "maximum_json_bytes": 65536,
+    "maximum_items_per_segment": 100,
+    "required_segment_fields": ["catalog_revision", "platform_profile", "segment_type", "items", "next_cursor", "complete"],
+    "segment_types": ["containers", "taxonomies", "terms", "authors", "presentation_modes", "native_limits"],
+    "purpose": "Bounded descriptive discovery before an operator creates or updates mapping policy.",
+    "authority_rule": "Catalog data cannot authorize a destination, expand connection scope, select presentation, create work, or alter an existing mapping. Operator-approved policy references an exact catalog_revision.",
+    "cursor_rule": "Segment cursors are opaque and bound to connection, platform_profile, segment_type, and catalog_revision.",
+    "cache_control": "private, must-revalidate",
+    "etag_rule": "ETag identifies the exact catalog_revision and segment request; a changed catalog returns a new revision and never rewrites existing policy.",
+    "removal_rule": "Removed catalog entries remain identifiable as unavailable so existing mappings enter operator_attention rather than silently remapping."
+  },
+  "authorship_and_taxonomy": {
+    "source_author_fields": ["source_author_id", "source_author_name", "source_author_url"],
+    "source_author_id_maximum_bytes": 255,
+    "source_author_name_maximum_bytes": 200,
+    "source_author_url_maximum_bytes": 2048,
+    "source_authors_maximum_items": 20,
+    "category_fields": ["source_category_id", "source_category_name", "source_parent_category_id"],
+    "categories_maximum_items": 20,
+    "tag_fields": ["source_tag_id", "source_tag_name"],
+    "tags_maximum_items": 100,
+    "identity_rule": "Transported authorship and taxonomy never grants account, login, moderation, or destination authorization. Operator policy owns native mapping and fallback.",
+    "deleted_author_rule": "A deleted or anonymized source author retains a stable opaque source_author_id and a truthful bounded display label supplied by the source; the adapter never invents a shared account.",
+    "unmapped_taxonomy_rule": "An unmapped or removed source term is omitted or held according to the exact policy revision; it never creates a destination term or selects a fallback silently."
+  },
+  "discourse_network": {
+    "enabled_profile": "discourse_as_publisher",
+    "managed_scopes": ["first_post"],
+    "relationships": ["hub_to_spoke", "spoke_to_hub"],
+    "required_provenance_fields": [
+      "origin_forum_id",
+      "origin_forum_name",
+      "origin_topic_url",
+      "content_authority_forum_id",
+      "relationship",
+      "operation_id",
+      "route_forum_ids",
+      "managed_scope"
+    ],
+    "forum_id_pattern": "^dbf_[a-f0-9]{32}$",
+    "operation_id_pattern": "^dbo_[a-f0-9]{32}$",
+    "origin_forum_name_maximum_bytes": 200,
+    "route_maximum_forums": 8,
+    "rules": [
+      "A forum rejects an operation that originated from or already visited its own forum_id.",
+      "A repeated forum_id, over-limit route, wrong relationship, or unsupported managed scope fails closed.",
+      "Replies, flags, whispers, moderation actions, users, private content, and trust remain local.",
+      "Spoke-origin content received by a hub is not automatically eligible for another spoke.",
+      "Visible presentation identifies origin forum, relationship, canonical origin topic, current local forum, and the synchronized-first-post versus local-discussion boundary.",
+      "Organization, unit, hub, and spoke display labels are generic configured presentation, never installation-specific product code.",
+      "Network operation integrity is provided by the authenticated connection and exact immutable operation, origin, route, policy, and revision fields; body provenance never expands the connection's authorized peer or direction."
+    ]
+  },
+  "error_responses": {
+    "content_type": "application/json",
+    "maximum_json_bytes": 4096,
+    "required_fields": ["error_code", "message", "correlation_id"],
+    "message_rule": "Human-readable message is sanitized and bounded; it never contains Content Connection secrets, Operator Service credentials, lease tokens, signing material, or protected response bodies.",
+    "statuses": {
+      "400": ["invalid_json", "unknown_field", "malformed_value"],
+      "401": ["authentication_failed", "contract_version_mismatch"],
+      "403": ["scope_denied", "direction_denied", "policy_denied"],
+      "404": ["not_found", "revision_not_found"],
+      "409": ["reconciliation_required", "revision_conflict", "identity_conflict", "destination_collision", "lease_conflict", "work_superseded", "catalog_revision_conflict", "cursor_snapshot_mismatch"],
+      "410": ["snapshot_expired", "revision_superseded", "work_expired", "url_retired"],
+      "413": ["request_too_large"],
+      "415": ["unsupported_media_type"],
+      "422": ["validation_failed", "content_unsupported", "integrity_failed", "lease_limit_exceeded"],
+      "429": ["rate_limited"],
+      "500": ["internal_error"],
+      "503": ["temporarily_unavailable"]
+    }
+  },
+  "operator_service_contract": {
+    "path": "operator-service-contract.json",
+    "separate_authentication_boundary": true,
+    "adapter_secret_rule": "Operator Service credentials and entitlements never appear in adapter requests and never grant Content Connection scope."
+  },
+  "transport_and_persistence": {
+    "rules": [
+      "Use HTTPS and the configured Discourse service origin only.",
+      "Reject redirects and cross-origin adapter API responses.",
+      "Apply bounded connect, response, and overall operation timeouts.",
+      "Require the documented content type and valid encoding/JSON.",
+      "Redact Content Connection, Operator Service, lease, and signing secrets from every error, log, fixture, screenshot, and public artifact.",
+      "Persist stable resource, topic, destination binding, revision, policy, work, verification, correlation, retry, and reconciliation state durably on the server.",
+      "Expose truthful successful, retryable, reconciliation-required, and operator-action states.",
+      "Disabling a connection stops new authorized activity without silently deleting topics, native content, or durable mapping history.",
+      "Never fall back to direct Discourse Core topic creation or API-key publication."
+    ]
   }
 }

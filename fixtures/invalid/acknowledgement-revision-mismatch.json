@@ -1,0 +1,5 @@
+{
+  "work": {"source_revision": "post:12:version:4", "source_revision_sequence": 4, "policy_revision": "policy:2026-09-27:1"},
+  "acknowledgement": {"source_revision": "post:12:version:3", "source_revision_sequence": 3, "policy_revision": "policy:2026-09-27:1"},
+  "expected_error": "revision_conflict"
+}

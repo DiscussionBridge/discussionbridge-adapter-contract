@@ -1,0 +1,18 @@
+{
+  "resource_id": "a4965d46-e657-4af4-af47-6439e544eeb9",
+  "topic_id": 8,
+  "external_id": "post:site-7:482",
+  "from_url": "https://publisher.example/articles/community-guide/",
+  "to_url": "https://publisher.example/guides/community/",
+  "verified": true,
+  "transition_count": 1,
+  "verified_at": "2026-09-27T19:00:00Z",
+  "transitions": [
+    {
+      "old_url": "https://publisher.example/articles/community-guide/",
+      "new_url": "https://publisher.example/guides/community/",
+      "redirect_status": 308,
+      "verified_at": "2026-09-27T19:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "lease_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "resource_id": "c4965d46-e657-4af4-af47-6439e544eeb7",
+  "source_revision": "post:501:version:2",
+  "source_revision_sequence": 2,
+  "policy_revision": "policy:2026-09-27:1",
+  "action": "publish",
+  "destination_binding": {
+    "binding_id": "dbb_33333333333333333333333333333333",
+    "external_id": "ghost:post:national-program-update",
+    "canonical_url": "https://publisher.example/national-program-update/",
+    "publication_revision": "ghost:post:revision:1",
+    "content_disposition": "complete"
+  },
+  "synchronized_at": "2026-09-27T18:31:00Z",
+  "deployment_state": "not_required",
+  "verification_state": "not_required",
+  "correlation_id": "work-create-01"
+}

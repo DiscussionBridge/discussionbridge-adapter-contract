@@ -1,0 +1,9 @@
+{
+  "name": "discussionbridge-adapter-contract",
+  "version": "0.2.0-alpha.21",
+  "private": true,
+  "scripts": {
+    "test": "node tests/validate-contract.mjs"
+  },
+  "license": "MIT"
+}

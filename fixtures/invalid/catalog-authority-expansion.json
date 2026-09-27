@@ -1,0 +1,6 @@
+{
+  "connection": {"directions": ["from_discourse"], "lanes": ["articles"]},
+  "catalog_item": {"id": "pages", "claimed_directions": ["to_discourse"], "claimed_lanes": ["all"]},
+  "requested_direction": "to_discourse",
+  "expected_error": "direction_denied"
+}

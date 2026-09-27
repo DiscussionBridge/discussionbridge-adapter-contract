@@ -1,0 +1,7 @@
+{
+  "lease_token": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "error_code": "destination_unavailable",
+  "error_detail": "Destination returned a temporary 503 response.",
+  "failed_at": "2026-09-27T18:31:00Z",
+  "correlation_id": "work-01"
+}

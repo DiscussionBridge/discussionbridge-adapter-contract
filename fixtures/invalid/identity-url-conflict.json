@@ -1,0 +1,5 @@
+{
+  "stored": {"resource_id": "a4965d46-e657-4af4-af47-6439e544eeb9", "external_id": "post:site-7:482", "canonical_url": "https://publisher.example/a/"},
+  "incoming": {"external_id": "post:site-7:999", "canonical_url": "https://publisher.example/a/"},
+  "expected_error": "identity_conflict"
+}

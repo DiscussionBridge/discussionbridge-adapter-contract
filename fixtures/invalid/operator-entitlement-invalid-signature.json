@@ -1,0 +1,4 @@
+{
+  "entitlement": {"signature": "not_base64url!", "key_id": "unknown-key"},
+  "expected_error": "entitlement_invalid_signature"
+}

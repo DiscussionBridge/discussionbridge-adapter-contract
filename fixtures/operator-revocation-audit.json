@@ -1,0 +1,15 @@
+{
+  "event_id": "dba_11111111111111111111111111111111",
+  "occurred_at": "2026-09-28T02:00:00Z",
+  "forum_id": "dbf_11111111111111111111111111111111",
+  "provider_id": "dbp_11111111111111111111111111111111",
+  "entitlement_id": "dbe_11111111111111111111111111111111",
+  "actor": "customer_admin:42",
+  "scope": "provider_enrollment",
+  "action": "revoke_entitlement",
+  "target_type": "operator_entitlement",
+  "target_id": "dbe_11111111111111111111111111111111",
+  "operation_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "customer_approval_id": "approval:2026-09-28:1",
+  "outcome": "revoked"
+}

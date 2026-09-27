@@ -1,0 +1,7 @@
+{
+  "headers": {
+    "X-DiscussionBridge-Connection": "dbc_111111111111111111111111",
+    "X-DiscussionBridge-Contract": "0.2.0-alpha.20"
+  },
+  "expected_error": "validation_failed"
+}

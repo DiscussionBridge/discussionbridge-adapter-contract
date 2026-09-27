@@ -1,0 +1,6 @@
+{
+  "from_url": "https://publisher.example/a/",
+  "to_url": "https://publisher.example/c/",
+  "transitions": [{"old_url": "https://publisher.example/a/", "new_url": "https://publisher.example/b/", "redirect_status": 308}],
+  "expected_error": "reconciliation_required"
+}

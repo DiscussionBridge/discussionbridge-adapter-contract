@@ -1,0 +1,4 @@
+{
+  "network_provenance": {"managed_scope": "all_posts"},
+  "expected_error": "scope_denied"
+}

@@ -1,0 +1,34 @@
+{
+  "publication_work": [
+    {
+      "work_id": "dbw_44444444444444444444444444444444",
+      "resource_id": "a4965d46-e657-4af4-af47-6439e544eeb9",
+      "connection_id": "dbc_111111111111111111111111",
+      "action": "hold",
+      "source_revision": "post:12:version:5",
+      "source_revision_sequence": 5,
+      "policy_revision": "policy:2026-09-27:1",
+      "presentation_mode": "interactive",
+      "lease_token": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "lease_expires_at": "2026-09-27T19:05:00Z",
+      "attempt_count": 1,
+      "correlation_id": "work-hold-01"
+    },
+    {
+      "work_id": "dbw_55555555555555555555555555555555",
+      "resource_id": "b4965d46-e657-4af4-af47-6439e544eeb8",
+      "connection_id": "dbc_111111111111111111111111",
+      "action": "unpublish",
+      "source_revision": "post:18:version:8",
+      "source_revision_sequence": 8,
+      "policy_revision": "policy:2026-09-27:1",
+      "presentation_mode": "full",
+      "lease_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "lease_expires_at": "2026-09-27T19:05:00Z",
+      "attempt_count": 1,
+      "correlation_id": "work-unpublish-01"
+    }
+  ],
+  "claimed_at": "2026-09-27T19:00:00Z",
+  "correlation_id": "withdrawal-batch-01"
+}

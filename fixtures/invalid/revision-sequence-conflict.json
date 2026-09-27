@@ -1,0 +1,13 @@
+{
+  "stored": {
+    "source_revision": "post:12:version:4",
+    "source_revision_sequence": 4,
+    "source_content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "incoming": {
+    "source_revision": "post:12:version:other",
+    "source_revision_sequence": 4,
+    "source_content_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "expected_error": "reconciliation_required"
+}

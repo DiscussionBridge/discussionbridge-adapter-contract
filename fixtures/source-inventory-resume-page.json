@@ -1,0 +1,25 @@
+{
+  "request": {
+    "snapshot": "dbs_11111111111111111111111111111111",
+    "cursor": "cursor_page_2_policy_1",
+    "limit": 25
+  },
+  "response": {
+    "snapshot": "dbs_11111111111111111111111111111111",
+    "policy_revision": "policy:2026-09-27:1",
+    "items": [
+      {
+        "resource_id": "b4965d46-e657-4af4-af47-6439e544eeb8",
+        "topic_id": 12,
+        "topic_url": "https://forum.example/t/large-source-topic/12",
+        "title": "Large Source Topic",
+        "source_revision": "post:18:version:7",
+        "source_revision_sequence": 7,
+        "source_created_at": "2026-09-01T16:00:00Z",
+        "source_updated_at": "2026-09-27T18:30:00Z"
+      }
+    ],
+    "next_cursor": null,
+    "complete": true
+  }
+}
