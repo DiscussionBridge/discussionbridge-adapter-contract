@@ -49,6 +49,15 @@ function correlation(value, contract) {
   nonblank(value, contract.common.correlation_id_maximum_bytes, "correlation_id");
 }
 
+export function validateCorrelationExchange(value, contract) {
+  exactObject(value, ["request_header", "response_header", "response_body"], ["request_body"], "correlation exchange");
+  correlation(value.request_header, contract);
+  correlation(value.response_header, contract);
+  correlation(value.response_body, contract);
+  if (value.request_header !== value.response_header || value.request_header !== value.response_body) fail("validation_failed");
+  if (Object.hasOwn(value, "request_body") && value.request_body !== value.request_header) fail("validation_failed");
+}
+
 export function canonicalize(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
