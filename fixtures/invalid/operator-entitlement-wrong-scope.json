@@ -5,13 +5,14 @@
     "provider_id": "dbp_11111111111111111111111111111111",
     "provider_name": "DiscussionBridge",
     "forum_id": "dbf_11111111111111111111111111111111",
+    "issuer_id": "dbi_11111111111111111111111111111111",
     "issued_at": "2026-09-27T18:00:00Z",
     "not_before": "2026-09-27T18:00:00Z",
     "expires_at": "2027-09-27T18:00:00Z",
     "grace_until": "2027-10-04T18:00:00Z",
     "scopes": ["export_connection_secrets"],
     "key_id": "discussionbridge-operator-2026-01",
-    "signature": "ZXhhbXBsZS1zaWduYXR1cmU"
+    "signature": "cyHfZevCa0yYQzOovT-8h34CZpmAlqyA8xikNH9baH7z0bQXypMxWetwdogsSG7G0QlnUOjVGaR9CL75Wl7sAw"
   },
   "expected_error": "scope_denied"
 }

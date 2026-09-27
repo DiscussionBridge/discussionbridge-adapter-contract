@@ -302,7 +302,6 @@ export function validateForumClone(existingForumId, cloneForumId, rotatedAndReau
 export function validateOperatorEntitlement(entitlement, operator, trust, context = {}) {
   exactObject(entitlement, operator.entitlement.required_fields, [], "operator entitlement");
   if (entitlement.entitlement_version !== operator.entitlement.entitlement_version) fail("entitlement_invalid_signature");
-  for (const scope of entitlement.scopes) if (!operator.entitlement.allowed_scopes.includes(scope)) fail("scope_denied");
   const signature = entitlement.signature;
   if (!base64urlPattern.test(signature) || signature.includes("=") || Buffer.from(signature, "base64url").length !== operator.entitlement.signature_decoded_bytes) fail("entitlement_invalid_signature");
   const trustKey = trust?.[`${entitlement.issuer_id}:${entitlement.key_id}`];
@@ -314,6 +313,7 @@ export function validateOperatorEntitlement(entitlement, operator, trust, contex
   delete unsigned.signature;
   const message = Buffer.from(`${operator.entitlement.signing_domain}${canonicalize(unsigned)}`, "utf8");
   if (!verify(null, message, publicKey, Buffer.from(signature, "base64url"))) fail("entitlement_invalid_signature");
+  for (const scope of entitlement.scopes) if (!operator.entitlement.allowed_scopes.includes(scope)) fail("scope_denied");
   for (const field of ["issued_at", "not_before", "expires_at", "grace_until"]) timestamp(entitlement[field], field);
   if (context.forumId && context.forumId !== entitlement.forum_id) fail("entitlement_wrong_forum");
   if (context.state === "revoked") fail("entitlement_revoked");
