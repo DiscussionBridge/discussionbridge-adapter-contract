@@ -313,8 +313,10 @@ export function validateAcknowledgementResponse(value, contract) {
   if (!contract.publication_work.acknowledgement.stages.includes(value.accepted_stage)) fail("stage_conflict");
   if (typeof value.terminal !== "boolean") fail("validation_failed");
   if (value.terminal) {
+    if (!["synchronized", "verified"].includes(value.accepted_stage)) fail("stage_conflict");
     if (value.resulting_state !== "acknowledged" || Object.hasOwn(value, "next_stage_token")) fail("stage_conflict");
   } else {
+    if (!["synchronized", "deployed"].includes(value.accepted_stage)) fail("stage_conflict");
     if (!Object.hasOwn(value, "next_stage_token")) fail("stage_conflict");
     pattern(value.next_stage_token, contract.publication_work.stage_token_pattern, "stage_conflict", "next_stage_token");
     const expected = value.accepted_stage === "synchronized" ? "awaiting_deployment" : "awaiting_verification";
@@ -447,16 +449,17 @@ export function validateOperatorEntitlement(entitlement, operator, trust, contex
   nonblank(entitlement.key_id, operator.entitlement.key_id_maximum_bytes, "key_id");
   if (!Array.isArray(entitlement.scopes) || entitlement.scopes.length === 0) fail("scope_denied");
   const signature = entitlement.signature;
-  if (!base64urlPattern.test(signature) || signature.includes("=") || Buffer.from(signature, "base64url").length !== operator.entitlement.signature_decoded_bytes) fail("entitlement_invalid_signature");
+  const signatureBytes = Buffer.from(signature, "base64url");
+  if (!base64urlPattern.test(signature) || signature.includes("=") || signatureBytes.length !== operator.entitlement.signature_decoded_bytes || signatureBytes.toString("base64url") !== signature) fail("entitlement_invalid_signature");
   const trustKey = trust?.[`${entitlement.issuer_id}:${entitlement.key_id}`];
   if (!trustKey || !base64urlPattern.test(trustKey)) fail("entitlement_invalid_signature");
   const raw = Buffer.from(trustKey, "base64url");
-  if (raw.length !== 32) fail("entitlement_invalid_signature");
+  if (raw.length !== 32 || raw.toString("base64url") !== trustKey) fail("entitlement_invalid_signature");
   const publicKey = createPublicKey({ key: Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), raw]), format: "der", type: "spki" });
   const unsigned = structuredClone(entitlement);
   delete unsigned.signature;
   const message = Buffer.from(`${operator.entitlement.signing_domain}${canonicalize(unsigned)}`, "utf8");
-  if (!verify(null, message, publicKey, Buffer.from(signature, "base64url"))) fail("entitlement_invalid_signature");
+  if (!verify(null, message, publicKey, signatureBytes)) fail("entitlement_invalid_signature");
   for (const scope of entitlement.scopes) if (!operator.entitlement.allowed_scopes.includes(scope)) fail("scope_denied");
   for (const field of ["issued_at", "not_before", "expires_at", "grace_until"]) timestamp(entitlement[field], field);
   if (Date.parse(entitlement.not_before) < Date.parse(entitlement.issued_at)) fail("validation_failed");
