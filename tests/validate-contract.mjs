@@ -6,14 +6,20 @@ import {
   ProtocolError,
   canonicalize,
   validateAcknowledgement,
+  validateAcknowledgementResponse,
   validateAcknowledgementIdentity,
+  validateAuthenticationHeaders,
   validateCatalogSegment,
+  validateCatalogCursor,
   validateCatalogUpdate,
+  validateClaimRequest,
+  validateClaimResponse,
   validateChunk,
   validateChunkSet,
   validateConnectionCapability,
   validateContractHeader,
   validateCursorSnapshot,
+  validateCutoverManifest,
   validateDestinationCollision,
   validateDirection,
   validateEntitlementTime,
@@ -25,20 +31,27 @@ import {
   validateLeaseRenewal,
   validateLeaseTime,
   validateNetwork,
+  validateNetworkRoute,
   validateOperatorEntitlement,
+  validateOperatorAudit,
   validatePresentationMode,
   validateReplay,
+  validateRecordIndex,
+  validateRecordShow,
   validateResolvedPolicy,
   validateResolveRecord,
   validateResolveResponse,
   validateRetiredUrl,
   validateRevisionTransition,
   validateRevocationDetail,
+  validateRevocationCursor,
   validateRevocationIndex,
+  validateRenewal,
   validateScope,
   validateSourceDetail,
   validateStageTransition,
   validateUrlProof,
+  validateUrlProofResponse,
   validateWork,
 } from "./protocol-validation.mjs";
 
@@ -65,40 +78,8 @@ assert.equal(operator.entitlement.canonicalization, "RFC 8785 JCS");
 const trustVector = fixtures.get("operator-entitlement-test-vector.json");
 const trust = { [`${trustVector.issuer_id}:${trustVector.key_id}`]: trustVector.public_key_base64url };
 
-function validateClaimEnvelope(value) {
-  for (const field of contract.publication_work.claim.response_required_fields) assert.ok(Object.hasOwn(value, field));
-  for (const item of value.publication_work) validateWork(item, contract);
-}
-
-function validateRenewal(value) {
-  for (const field of contract.publication_work.renew.required_fields) assert.ok(Object.hasOwn(value.request, field));
-  for (const field of contract.publication_work.renew.response_required_fields) assert.ok(Object.hasOwn(value.response, field));
-  validateLeaseRenewal(0, value.response.total_lease_seconds, contract.publication_work.claim.maximum_total_lease_seconds);
-  assert.equal(value.request.correlation_id, value.response.correlation_id);
-}
-
-function validateAudit(value) {
-  for (const field of operator.audit.required_fields) assert.ok(Object.hasOwn(value, field));
-  assert.ok(operator.audit.outcomes.includes(value.outcome));
-  assert.match(value.event_id, new RegExp(operator.audit.event_id_pattern));
-}
-
-function validateFromDiscourseRecord(value) {
-  const record = value.bridge_record;
-  for (const field of contract.records.required_record_fields) assert.ok(Object.hasOwn(record, field));
-  assert.equal(record.direction, "from_discourse");
-  for (const binding of record.bindings) {
-    for (const field of contract.records.destination_binding_fields) assert.ok(Object.hasOwn(binding, field));
-  }
-}
-
-function validateUrlProofFixture(value) {
-  for (const field of contract.records.source_url_migration_attestation.required_response_fields) assert.ok(Object.hasOwn(value, field));
-  validateUrlProof(value);
-  assert.equal(value.transition_count, value.transitions.length);
-}
-
 const positiveHandlers = {
+  "authentication-headers.json": (value) => validateAuthenticationHeaders(value, contract),
   "connection-capability.json": (value) => validateConnectionCapability(value, contract),
   "connection-capability-to-discourse.json": (value) => validateConnectionCapability(value, contract),
   "created-response.json": (value) => validateResolveResponse(value, contract.resolve.success_response_required_fields, contract),
@@ -112,7 +93,8 @@ const positiveHandlers = {
     validateRevisionTransition(value.stored, value.bridge_record);
     assert.equal(value.stored.external_id, value.bridge_record.external_id);
   },
-  "from-discourse-record.json": validateFromDiscourseRecord,
+  "from-discourse-record.json": (value) => validateRecordShow(value, contract),
+  "bridge-record-index.json": (value) => validateRecordIndex(value, contract),
   "source-inventory-page.json": (value) => validateInventory(value, contract),
   "source-inventory-resume-page.json": (value) => {
     assert.equal(value.request.snapshot, value.response.snapshot);
@@ -132,15 +114,23 @@ const positiveHandlers = {
     assert.equal(value.restart.deduplicate_by, "revocation_id");
     assert.equal(value.restart.read_does_not_acknowledge, true);
   },
-  "source-url-proof.json": validateUrlProofFixture,
-  "publication-work-claim.json": validateClaimEnvelope,
-  "publication-work-restore.json": validateClaimEnvelope,
-  "publication-work-withdrawal.json": validateClaimEnvelope,
-  "publication-lease-renewal.json": validateRenewal,
+  "source-url-proof.json": (value) => validateUrlProofResponse(value, contract),
+  "publication-work-claim-request.json": (value) => validateClaimRequest(value, contract),
+  "publication-work-claim.json": (value) => validateClaimResponse(value, contract),
+  "publication-work-restore.json": (value) => validateClaimResponse(value, contract),
+  "publication-work-withdrawal.json": (value) => validateClaimResponse(value, contract),
+  "publication-lease-renewal.json": (value) => validateRenewal(value, contract),
   "publication-acknowledgement-create.json": (value) => validateAcknowledgement(value, contract),
   "publication-acknowledgement-static-pending.json": (value) => validateAcknowledgement(value, contract),
   "publication-acknowledgement-static-deployed.json": (value) => validateAcknowledgement(value, contract),
   "publication-acknowledgement.json": (value) => validateAcknowledgement(value, contract),
+  "publication-acknowledgement-responses.json": (value) => {
+    for (const response of Object.values(value)) validateAcknowledgementResponse(response, contract);
+    assert.equal(value.synchronized.next_stage_token, fixtures.get("publication-acknowledgement-static-deployed.json").stage_token);
+    assert.equal(value.deployed.next_stage_token, fixtures.get("publication-acknowledgement.json").stage_token);
+    assert.equal(value.verified.terminal, true);
+    assert.equal(value.dynamic.terminal, true);
+  },
   "publication-failure.json": (value) => validateFailure(value, contract),
   "publication-deployment-failure.json": (value) => validateFailure(value, contract),
   "publication-verification-failure.json": (value) => validateFailure(value, contract),
@@ -195,21 +185,22 @@ const positiveHandlers = {
     delete entitlement.signature;
     assert.equal(value.canonical_json, canonicalize(entitlement));
   },
-  "operator-enrollment-audit.json": validateAudit,
-  "operator-revocation-audit.json": validateAudit,
+  "operator-enrollment-audit.json": (value) => validateOperatorAudit(value, operator),
+  "operator-revocation-audit.json": (value) => validateOperatorAudit(value, operator),
   "network-operation-replay.json": (value) => {
     validateReplay(value.immutable_operation, value.immutable_operation);
     assert.equal(value.retained_result.mutated, false);
   },
+  "network-route-append.json": (value) => validateNetworkRoute(value, contract),
   "network-forum-identity.json": (value) => {
     assert.match(value.forum_id, new RegExp(contract.discourse_network.forum_id_pattern));
     assert.equal(value.created_once, true);
     assert.equal(value.protected_persistent, true);
     assert.equal(value.automatic_rotation, false);
+    assert.equal(value.approved_rotation.customer_approved && value.approved_rotation.audited && value.approved_rotation.peers_require_reauthorization, true);
   },
   "cutover-manifest.json": (value) => {
-    assert.equal(value.adapter_protocol.version, contract.version);
-    for (const item of [value.adapter_protocol, value.shared_plugin, ...value.adapters]) assert.match(item.sha256, new RegExp(contract.common.sha256_pattern));
+    validateCutoverManifest(value, contract);
     assert.notEqual(value.shared_plugin.version, contract.version);
     assert.notEqual(value.adapters[0].version, contract.version);
   },
@@ -240,6 +231,8 @@ const negativeHandlers = {
   "capability-missing-correlation.json": (value) => { const capability = structuredClone(fixtures.get("connection-capability.json")); delete capability[value.remove_field]; validateConnectionCapability(capability, contract); },
   "correlation-over-limit.json": (value) => validateConnectionCapability({ ...structuredClone(fixtures.get("connection-capability.json")), correlation_id: "x".repeat(value.byte_length) }, contract),
   "catalog-authority-expansion.json": (value) => validateDirection(value.connection, { direction: value.requested_direction }),
+  "catalog-cursor-mismatch.json": (value) => validateCatalogCursor(value.request, value.binding),
+  "catalog-over-limit.json": (value) => { const catalog = structuredClone(fixtures.get("platform-catalog-authors.json")); catalog.items = Array.from({ length: value.item_count }, (_, index) => ({ id: `author:${index}`, name: `Author ${index}`, available: true })); validateCatalogSegment(catalog, contract); },
   "catalog-stale-revision.json": (value) => { const update = structuredClone(fixtures.get("platform-catalog-update.json")); update.request.base_catalog_revision = value.request_base_catalog_revision; validateCatalogUpdate(update, contract, value.current_catalog_revision); },
   "catalog-removed-mapping.json": (value) => validateResolvedPolicy(value.policy, value.catalog_items),
   "catalog-unknown-field.json": (value) => validateCatalogSegment({ ...structuredClone(fixtures.get("platform-catalog-authors.json")), [value.field]: value.value }, contract),
@@ -256,6 +249,7 @@ const negativeHandlers = {
   "network-route-over-limit.json": (value) => validateNetwork({ ...structuredClone(baseNetwork), route_forum_ids: value.route_forum_ids }, contract, null),
   "network-self-origin.json": (value) => validateNetwork({ ...structuredClone(baseNetwork), ...value.network_provenance }, contract, value.local_forum_id),
   "network-unsupported-scope.json": (value) => validateNetwork({ ...structuredClone(baseNetwork), ...value.network_provenance }, contract, null),
+  "network-unauthorized-sender.json": (value) => validateNetworkRoute({ ...structuredClone(fixtures.get("network-route-append.json")), authorized_peer: value.authorized_peer }, contract),
   "operator-entitlement-expired.json": validateEntitlementTime,
   "operator-entitlement-grace-mutation.json": (value) => validateOperatorEntitlement(validEntitlement, operator, trust, { at: value.request_at, mutation: value.mutation }),
   "operator-entitlement-invalid-signature.json": (value) => validateOperatorEntitlement({ ...structuredClone(validEntitlement), ...value.entitlement }, operator, trust),
@@ -266,6 +260,7 @@ const negativeHandlers = {
   "operator-entitlement-wrong-scope.json": (value) => validateOperatorEntitlement(value.entitlement, operator, trust),
   "over-limit-title.json": () => validateResolveRecord({ ...structuredClone(baseComplete), title: "x".repeat(contract.resolve.field_rules.title_maximum_bytes + 1) }, contract),
   "revision-sequence-conflict.json": (value) => validateRevisionTransition(value.stored, value.incoming),
+  "revocation-cursor-mismatch.json": (value) => validateRevocationCursor(value.request, value.binding),
   "secret-leak-error.json": (value) => validateErrorResponse(value.error_response, contract, [value.headers[contract.authentication.secret_header]]),
   "snapshot-cursor-mismatch.json": (value) => validateCursorSnapshot(value.request, value.cursor_binding),
   "source-content-integrity.json": (value) => validateChunkSet(value.descriptor, value.chunks, contract),
@@ -299,6 +294,25 @@ const mutationCases = [
   ["content bound", () => validateResolveRecord({ ...structuredClone(baseComplete), source_content_bytes: contract.resolve.source_content_maximum_bytes + 1 }, contract), "validation_failed"],
   ["content hash", () => validateResolveRecord({ ...structuredClone(baseComplete), source_content_sha256: "0".repeat(64) }, contract), "integrity_failed"],
   ["signature", () => { const value = structuredClone(validEntitlement); value.signature = `${value.signature[0] === "A" ? "B" : "A"}${value.signature.slice(1)}`; validateOperatorEntitlement(value, operator, trust); }, "entitlement_invalid_signature"],
+  ["authentication unknown field", () => validateAuthenticationHeaders({ ...structuredClone(fixtures.get("authentication-headers.json")), unexpected: true }, contract), "unknown_field"],
+  ["capability unknown field", () => validateConnectionCapability({ ...structuredClone(fixtures.get("connection-capability.json")), unexpected: true }, contract), "unknown_field"],
+  ["record index unknown field", () => validateRecordIndex({ ...structuredClone(fixtures.get("bridge-record-index.json")), unexpected: true }, contract), "unknown_field"],
+  ["record show unknown field", () => validateRecordShow({ ...structuredClone(fixtures.get("from-discourse-record.json")), unexpected: true }, contract), "unknown_field"],
+  ["inventory unknown field", () => validateInventory({ ...structuredClone(fixtures.get("source-inventory-page.json")), unexpected: true }, contract), "unknown_field"],
+  ["source detail unknown field", () => validateSourceDetail({ ...structuredClone(fixtures.get("source-detail-inline.json")), unexpected: true }, contract), "unknown_field"],
+  ["URL proof unknown field", () => validateUrlProofResponse({ ...structuredClone(fixtures.get("source-url-proof.json")), unexpected: true }, contract), "unknown_field"],
+  ["revocation index unknown field", () => validateRevocationIndex({ ...structuredClone(fixtures.get("source-revocation-index.json")), unexpected: true }, contract), "unknown_field"],
+  ["revocation detail unknown field", () => validateRevocationDetail({ ...structuredClone(fixtures.get("source-revocation.json")), unexpected: true }, contract), "unknown_field"],
+  ["claim request unknown field", () => validateClaimRequest({ ...structuredClone(fixtures.get("publication-work-claim-request.json")), unexpected: true }, contract), "unknown_field"],
+  ["claim response unknown field", () => validateClaimResponse({ ...structuredClone(fixtures.get("publication-work-claim.json")), unexpected: true }, contract), "unknown_field"],
+  ["renewal unknown field", () => { const value = structuredClone(fixtures.get("publication-lease-renewal.json")); value.request.unexpected = true; validateRenewal(value, contract); }, "unknown_field"],
+  ["acknowledgement unknown field", () => validateAcknowledgement({ ...structuredClone(baseAck), unexpected: true }, contract), "unknown_field"],
+  ["acknowledgement response unknown field", () => validateAcknowledgementResponse({ ...structuredClone(fixtures.get("publication-acknowledgement-responses.json").verified), unexpected: true }, contract), "unknown_field"],
+  ["failure unknown field", () => validateFailure({ ...structuredClone(fixtures.get("publication-failure.json")), unexpected: true }, contract), "unknown_field"],
+  ["catalog unknown field", () => validateCatalogSegment({ ...structuredClone(fixtures.get("platform-catalog-authors.json")), unexpected: true }, contract), "unknown_field"],
+  ["error unknown field", () => validateErrorResponse({ ...structuredClone(fixtures.get("rejected-response.json")), unexpected: true }, contract), "unknown_field"],
+  ["operator entitlement unknown field", () => validateOperatorEntitlement({ ...structuredClone(validEntitlement), unexpected: true }, operator, trust), "unknown_field"],
+  ["operator audit unknown field", () => validateOperatorAudit({ ...structuredClone(fixtures.get("operator-enrollment-audit.json")), unexpected: true }, operator), "unknown_field"],
 ];
 for (const [name, operation, code] of mutationCases) {
   assert.throws(operation, (error) => error instanceof ProtocolError && error.code === code, `mutation ${name} must fail with ${code}`);

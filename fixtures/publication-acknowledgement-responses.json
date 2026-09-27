@@ -1,0 +1,6 @@
+{
+  "synchronized":{"work_id":"dbw_11111111111111111111111111111111","accepted_stage":"synchronized","resulting_state":"awaiting_deployment","terminal":false,"next_stage_token":"3333333333333333333333333333333333333333333333333333333333333333","correlation_id":"work-01"},
+  "deployed":{"work_id":"dbw_11111111111111111111111111111111","accepted_stage":"deployed","resulting_state":"awaiting_verification","terminal":false,"next_stage_token":"4444444444444444444444444444444444444444444444444444444444444444","correlation_id":"work-01"},
+  "verified":{"work_id":"dbw_11111111111111111111111111111111","accepted_stage":"verified","resulting_state":"acknowledged","terminal":true,"correlation_id":"work-01"},
+  "dynamic":{"work_id":"dbw_88888888888888888888888888888888","accepted_stage":"synchronized","resulting_state":"acknowledged","terminal":true,"correlation_id":"work-create-01"}
+}

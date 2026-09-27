@@ -1,0 +1,1 @@
+{"request":{"connection_id":"dbc_111111111111111111111111","platform_profile":"ghost","segment_type":"authors","catalog_revision":"catalog:ghost:2026-09-27:2"},"binding":{"connection_id":"dbc_111111111111111111111111","platform_profile":"ghost","segment_type":"authors","catalog_revision":"catalog:ghost:2026-09-27:1"},"expected_error":"cursor_snapshot_mismatch"}

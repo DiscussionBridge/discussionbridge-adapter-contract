@@ -1,0 +1,1 @@
+{"request":{"connection_id":"dbc_111111111111111111111111","high_water":"revocations:2","policy_revision":"policy:2026-09-27:1"},"binding":{"connection_id":"dbc_111111111111111111111111","high_water":"revocations:1","policy_revision":"policy:2026-09-27:1"},"expected_error":"cursor_snapshot_mismatch"}

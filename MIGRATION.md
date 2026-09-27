@@ -28,6 +28,15 @@ headers, fields, routes, or state.
    receiver schema migration identity, configuration revision, connection and
    destination-policy revisions, and consumer deployment identities.
 
+The exact cutover manifest fields are `manifest_id`, `adapter_protocol`,
+`shared_plugin`, `adapters`, `receiver_schema`, `configuration_revision`,
+`policy_revisions`, `consumer_identities`, and `correlation_id`.
+`adapter_protocol` and `shared_plugin` each require `version` and `sha256`;
+each adapter entry requires `profile`, `version`, and `sha256`. Every digest is
+the SHA-256 of the immutable artifact bytes. Preflight compares every installed
+and prepared identity with this manifest and rejects any mismatch before schema
+migration or content mutation.
+
 ## Receiver migration requirements
 
 The shared plugin migration begins from the Alpha.30 schema and runs in one

@@ -77,6 +77,16 @@
     "supported_operations": ["resolve", "inventory", "claim", "renew", "acknowledge", "fail", "revocations", "catalog"],
     "bounds_required_fields": ["resolve_json_bytes", "source_content_bytes", "claim_maximum_items", "lease_maximum_seconds", "catalog_segment_items"],
     "destination_policy_required_fields": ["destination_policy_id", "profile", "presentation_mode", "container_mapping", "taxonomy_mapping", "author_mapping", "native_limit_policy", "catalog_revision"],
+    "destination_policy_field_rules": {
+      "container_mapping_required_fields": ["source", "destination"],
+      "taxonomy_mapping_required_fields": ["mode"],
+      "taxonomy_mapping_optional_fields": ["items"],
+      "author_mapping_required_fields": ["mode"],
+      "author_mapping_optional_fields": ["destination_id", "items"],
+      "mapping_modes": ["mapped_only", "source_attribution"],
+      "native_limit_policy_required_fields": ["maximum_bytes", "overflow_behavior"],
+      "overflow_behaviors": ["complete", "excerpt_with_read_more", "operator_attention"]
+    },
     "authority_rule": "The response reports the authenticated connection's effective receiver policy. It never expands the stored connection scope, and the adapter cannot override it with request or catalog data.",
     "cache_control": "private, no-store",
     "etag_rule": "No capability response is reused across authentication, connection, or policy revision boundaries."
@@ -184,6 +194,8 @@
     "show_path": "/discussion-bridge/v1/bridge-records/{resource_id}.json",
     "maximum_page": 10000,
     "records_per_page": 100,
+    "index_required_response_fields": ["records", "page", "total_pages", "correlation_id"],
+    "show_required_response_fields": ["bridge_record", "correlation_id"],
     "required_record_fields": [
       "resource_id",
       "direction",
@@ -197,6 +209,7 @@
       "source_updated_at",
       "bindings"
     ],
+    "optional_record_fields": ["content_disposition", "content_transport"],
     "binding_states": [
       "pending",
       "active",
@@ -266,6 +279,7 @@
         "transitions",
         "correlation_id"
       ],
+      "transition_required_fields": ["old_url", "new_url", "redirect_status", "verified_at"],
       "identity_rule": "resource_id, topic_id, and source external_id are identical before and after every verified transition",
       "failure_rule": "Missing links, cycles, wrong ownership, destination collision, retired binding conflict, nonpermanent redirect, or over-limit ancestry fails closed as reconciliation_required.",
       "retired_url_rule": "Every replaced source URL remains reserved to the same resource until an explicit operator-approved rollback or retirement action.",
@@ -370,6 +384,8 @@
       "method": "POST",
       "path": "/discussion-bridge/v1/publication-work/claim.json",
       "request_fields": ["maximum_items", "requested_lease_seconds", "worker_id", "correlation_id"],
+      "request_required_fields": ["worker_id", "correlation_id"],
+      "request_optional_fields": ["maximum_items", "requested_lease_seconds"],
       "default_maximum_items": 1,
       "maximum_items": 32,
       "default_lease_seconds": 300,
@@ -404,6 +420,9 @@
         "correlation_id"
       ],
       "conditional_fields": ["deployed_at", "publicly_verified_at"],
+      "response_required_fields": ["work_id", "accepted_stage", "resulting_state", "terminal", "correlation_id"],
+      "response_conditional_fields": ["next_stage_token"],
+      "response_rule": "A nonterminal synchronized or deployed response requires next_stage_token and terminal false. A terminal dynamic synchronized or static verified response omits next_stage_token and requires terminal true. Exact request replay returns the same response.",
       "stages": ["synchronized", "deployed", "verified"],
       "rule": "Acknowledgement is accepted only for the exact work identity, current stage token, source revision, policy revision, destination policy, action, connection, and destination binding. The synchronized stage requires the active publication lease. Dynamic destinations finish at synchronized with deployment_state and verification_state not_required. Static destinations persist the exact destination binding and publication revision at synchronized, then receive a new stage token for deployed and verified acknowledgements; deployed_at is required at deployed and publicly_verified_at is required at verified.",
       "stage_transition_rule": "Stages are monotonic and idempotent for an exact request. synchronized may advance only to deployed; deployed only to verified. A stale stage token, skipped stage, changed binding/revision/policy, late acknowledgement after supersession, or repeated stage with different data fails closed without changing state.",
@@ -442,6 +461,12 @@
     "lease_token_pattern": "^[a-f0-9]{64}$",
     "stage_token_pattern": "^[a-f0-9]{64}$",
     "worker_id_maximum_bytes": 200,
+    "resolved_mapping_rules": {
+      "container_required_fields": ["id", "kind"],
+      "taxonomy_item_required_fields": ["source_id", "destination_id"],
+      "author_required_fields": ["mode", "destination_id"],
+      "native_limit_policy_required_fields": ["maximum_bytes", "overflow_behavior"]
+    },
     "actions": ["publish", "update", "hold", "unpublish", "restore"],
     "lifecycle_states": ["available", "leased", "awaiting_deployment", "awaiting_verification", "acknowledged", "retry_wait", "operator_attention", "superseded"],
     "lifecycle_transitions": {

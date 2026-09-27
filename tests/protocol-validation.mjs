@@ -68,10 +68,36 @@ export function validateConnectionCapability(value, contract) {
   if (value.allowed_presentation_modes.join("|") !== contract.configuration.presentation_modes.join("|")) fail("validation_failed");
   if (value.supported_operations.some((item) => !contract.connection_capability.supported_operations.includes(item))) fail("validation_failed");
   exactObject(value.bounds, contract.connection_capability.bounds_required_fields, [], "bounds");
-  if (value.bounds.source_content_bytes !== contract.common.source_content_maximum_bytes) fail("validation_failed");
+  const expectedBounds = {
+    resolve_json_bytes: contract.resolve.maximum_json_bytes,
+    source_content_bytes: contract.common.source_content_maximum_bytes,
+    claim_maximum_items: contract.publication_work.claim.maximum_items,
+    lease_maximum_seconds: contract.publication_work.claim.maximum_total_lease_seconds,
+    catalog_segment_items: contract.platform_catalog.maximum_items_per_segment,
+  };
+  for (const [field, expected] of Object.entries(expectedBounds)) if (value.bounds[field] !== expected) fail("validation_failed");
   if (!Array.isArray(value.destination_policies) || value.destination_policies.length === 0) fail("validation_failed");
-  for (const policy of value.destination_policies) exactObject(policy, contract.connection_capability.destination_policy_required_fields, [], "destination policy");
+  for (const policy of value.destination_policies) {
+    exactObject(policy, contract.connection_capability.destination_policy_required_fields, [], "destination policy");
+    if (!contract.profiles.includes(policy.profile)) fail("validation_failed");
+    validatePresentationMode(policy.presentation_mode, contract);
+    const rules = contract.connection_capability.destination_policy_field_rules;
+    exactObject(policy.container_mapping, rules.container_mapping_required_fields, [], "container mapping");
+    exactObject(policy.taxonomy_mapping, rules.taxonomy_mapping_required_fields, rules.taxonomy_mapping_optional_fields, "taxonomy mapping");
+    exactObject(policy.author_mapping, rules.author_mapping_required_fields, rules.author_mapping_optional_fields, "author mapping");
+    if (!rules.mapping_modes.includes(policy.taxonomy_mapping.mode) || !rules.mapping_modes.includes(policy.author_mapping.mode)) fail("validation_failed");
+    exactObject(policy.native_limit_policy, rules.native_limit_policy_required_fields, [], "native limit policy");
+    if (!Number.isSafeInteger(policy.native_limit_policy.maximum_bytes) || policy.native_limit_policy.maximum_bytes < 1 || !rules.overflow_behaviors.includes(policy.native_limit_policy.overflow_behavior)) fail("validation_failed");
+  }
   correlation(value.correlation_id, contract);
+}
+
+export function validateAuthenticationHeaders(value, contract) {
+  exactObject(value, [contract.authentication.connection_header, contract.authentication.secret_header, contract.authentication.contract_header, contract.common.correlation_header], [], "authentication headers");
+  pattern(value[contract.authentication.connection_header], contract.authentication.connection_id_pattern);
+  nonblank(value[contract.authentication.secret_header], 4096, contract.authentication.secret_header);
+  validateContractHeader(value, contract);
+  correlation(value[contract.common.correlation_header], contract);
 }
 
 export function validateResolveRecord(record, contract) {
@@ -101,6 +127,36 @@ export function validateResolveResponse(value, fields, contract) {
   exactObject(value, [...fields, "correlation_id"], [], "resolve response");
   correlation(value.correlation_id, contract);
   if (value.core_fallback !== false) fail("validation_failed");
+}
+
+export function validateRecord(record, contract) {
+  exactObject(record, contract.records.required_record_fields, contract.records.optional_record_fields, "bridge record");
+  positiveInteger(record.topic_id, "topic_id");
+  positiveInteger(record.source_revision_sequence, "source_revision_sequence");
+  timestamp(record.source_created_at, "source_created_at");
+  timestamp(record.source_updated_at, "source_updated_at");
+  if (!Array.isArray(record.bindings)) fail("validation_failed");
+  for (const binding of record.bindings) {
+    exactObject(binding, contract.records.destination_binding_fields, [], "destination binding");
+    pattern(binding.binding_id, contract.records.binding_id_pattern);
+    pattern(binding.connection_id, contract.authentication.connection_id_pattern);
+    validatePresentationMode(binding.presentation_mode, contract);
+  }
+}
+
+export function validateRecordIndex(value, contract) {
+  exactObject(value, contract.records.index_required_response_fields, [], "record index");
+  if (!Array.isArray(value.records) || value.records.length > contract.records.records_per_page) fail("validation_failed");
+  for (const record of value.records) validateRecord(record, contract);
+  positiveInteger(value.page, "page");
+  positiveInteger(value.total_pages, "total_pages");
+  correlation(value.correlation_id, contract);
+}
+
+export function validateRecordShow(value, contract) {
+  exactObject(value, contract.records.show_required_response_fields, [], "record show");
+  validateRecord(value.bridge_record, contract);
+  correlation(value.correlation_id, contract);
 }
 
 export function validateInventory(value, contract) {
@@ -135,6 +191,12 @@ export function validateSourceDetail(value, contract) {
   timestamp(value.source_created_at, "source_created_at");
   timestamp(value.source_updated_at, "source_updated_at");
   validatePresentationMode(value.presentation_mode, contract);
+  if (!Array.isArray(value.source_authors) || value.source_authors.length > contract.source_publication.detail.source_authors_maximum_items) fail("validation_failed");
+  if (!Array.isArray(value.categories) || value.categories.length > contract.source_publication.detail.categories_maximum_items) fail("validation_failed");
+  if (!Array.isArray(value.tags) || value.tags.length > contract.source_publication.detail.tags_maximum_items) fail("validation_failed");
+  for (const author of value.source_authors) exactObject(author, contract.authorship_and_taxonomy.source_author_fields, [], "source author");
+  for (const category of value.categories) exactObject(category, contract.authorship_and_taxonomy.category_fields, [], "source category");
+  for (const tag of value.tags) exactObject(tag, contract.authorship_and_taxonomy.tag_fields, [], "source tag");
   validateTransport(value.content_transport, contract);
   if (value.network_provenance !== null) validateNetwork(value.network_provenance, contract, null);
   correlation(value.correlation_id, contract);
@@ -166,11 +228,45 @@ export function validateWork(value, contract) {
   pattern(value.stage_token, contract.publication_work.stage_token_pattern, "stage_conflict", "stage_token");
   if (!contract.publication_work.actions.includes(value.action)) fail("validation_failed");
   validatePresentationMode(value.presentation_mode, contract);
+  const mappingRules = contract.publication_work.resolved_mapping_rules;
+  exactObject(value.resolved_container, mappingRules.container_required_fields, [], "resolved container");
+  if (!Array.isArray(value.resolved_taxonomy)) fail("validation_failed");
+  for (const item of value.resolved_taxonomy) exactObject(item, mappingRules.taxonomy_item_required_fields, [], "resolved taxonomy item");
+  exactObject(value.resolved_author, mappingRules.author_required_fields, [], "resolved author");
+  exactObject(value.native_limit_policy, mappingRules.native_limit_policy_required_fields, [], "native limit policy");
+  if (!Number.isSafeInteger(value.native_limit_policy.maximum_bytes) || value.native_limit_policy.maximum_bytes < 1) fail("validation_failed");
   positiveInteger(value.source_revision_sequence, "source_revision_sequence");
   if (!Number.isSafeInteger(value.attempt_count) || value.attempt_count < 1 || value.attempt_count > contract.publication_work.maximum_total_attempts) fail("validation_failed");
   if (!Number.isSafeInteger(value.retry_generation) || value.retry_generation < 0) fail("validation_failed");
   timestamp(value.lease_expires_at, "lease_expires_at");
   correlation(value.correlation_id, contract);
+}
+
+export function validateClaimRequest(value, contract) {
+  exactObject(value, contract.publication_work.claim.request_required_fields, contract.publication_work.claim.request_optional_fields, "claim request");
+  nonblank(value.worker_id, contract.publication_work.worker_id_maximum_bytes, "worker_id");
+  if (Object.hasOwn(value, "maximum_items") && (!Number.isSafeInteger(value.maximum_items) || value.maximum_items < 1 || value.maximum_items > contract.publication_work.claim.maximum_items)) fail("validation_failed");
+  if (Object.hasOwn(value, "requested_lease_seconds") && (!Number.isSafeInteger(value.requested_lease_seconds) || value.requested_lease_seconds < 1 || value.requested_lease_seconds > contract.publication_work.claim.maximum_requested_lease_seconds)) fail("validation_failed");
+  correlation(value.correlation_id, contract);
+}
+
+export function validateClaimResponse(value, contract) {
+  exactObject(value, contract.publication_work.claim.response_required_fields, [], "claim response");
+  if (!Array.isArray(value.publication_work) || value.publication_work.length > contract.publication_work.claim.maximum_items) fail("validation_failed");
+  for (const item of value.publication_work) validateWork(item, contract);
+  timestamp(value.claimed_at, "claimed_at");
+  correlation(value.correlation_id, contract);
+}
+
+export function validateRenewal(value, contract) {
+  exactObject(value.request, contract.publication_work.renew.required_fields, [], "renewal request");
+  exactObject(value.response, contract.publication_work.renew.response_required_fields, [], "renewal response");
+  pattern(value.request.lease_token, contract.publication_work.lease_token_pattern, "reconciliation_required", "lease_token");
+  if (!Number.isSafeInteger(value.request.requested_lease_seconds) || value.request.requested_lease_seconds < 1 || value.request.requested_lease_seconds > contract.publication_work.claim.maximum_requested_lease_seconds) fail("validation_failed");
+  pattern(value.response.work_id, contract.publication_work.work_id_pattern);
+  timestamp(value.response.lease_expires_at, "lease_expires_at");
+  validateLeaseRenewal(0, value.response.total_lease_seconds, contract.publication_work.claim.maximum_total_lease_seconds);
+  if (value.request.correlation_id !== value.response.correlation_id) fail("validation_failed");
 }
 
 export function validateAcknowledgement(value, contract) {
@@ -196,6 +292,8 @@ export function validateAcknowledgement(value, contract) {
   }
   exactObject(value.destination_binding, ["binding_id", "external_id", "canonical_url", "publication_revision", "content_disposition"], [], "destination_binding");
   pattern(value.destination_binding.binding_id, contract.records.binding_id_pattern);
+  for (const field of ["external_id", "canonical_url", "publication_revision"]) nonblank(value.destination_binding[field], 2048, `destination_binding.${field}`);
+  if (!["complete", "excerpt"].includes(value.destination_binding.content_disposition)) fail("validation_failed");
   correlation(value.correlation_id, contract);
 }
 
@@ -207,6 +305,22 @@ export function validateStageTransition(previous, next) {
   }
   if (canonicalize(previous.destination_binding) !== canonicalize(next.destination_binding)) fail("identity_conflict");
   if (previous.stage_token === next.stage_token) fail("stage_conflict");
+}
+
+export function validateAcknowledgementResponse(value, contract) {
+  exactObject(value, contract.publication_work.acknowledgement.response_required_fields, contract.publication_work.acknowledgement.response_conditional_fields, "acknowledgement response");
+  pattern(value.work_id, contract.publication_work.work_id_pattern);
+  if (!contract.publication_work.acknowledgement.stages.includes(value.accepted_stage)) fail("stage_conflict");
+  if (typeof value.terminal !== "boolean") fail("validation_failed");
+  if (value.terminal) {
+    if (value.resulting_state !== "acknowledged" || Object.hasOwn(value, "next_stage_token")) fail("stage_conflict");
+  } else {
+    if (!Object.hasOwn(value, "next_stage_token")) fail("stage_conflict");
+    pattern(value.next_stage_token, contract.publication_work.stage_token_pattern, "stage_conflict", "next_stage_token");
+    const expected = value.accepted_stage === "synchronized" ? "awaiting_deployment" : "awaiting_verification";
+    if (value.resulting_state !== expected) fail("stage_conflict");
+  }
+  correlation(value.correlation_id, contract);
 }
 
 export function validateFailure(value, contract) {
@@ -230,6 +344,7 @@ export function validateCatalogSegment(value, contract) {
     if (ids.has(item.id)) fail("validation_failed");
     ids.add(item.id);
     if (typeof item.available !== "boolean") fail("validation_failed");
+    if (value.segment_type === "native_limits" && (!Number.isSafeInteger(item.maximum_bytes) || item.maximum_bytes < 1 || !["complete", "excerpt_with_read_more", "operator_attention"].includes(item.overflow_behavior))) fail("validation_failed");
   }
   correlation(value.correlation_id, contract);
 }
@@ -242,6 +357,18 @@ export function validateCatalogUpdate(value, contract, currentRevision = null) {
   for (const segment of value.request.segments) {
     exactObject(segment, contract.platform_catalog.segment_required_fields, [], "catalog update segment");
     if (!contract.platform_catalog.segment_types.includes(segment.segment_type)) fail("validation_failed");
+  }
+}
+
+export function validateCatalogCursor(request, binding) {
+  for (const field of ["connection_id", "platform_profile", "segment_type", "catalog_revision"]) {
+    if (request[field] !== binding[field]) fail("cursor_snapshot_mismatch");
+  }
+}
+
+export function validateRevocationCursor(request, binding) {
+  for (const field of ["connection_id", "high_water", "policy_revision"]) {
+    if (request[field] !== binding[field]) fail("cursor_snapshot_mismatch");
   }
 }
 
@@ -280,13 +407,23 @@ export function validateErrorResponse(value, contract, protectedValues = []) {
 }
 
 export function validateNetwork(value, contract, localForumId) {
-  object(value, "network provenance");
-  for (const field of contract.discourse_network.required_provenance_fields) if (!Object.hasOwn(value, field)) fail("validation_failed");
+  exactObject(value, contract.discourse_network.required_provenance_fields, [], "network provenance");
   if (!contract.discourse_network.relationships.includes(value.relationship)) fail("direction_denied");
   if (!contract.discourse_network.managed_scopes.includes(value.managed_scope)) fail("scope_denied");
   if (!Array.isArray(value.route_forum_ids) || value.route_forum_ids.length > contract.discourse_network.route_maximum_forums || new Set(value.route_forum_ids).size !== value.route_forum_ids.length) fail("validation_failed");
   if (localForumId && value.origin_forum_id === localForumId) fail("direction_denied");
   if (localForumId && value.route_forum_ids.includes(localForumId)) fail("scope_denied");
+}
+
+export function validateNetworkRoute(value, contract) {
+  exactObject(value, ["authenticated_sender_forum_id", "local_forum_id", "authorized_peer", "route_before", "route_after", "correlation_id"], [], "network route append");
+  if (value.authorized_peer !== true) fail("direction_denied");
+  if (!Array.isArray(value.route_before) || !Array.isArray(value.route_after) || value.route_before.length === 0) fail("validation_failed");
+  if (value.route_before.at(-1) !== value.authenticated_sender_forum_id) fail("direction_denied");
+  if (value.route_before.includes(value.local_forum_id)) fail("scope_denied");
+  if (canonicalize(value.route_after) !== canonicalize([...value.route_before, value.local_forum_id])) fail("validation_failed");
+  if (value.route_after.length > contract.discourse_network.route_maximum_forums) fail("validation_failed");
+  correlation(value.correlation_id, contract);
 }
 
 export function validateReplay(stored, replay) {
@@ -302,6 +439,13 @@ export function validateForumClone(existingForumId, cloneForumId, rotatedAndReau
 export function validateOperatorEntitlement(entitlement, operator, trust, context = {}) {
   exactObject(entitlement, operator.entitlement.required_fields, [], "operator entitlement");
   if (entitlement.entitlement_version !== operator.entitlement.entitlement_version) fail("entitlement_invalid_signature");
+  pattern(entitlement.entitlement_id, operator.entitlement.entitlement_id_pattern, "entitlement_invalid_signature");
+  pattern(entitlement.provider_id, operator.entitlement.provider_id_pattern, "entitlement_invalid_signature");
+  pattern(entitlement.forum_id, operator.entitlement.forum_id_pattern, "entitlement_invalid_signature");
+  pattern(entitlement.issuer_id, operator.entitlement.issuer_id_pattern, "entitlement_invalid_signature");
+  nonblank(entitlement.provider_name, operator.entitlement.provider_name_maximum_bytes, "provider_name");
+  nonblank(entitlement.key_id, operator.entitlement.key_id_maximum_bytes, "key_id");
+  if (!Array.isArray(entitlement.scopes) || entitlement.scopes.length === 0) fail("scope_denied");
   const signature = entitlement.signature;
   if (!base64urlPattern.test(signature) || signature.includes("=") || Buffer.from(signature, "base64url").length !== operator.entitlement.signature_decoded_bytes) fail("entitlement_invalid_signature");
   const trustKey = trust?.[`${entitlement.issuer_id}:${entitlement.key_id}`];
@@ -315,6 +459,9 @@ export function validateOperatorEntitlement(entitlement, operator, trust, contex
   if (!verify(null, message, publicKey, Buffer.from(signature, "base64url"))) fail("entitlement_invalid_signature");
   for (const scope of entitlement.scopes) if (!operator.entitlement.allowed_scopes.includes(scope)) fail("scope_denied");
   for (const field of ["issued_at", "not_before", "expires_at", "grace_until"]) timestamp(entitlement[field], field);
+  if (Date.parse(entitlement.not_before) < Date.parse(entitlement.issued_at)) fail("validation_failed");
+  if (Date.parse(entitlement.expires_at) <= Date.parse(entitlement.not_before) || (Date.parse(entitlement.expires_at) - Date.parse(entitlement.issued_at)) / 1000 > operator.entitlement.maximum_lifetime_seconds) fail("validation_failed");
+  if (Date.parse(entitlement.grace_until) < Date.parse(entitlement.expires_at) || (Date.parse(entitlement.grace_until) - Date.parse(entitlement.expires_at)) / 1000 > operator.entitlement.maximum_grace_seconds) fail("validation_failed");
   if (context.forumId && context.forumId !== entitlement.forum_id) fail("entitlement_wrong_forum");
   if (context.state === "revoked") fail("entitlement_revoked");
   if (context.state === "replaced") fail("entitlement_replaced");
@@ -359,6 +506,32 @@ export function validateAcknowledgementIdentity(work, acknowledgement, state = "
 
 export function validateUrlProof(value) {
   if (!value.transitions.length || value.transitions.at(-1).new_url !== value.to_url) fail("reconciliation_required");
+  if (value.transitions[0].old_url !== value.from_url) fail("reconciliation_required");
+  for (let index = 1; index < value.transitions.length; index += 1) {
+    if (value.transitions[index - 1].new_url !== value.transitions[index].old_url) fail("reconciliation_required");
+  }
+}
+
+export function validateUrlProofResponse(value, contract) {
+  exactObject(value, contract.records.source_url_migration_attestation.required_response_fields, [], "source URL proof");
+  if (!Array.isArray(value.transitions) || value.transitions.length > contract.records.source_url_migration_attestation.maximum_transitions) fail("validation_failed");
+  for (const transition of value.transitions) {
+    exactObject(transition, contract.records.source_url_migration_attestation.transition_required_fields, [], "source URL transition");
+    if (!contract.records.source_url_migration_attestation.permanent_redirect_statuses.includes(transition.redirect_status)) fail("reconciliation_required");
+    timestamp(transition.verified_at, "transition.verified_at");
+  }
+  if (value.transition_count !== value.transitions.length) fail("validation_failed");
+  timestamp(value.verified_at, "verified_at");
+  correlation(value.correlation_id, contract);
+  validateUrlProof(value);
+}
+
+export function validateOperatorAudit(value, operator) {
+  exactObject(value, operator.audit.required_fields, [], "operator audit");
+  pattern(value.event_id, operator.audit.event_id_pattern);
+  pattern(value.operation_sha256, operator.audit.operation_sha256_pattern);
+  timestamp(value.occurred_at, "occurred_at");
+  if (!operator.audit.outcomes.includes(value.outcome)) fail("validation_failed");
 }
 
 export function validateDestinationCollision(value) {
@@ -375,4 +548,15 @@ export function validateContractHeader(headers, contract) {
 
 export function validateEntitlementTime(value) {
   if (Date.parse(value.request_at) > Date.parse(value.entitlement.grace_until)) fail("entitlement_expired");
+}
+
+export function validateCutoverManifest(value, contract) {
+  exactObject(value, ["manifest_id", "adapter_protocol", "shared_plugin", "adapters", "receiver_schema", "configuration_revision", "policy_revisions", "consumer_identities", "correlation_id"], [], "cutover manifest");
+  exactObject(value.adapter_protocol, ["version", "sha256"], [], "adapter protocol artifact");
+  exactObject(value.shared_plugin, ["version", "sha256"], [], "shared plugin artifact");
+  if (!Array.isArray(value.adapters) || value.adapters.length === 0) fail("validation_failed");
+  for (const adapter of value.adapters) exactObject(adapter, ["profile", "version", "sha256"], [], "adapter artifact");
+  for (const artifact of [value.adapter_protocol, value.shared_plugin, ...value.adapters]) pattern(artifact.sha256, contract.common.sha256_pattern);
+  if (value.adapter_protocol.version !== contract.version) fail("validation_failed");
+  correlation(value.correlation_id, contract);
 }

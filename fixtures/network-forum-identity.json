@@ -5,5 +5,6 @@
   "restore_behavior":"preserve",
   "clone_behavior":"disabled_until_rotated_and_reauthorized",
   "automatic_rotation":false,
+  "approved_rotation":{"old_forum_id":"dbf_22222222222222222222222222222222","new_forum_id":"dbf_33333333333333333333333333333333","customer_approved":true,"audited":true,"peers_require_reauthorization":true},
   "correlation_id":"network-identity-01"
 }
