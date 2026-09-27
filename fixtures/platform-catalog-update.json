@@ -1,0 +1,14 @@
+{
+  "request": {
+    "platform_profile": "ghost",
+    "base_catalog_revision": "catalog:ghost:2026-09-27:1",
+    "segments": [{"segment_type":"authors","items":[{"id":"ghost:author:editor","name":"Editor","available":true}]}],
+    "correlation_id": "catalog-update-01"
+  },
+  "response": {
+    "catalog_revision": "catalog:ghost:2026-09-27:2",
+    "platform_profile": "ghost",
+    "accepted_segments": ["authors"],
+    "correlation_id": "catalog-update-01"
+  }
+}

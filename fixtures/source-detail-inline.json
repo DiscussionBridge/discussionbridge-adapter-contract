@@ -36,5 +36,6 @@
     "sha256": "6a53e7c575a7b194305b793db9d549e43effbc443e3a9106629b2305884c63e6",
     "content_html": "<p>This discussion started in Discourse.</p>"
   },
-  "network_provenance": null
+  "network_provenance": null,
+  "correlation_id": "source-detail-inline-01"
 }

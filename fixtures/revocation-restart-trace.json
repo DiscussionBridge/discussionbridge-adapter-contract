@@ -1,0 +1,7 @@
+{
+  "page_one":{"high_water":"revocations:2026-09-27T19:00:00Z","revocation_ids":["dbr_11111111111111111111111111111111"],"next_cursor":"revocation-page-2"},
+  "page_two":{"high_water":"revocations:2026-09-27T19:00:00Z","revocation_ids":["dbr_22222222222222222222222222222222"],"next_cursor":null,"complete":true},
+  "restart":{"new_high_water":"revocations:2026-09-27T20:00:00Z","deduplicate_by":"revocation_id","read_does_not_acknowledge":true},
+  "delivery_acknowledgement":"publication-work-staged-acknowledgement",
+  "correlation_id":"revocation-restart-01"
+}

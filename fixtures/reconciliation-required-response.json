@@ -6,6 +6,7 @@
   "topic_url": null,
   "direction": "to_discourse",
   "conflict_fields": ["external_id", "canonical_url"],
-  "core_fallback": false
+  "core_fallback": false,
+  "correlation_id": "resolve-conflict-01"
 }
 

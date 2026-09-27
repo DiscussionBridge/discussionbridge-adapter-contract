@@ -1,0 +1,8 @@
+{
+  "issuer_id": "dbi_11111111111111111111111111111111",
+  "key_id": "discussionbridge-operator-2026-01",
+  "public_key_base64url": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+  "signing_domain": "DiscussionBridge-Operator-Service-Entitlement-v1\n",
+  "canonical_json": "{\"entitlement_id\":\"dbe_11111111111111111111111111111111\",\"entitlement_version\":1,\"expires_at\":\"2027-09-27T18:00:00Z\",\"forum_id\":\"dbf_11111111111111111111111111111111\",\"grace_until\":\"2027-10-04T18:00:00Z\",\"issued_at\":\"2026-09-27T18:00:00Z\",\"issuer_id\":\"dbi_11111111111111111111111111111111\",\"key_id\":\"discussionbridge-operator-2026-01\",\"not_before\":\"2026-09-27T18:00:00Z\",\"provider_id\":\"dbp_11111111111111111111111111111111\",\"provider_name\":\"DiscussionBridge\",\"scopes\":[\"observe_health\",\"observe_publication\",\"retry_retryable_work\"]}",
+  "signature": "CoWk_EEtcpo-d8IT32Ak2nMFIkn8XfsWOoHzKoGGerbc-Dw7R6e1w9McdDHeWRiv9VNgsJ06upJu1OAUlLg_AA"
+}

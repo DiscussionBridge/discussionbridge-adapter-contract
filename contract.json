@@ -48,6 +48,9 @@
     "correlation_id_maximum_bytes": 200,
     "error_detail_maximum_bytes": 2048,
     "network_route_maximum_forums": 8,
+    "source_content_maximum_bytes": 16777216,
+    "correlation_header": "X-DiscussionBridge-Correlation",
+    "correlation_rule": "Every request supplies one nonblank correlation identifier in X-DiscussionBridge-Correlation. Every success or error response echoes that exact identifier in both the response header and correlation_id body field. A body correlation_id, when the endpoint has a request body, is required and must exactly equal the header; mismatch fails before mutation.",
     "request_object_rule": "Unknown request fields are rejected unless an endpoint explicitly declares an extensible metadata object.",
     "timestamp_null_rule": "A required timestamp is never null. An optional event timestamp is absent until the event occurs; JSON null is not a substitute."
   },
@@ -60,11 +63,20 @@
       "enabled",
       "directions",
       "lanes",
-      "forum_name",
       "allowed_presentation_modes",
+      "supported_operations",
+      "bounds",
+      "destination_policies",
       "catalog_required",
-      "policy_revision"
+      "policy_revision",
+      "correlation_id"
     ],
+    "conditional_fields": {
+      "forum_name": "required when directions includes from_discourse or the connection enables discourse_network; otherwise absent or a nonblank configured label"
+    },
+    "supported_operations": ["resolve", "inventory", "claim", "renew", "acknowledge", "fail", "revocations", "catalog"],
+    "bounds_required_fields": ["resolve_json_bytes", "source_content_bytes", "claim_maximum_items", "lease_maximum_seconds", "catalog_segment_items"],
+    "destination_policy_required_fields": ["destination_policy_id", "profile", "presentation_mode", "container_mapping", "taxonomy_mapping", "author_mapping", "native_limit_policy", "catalog_revision"],
     "authority_rule": "The response reports the authenticated connection's effective receiver policy. It never expands the stored connection scope, and the adapter cannot override it with request or catalog data.",
     "cache_control": "private, no-store",
     "etag_rule": "No capability response is reused across authentication, connection, or policy revision boundaries."
@@ -128,6 +140,7 @@
       "source_author_name_maximum_bytes": 200,
       "existing_topic_id": "positive signed 64-bit integer; accepted only for an exact available unlisted Discourse Core embed of canonical_url"
     },
+    "source_content_maximum_bytes": 16777216,
     "revision_rules": [
       "The stable platform-native external_id is independent of canonical_url.",
       "An exact source_revision replay is idempotent.",
@@ -151,7 +164,8 @@
       "direction",
       "accepted_source_revision",
       "accepted_source_revision_sequence",
-      "core_fallback"
+      "core_fallback",
+      "correlation_id"
     ],
     "reconciliation_response_required_fields": [
       "outcome",
@@ -161,7 +175,8 @@
       "topic_url",
       "direction",
       "conflict_fields",
-      "core_fallback"
+      "core_fallback",
+      "correlation_id"
     ]
   },
   "records": {
@@ -248,7 +263,8 @@
         "verified",
         "transition_count",
         "verified_at",
-        "transitions"
+        "transitions",
+        "correlation_id"
       ],
       "identity_rule": "resource_id, topic_id, and source external_id are identical before and after every verified transition",
       "failure_rule": "Missing links, cycles, wrong ownership, destination collision, retired binding conflict, nonpermanent redirect, or over-limit ancestry fails closed as reconciliation_required.",
@@ -267,7 +283,7 @@
       "cursor": "opaque, connection-scoped, restart-safe, and bound to one immutable snapshot and policy_revision",
       "minimum_snapshot_retention_seconds": 2592000,
       "inactivity_expiry_rule": "The receiver retains a snapshot for at least 30 days after its most recent successful page read. Expiry returns HTTP 410 snapshot_expired without mutating publication state; the adapter starts a new snapshot and deduplicates by stable resource_id and source_revision.",
-      "required_response_fields": ["snapshot", "policy_revision", "items", "next_cursor", "complete"],
+      "required_response_fields": ["snapshot", "policy_revision", "items", "next_cursor", "complete", "correlation_id"],
       "required_item_fields": ["resource_id", "topic_id", "topic_url", "title", "source_revision", "source_revision_sequence", "source_created_at", "source_updated_at"],
       "high_water_rule": "A completed snapshot fixes the initial high-water mark. Later changes arrive through publication work and are not hidden by reopening the snapshot."
     },
@@ -290,12 +306,14 @@
         "presentation_mode",
         "content_transport",
         "content_disposition",
-        "network_provenance"
+        "network_provenance",
+        "correlation_id"
       ],
       "source_authors_maximum_items": 20,
       "categories_maximum_items": 20,
       "tags_maximum_items": 100,
-      "revision_rule": "The receiver returns the requested exact revision or HTTP 410 revision_superseded / HTTP 404 revision_not_found; it never substitutes a different revision silently."
+      "revision_rule": "The receiver returns the requested exact revision while any available, leased, retry_wait, operator_attention, deployment-pending, verification-pending, or recoverable work references it. After every such reference is terminal and retention permits removal, HTTP 410 revision_superseded may replace it; an unknown revision returns HTTP 404 revision_not_found. The receiver never substitutes a different revision silently.",
+      "maximum_source_content_bytes": 16777216
     },
     "content_transport": {
       "inline": {
@@ -322,7 +340,8 @@
           "chunk_count",
           "decoded_bytes",
           "chunk_sha256",
-          "content_base64"
+          "content_base64",
+          "correlation_id"
         ],
         "integrity_rule": "The adapter verifies every decoded chunk hash, exact total byte_length, and the complete SHA-256 before parsing or publishing the reassembled UTF-8 HTML.",
         "total_size_rule": "The protocol imposes no universal destination-content ceiling; each response is bounded and the finite exact source byte_length governs completion."
@@ -332,10 +351,15 @@
       "method": "GET",
       "index_path": "/discussion-bridge/v1/source-revocations.json",
       "show_path": "/discussion-bridge/v1/source-revocations/{resource_id}.json",
-      "query": ["cursor", "limit"],
+      "query": ["cursor", "limit", "high_water"],
       "default_limit": 25,
       "maximum_limit": 100,
-      "required_fields": ["resource_id", "source_revision", "source_revision_sequence", "reason", "effective_at", "restorable"],
+      "index_required_fields": ["high_water", "policy_revision", "items", "next_cursor", "complete", "correlation_id"],
+      "item_required_fields": ["revocation_id", "resource_id", "source_revision", "source_revision_sequence", "reason", "effective_at", "restorable"],
+      "detail_required_fields": ["revocation_id", "resource_id", "source_revision", "source_revision_sequence", "reason", "effective_at", "restorable", "affected_binding_ids", "policy_revision", "correlation_id"],
+      "revocation_id_pattern": "^dbr_[a-f0-9]{32}$",
+      "cursor_rule": "The opaque cursor is connection-scoped and bound to one immutable high_water and policy_revision. A resumed request must send the same high_water; mismatch returns cursor_snapshot_mismatch.",
+      "restart_rule": "After cursor expiry or loss, the adapter restarts without a cursor, receives a new high_water, and deduplicates by revocation_id. Reading the feed does not acknowledge delivery; hold, unpublish, or restore work and its staged acknowledgement are the only delivery acknowledgement.",
       "reasons": ["source_unpublished", "source_deleted", "scope_removed", "policy_removed", "operator_hold"],
       "retention_rule": "A revocation remains readable until every affected destination binding acknowledges it or is retired, and never for less than 90 days after effective_at.",
       "restore_rule": "Restoration is a new higher source revision delivered as restore work against the same resource and destination identity."
@@ -369,7 +393,10 @@
         "source_revision",
         "source_revision_sequence",
         "policy_revision",
+        "destination_policy_id",
         "action",
+        "stage",
+        "stage_token",
         "destination_binding",
         "synchronized_at",
         "deployment_state",
@@ -377,7 +404,10 @@
         "correlation_id"
       ],
       "conditional_fields": ["deployed_at", "publicly_verified_at"],
-      "rule": "Acknowledgement is accepted only for the exact active lease, source revision, policy revision, action, connection, and destination binding after the native operation succeeds. Dynamic destinations use deployment_state not_required. Static destinations remain pending until deployed; deployed_at is required for deployed, and publicly_verified_at is required only after the exact deployed revision is verified."
+      "stages": ["synchronized", "deployed", "verified"],
+      "rule": "Acknowledgement is accepted only for the exact work identity, current stage token, source revision, policy revision, destination policy, action, connection, and destination binding. The synchronized stage requires the active publication lease. Dynamic destinations finish at synchronized with deployment_state and verification_state not_required. Static destinations persist the exact destination binding and publication revision at synchronized, then receive a new stage token for deployed and verified acknowledgements; deployed_at is required at deployed and publicly_verified_at is required at verified.",
+      "stage_transition_rule": "Stages are monotonic and idempotent for an exact request. synchronized may advance only to deployed; deployed only to verified. A stale stage token, skipped stage, changed binding/revision/policy, late acknowledgement after supersession, or repeated stage with different data fails closed without changing state.",
+      "static_recovery_rule": "Lease expiry after synchronized does not discard the persisted binding or return publication work to native mutation. The receiver exposes the same work at awaiting_deployment or awaiting_verification with a new bounded stage token until verified, failed into retry_wait, or placed in operator_attention."
     },
     "failure": {
       "method": "PUT",
@@ -394,34 +424,50 @@
       "source_revision",
       "source_revision_sequence",
       "policy_revision",
+      "destination_policy_id",
+      "catalog_revision",
       "presentation_mode",
+      "resolved_container",
+      "resolved_taxonomy",
+      "resolved_author",
+      "native_limit_policy",
       "lease_token",
+      "stage_token",
       "lease_expires_at",
       "attempt_count",
+      "retry_generation",
       "correlation_id"
     ],
     "work_id_pattern": "^dbw_[a-f0-9]{32}$",
     "lease_token_pattern": "^[a-f0-9]{64}$",
+    "stage_token_pattern": "^[a-f0-9]{64}$",
     "worker_id_maximum_bytes": 200,
-    "actions": ["publish", "update", "hold", "unpublish", "restore", "verify"],
-    "lifecycle_states": ["available", "leased", "acknowledged", "retry_wait", "operator_attention", "superseded"],
+    "actions": ["publish", "update", "hold", "unpublish", "restore"],
+    "lifecycle_states": ["available", "leased", "awaiting_deployment", "awaiting_verification", "acknowledged", "retry_wait", "operator_attention", "superseded"],
     "lifecycle_transitions": {
       "available": ["leased", "superseded"],
-      "leased": ["acknowledged", "retry_wait", "available", "operator_attention", "superseded"],
+      "leased": ["awaiting_deployment", "acknowledged", "retry_wait", "available", "operator_attention"],
+      "awaiting_deployment": ["awaiting_verification", "retry_wait", "operator_attention", "superseded"],
+      "awaiting_verification": ["acknowledged", "retry_wait", "operator_attention", "superseded"],
       "acknowledged": [],
       "retry_wait": ["available", "operator_attention", "superseded"],
       "operator_attention": ["available", "superseded"],
       "superseded": []
     },
-    "maximum_automatic_attempts": 3,
+    "initial_attempts": 1,
+    "maximum_automatic_retries": 3,
+    "maximum_total_attempts": 4,
     "retry_backoff_seconds": [60, 300, 900],
     "rules": [
-      "Only one worker may own an item during an active lease.",
+      "Only one worker may own an item during an active lease. A claimed item supplies the synchronized-stage token. Each accepted nonterminal static acknowledgement atomically returns the next stage token and invalidates the prior token; replay of the exact accepted request is idempotent, while reuse with different data fails stage_conflict.",
       "Expired unacknowledged work returns to available or retry_wait without changing destination identity.",
-      "A changed source or policy revision supersedes unacknowledged older work and never mutates its active lease.",
+      "Work is serialized per destination binding: only one revision may perform a native mutation for a binding at a time.",
+      "A changed source, policy, or destination-policy revision may supersede older available or retry_wait work immediately. It never mutates an active lease: the leased attempt may finish or expire, after which it becomes superseded and the newer work becomes available. A late acknowledgement for superseded work fails closed.",
+      "The receiver retains the exact source revision and content chunks until every work, retry, static stage, and recovery reference to it is terminal.",
       "A worker never invents a replacement Bridge Record, topic, or native object after conflict.",
       "After initial synchronization, recurring workers consume publication work instead of rescanning the complete source corpus.",
-      "Manual retry requires an authorized operator action, preserves the same work/resource/destination identity, creates a new lease only after the terminal condition is corrected, and never retries authentication, scope, identity, collision, or reconciliation failures unchanged."
+      "The initial attempt is attempt_count 1. Retryable failures after attempts 1, 2, and 3 schedule automatic retries after 60, 300, and 900 seconds. A retryable failure on attempt 4 enters operator_attention and schedules no retry.",
+      "Manual retry requires an authorized operator action and proof that the terminal condition was corrected. It preserves work_id, resource, revision, policy, and destination identity; increments retry_generation by exactly one; returns the item to available with attempt_count 1 for that generation; and never retries authentication, scope, identity, collision, or reconciliation failures unchanged."
     ]
   },
   "failure_registry": {
@@ -473,8 +519,22 @@
     "update_path": "/discussion-bridge/v1/platform-catalog.json",
     "maximum_json_bytes": 65536,
     "maximum_items_per_segment": 100,
-    "required_segment_fields": ["catalog_revision", "platform_profile", "segment_type", "items", "next_cursor", "complete"],
+    "get_query": ["platform_profile", "segment_type", "cursor", "limit", "catalog_revision"],
+    "get_required_response_fields": ["catalog_revision", "platform_profile", "segment_type", "items", "next_cursor", "complete", "correlation_id"],
+    "put_required_request_fields": ["platform_profile", "base_catalog_revision", "segments", "correlation_id"],
+    "put_required_response_fields": ["catalog_revision", "platform_profile", "accepted_segments", "correlation_id"],
+    "segment_required_fields": ["segment_type", "items"],
     "segment_types": ["containers", "taxonomies", "terms", "authors", "presentation_modes", "native_limits"],
+    "item_schemas": {
+      "containers": ["id", "name", "kind", "available"],
+      "taxonomies": ["id", "name", "hierarchical", "available"],
+      "terms": ["id", "taxonomy_id", "name", "parent_id", "available"],
+      "authors": ["id", "name", "available"],
+      "presentation_modes": ["id", "name", "available"],
+      "native_limits": ["id", "name", "maximum_bytes", "overflow_behavior", "available"]
+    },
+    "id_rule": "Every item ID is a stable platform-native opaque string and is never reassigned. Removed items remain present with available false while referenced by any policy.",
+    "update_rule": "PUT atomically replaces only the supplied complete segments when base_catalog_revision equals the current revision. Partial segment pages, unknown segment types, unstable IDs, or stale base revisions fail without changing the catalog.",
     "purpose": "Bounded descriptive discovery before an operator creates or updates mapping policy.",
     "authority_rule": "Catalog data cannot authorize a destination, expand connection scope, select presentation, create work, or alter an existing mapping. Operator-approved policy references an exact catalog_revision.",
     "cursor_rule": "Segment cursors are opaque and bound to connection, platform_profile, segment_type, and catalog_revision.",
@@ -514,6 +574,18 @@
     "operation_id_pattern": "^dbo_[a-f0-9]{32}$",
     "origin_forum_name_maximum_bytes": 200,
     "route_maximum_forums": 8,
+    "forum_identity": {
+      "creation_rule": "The shared Discourse plugin generates one cryptographically random forum_id exactly once when network publication is explicitly enabled and stores it in protected persistent forum state.",
+      "restore_rule": "A normal restore preserves forum_id. A deliberate clone must remain network-disabled until an operator rotates the clone to a new forum_id and reauthorizes every peer; the original ID remains reserved in replay history.",
+      "rotation_rule": "Rotation is explicit, customer-approved, audited, and invalidates existing peer authorization until re-enrolled. It never occurs automatically during rebuild, upgrade, restore, or hostname change."
+    },
+    "operation_replay": {
+      "ledger_key": "origin_forum_id plus operation_id",
+      "retention_seconds": 31536000,
+      "idempotency_rule": "An exact replay with identical source revision, content hash, route, relationship, managed scope, and policy returns the retained prior result without a second mutation.",
+      "mismatch_rule": "Reuse of an operation_id with any different immutable field returns operation_replay_mismatch and does not mutate.",
+      "append_rule": "The authenticated immediate sender must equal the final route_forum_ids entry. The receiver rejects self-origin, any repeated route ID, an unauthorized peer or direction, and an over-limit route before appending its own forum_id exactly once to the persisted result."
+    },
     "rules": [
       "A forum rejects an operation that originated from or already visited its own forum_id.",
       "A repeated forum_id, over-limit route, wrong relationship, or unsupported managed scope fails closed.",
@@ -528,13 +600,14 @@
     "content_type": "application/json",
     "maximum_json_bytes": 4096,
     "required_fields": ["error_code", "message", "correlation_id"],
+    "correlation_rule": "The response header and body correlation_id both exactly echo the accepted request correlation identifier, including authentication, validation, conflict, and internal-error responses. If no safe request identifier can be parsed, the server generates one and uses it consistently in both places.",
     "message_rule": "Human-readable message is sanitized and bounded; it never contains Content Connection secrets, Operator Service credentials, lease tokens, signing material, or protected response bodies.",
     "statuses": {
       "400": ["invalid_json", "unknown_field", "malformed_value"],
       "401": ["authentication_failed", "contract_version_mismatch"],
       "403": ["scope_denied", "direction_denied", "policy_denied"],
       "404": ["not_found", "revision_not_found"],
-      "409": ["reconciliation_required", "revision_conflict", "identity_conflict", "destination_collision", "lease_conflict", "work_superseded", "catalog_revision_conflict", "cursor_snapshot_mismatch"],
+      "409": ["reconciliation_required", "revision_conflict", "identity_conflict", "destination_collision", "lease_conflict", "work_superseded", "catalog_revision_conflict", "cursor_snapshot_mismatch", "stage_conflict", "operation_replay_mismatch"],
       "410": ["snapshot_expired", "revision_superseded", "work_expired", "url_retired"],
       "413": ["request_too_large"],
       "415": ["unsupported_media_type"],

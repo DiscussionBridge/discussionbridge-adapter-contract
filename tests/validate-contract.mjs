@@ -1,633 +1,317 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  ProtocolError,
+  canonicalize,
+  validateAcknowledgement,
+  validateAcknowledgementIdentity,
+  validateCatalogSegment,
+  validateCatalogUpdate,
+  validateChunk,
+  validateChunkSet,
+  validateConnectionCapability,
+  validateContractHeader,
+  validateCursorSnapshot,
+  validateDestinationCollision,
+  validateDirection,
+  validateEntitlementTime,
+  validateErrorResponse,
+  validateFailure,
+  validateForumClone,
+  validateIdentity,
+  validateInventory,
+  validateLeaseRenewal,
+  validateLeaseTime,
+  validateNetwork,
+  validateOperatorEntitlement,
+  validatePresentationMode,
+  validateReplay,
+  validateResolvedPolicy,
+  validateResolveRecord,
+  validateResolveResponse,
+  validateRetiredUrl,
+  validateRevisionTransition,
+  validateRevocationDetail,
+  validateRevocationIndex,
+  validateScope,
+  validateSourceDetail,
+  validateStageTransition,
+  validateUrlProof,
+  validateWork,
+} from "./protocol-validation.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const fixtureDirectory = path.join(root, "fixtures");
-const invalidFixtureDirectory = path.join(fixtureDirectory, "invalid");
-
-const readJson = async (relativePath) =>
-  JSON.parse(await readFile(path.join(root, relativePath), "utf8"));
-const sha256 = (value) =>
-  createHash("sha256").update(value).digest("hex");
-const bytes = (value) => Buffer.byteLength(value, "utf8");
-const rfc3339Utc = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
-const assertTimestamp = (value, label) => {
-  assert.match(value, rfc3339Utc, `${label} is not RFC 3339 UTC`);
-  assert.ok(Number.isFinite(Date.parse(value)), `${label} is not a real timestamp`);
-};
-
-const contract = await readJson("contract.json");
-const operator = await readJson("operator-service-contract.json");
-const packageJson = await readJson("package.json");
-const readme = await readFile(path.join(root, "README.md"), "utf8");
-const migration = await readFile(path.join(root, "MIGRATION.md"), "utf8");
-const coverage = await readFile(path.join(root, "COVERAGE.md"), "utf8");
+const load = async (relative) => JSON.parse(await readFile(path.join(root, relative), "utf8"));
+const contract = await load("contract.json");
+const operator = await load("operator-service-contract.json");
+const positiveDirectory = path.join(root, "fixtures");
+const negativeDirectory = path.join(positiveDirectory, "invalid");
+const positiveNames = (await readdir(positiveDirectory)).filter((name) => name.endsWith(".json")).sort();
+const negativeNames = (await readdir(negativeDirectory)).filter((name) => name.endsWith(".json")).sort();
+const fixtures = new Map();
+for (const name of positiveNames) fixtures.set(name, await load(`fixtures/${name}`));
+const invalid = new Map();
+for (const name of negativeNames) invalid.set(name, await load(`fixtures/invalid/${name}`));
 
 assert.equal(contract.contract, "discussionbridge-adapter");
 assert.equal(contract.version, "0.2.0-alpha.21");
-assert.equal(operator.version, contract.version);
-assert.equal(packageJson.version, contract.version);
+assert.deepEqual(contract.configuration.presentation_modes, ["simple", "full", "interactive"]);
+assert.equal(contract.publication_work.initial_attempts + contract.publication_work.maximum_automatic_retries, contract.publication_work.maximum_total_attempts);
+assert.equal(contract.publication_work.retry_backoff_seconds.length, contract.publication_work.maximum_automatic_retries);
+assert.equal(operator.entitlement.canonicalization, "RFC 8785 JCS");
 
-assert.deepEqual(contract.configuration.presentation_modes, [
-  "simple",
-  "full",
-  "interactive",
-]);
-assert.equal(contract.configuration.forum_name.fallback, null);
-assert.equal(
-  contract.configuration.forum_name.environment_variable,
-  "DISCUSSIONBRIDGE_FORUM_NAME",
-);
+const trustVector = fixtures.get("operator-entitlement-test-vector.json");
+const trust = { [`${trustVector.issuer_id}:${trustVector.key_id}`]: trustVector.public_key_base64url };
 
-assert.equal(
-  contract.authentication.connection_header,
-  "X-DiscussionBridge-Connection",
-);
-assert.equal(
-  contract.authentication.secret_header,
-  "X-DiscussionBridge-Secret",
-);
-assert.equal(
-  contract.authentication.contract_header,
-  "X-DiscussionBridge-Contract",
-);
-assert.equal(contract.authentication.contract_header_value, contract.version);
-assert.equal(
-  contract.resolve.path,
-  "/discussion-bridge/v1/bridge-records/resolve.json",
-);
-assert.equal(contract.resolve.maximum_json_bytes, 65536);
-assert.equal(contract.resolve.field_rules.content_html_maximum_bytes, 49152);
-assert.equal(contract.records.records_per_page, 100);
-assert.equal(contract.records.maximum_page, 10000);
-assert.deepEqual(contract.records.binding_roles, ["source", "presentation"]);
-for (const state of contract.records.binding_states) {
-  assert.ok(
-    Object.hasOwn(contract.records.binding_transitions, state),
-    `binding transitions miss ${state}`,
-  );
-}
-for (const state of contract.records.deployment_states) {
-  assert.ok(
-    Object.hasOwn(contract.records.deployment_transitions, state),
-    `deployment transitions miss ${state}`,
-  );
+function validateClaimEnvelope(value) {
+  for (const field of contract.publication_work.claim.response_required_fields) assert.ok(Object.hasOwn(value, field));
+  for (const item of value.publication_work) validateWork(item, contract);
 }
 
-assert.equal(contract.source_publication.inventory.maximum_limit, 100);
-assert.equal(contract.source_publication.revocations.maximum_limit, 100);
-assert.equal(
-  contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes,
-  32768,
-);
-assert.match(
-  contract.source_publication.content_transport.chunked.total_size_rule,
-  /no universal destination-content ceiling/i,
-);
-
-assert.equal(contract.publication_work.claim.maximum_items, 32);
-assert.ok(
-  contract.publication_work.claim.maximum_total_lease_seconds >=
-    contract.publication_work.claim.maximum_requested_lease_seconds,
-);
-assert.equal(contract.publication_work.maximum_automatic_attempts, 3);
-assert.deepEqual(contract.publication_work.retry_backoff_seconds, [60, 300, 900]);
-for (const state of contract.publication_work.lifecycle_states) {
-  assert.ok(
-    Object.hasOwn(contract.publication_work.lifecycle_transitions, state),
-    `work transitions miss ${state}`,
-  );
+function validateRenewal(value) {
+  for (const field of contract.publication_work.renew.required_fields) assert.ok(Object.hasOwn(value.request, field));
+  for (const field of contract.publication_work.renew.response_required_fields) assert.ok(Object.hasOwn(value.response, field));
+  validateLeaseRenewal(0, value.response.total_lease_seconds, contract.publication_work.claim.maximum_total_lease_seconds);
+  assert.equal(value.request.correlation_id, value.response.correlation_id);
 }
 
-const responseErrorCodes = new Set(
-  Object.values(contract.error_responses.statuses).flat(),
-);
-for (const errorCode of [
-  "unknown_field",
-  "direction_denied",
-  "scope_denied",
-  "revision_conflict",
-  "cursor_snapshot_mismatch",
-  "integrity_failed",
-  "lease_limit_exceeded",
-  "work_expired",
-]) {
-  assert.ok(responseErrorCodes.has(errorCode), `error registry misses ${errorCode}`);
+function validateAudit(value) {
+  for (const field of operator.audit.required_fields) assert.ok(Object.hasOwn(value, field));
+  assert.ok(operator.audit.outcomes.includes(value.outcome));
+  assert.match(value.event_id, new RegExp(operator.audit.event_id_pattern));
 }
 
-assert.match(contract.platform_catalog.authority_rule, /cannot authorize/i);
-assert.equal(operator.relationship.maximum_active_providers_per_forum, 1);
-assert.match(
-  operator.relationship.content_connection_separation,
-  /never grants, replaces, reveals, or expands/i,
-);
-assert.deepEqual(contract.discourse_network.managed_scopes, ["first_post"]);
-
-const fixtureNames = (await readdir(fixtureDirectory))
-  .filter((name) => name.endsWith(".json"))
-  .sort();
-assert.ok(fixtureNames.length >= 15);
-
-const fixtures = new Map();
-for (const name of fixtureNames) {
-  fixtures.set(name, await readJson(path.join("fixtures", name)));
-}
-
-const connectionCapability = fixtures.get("connection-capability.json");
-for (const field of contract.connection_capability.required_fields) {
-  assert.ok(Object.hasOwn(connectionCapability, field), `connection capability misses ${field}`);
-}
-assert.equal(connectionCapability.contract_version, contract.version);
-assert.deepEqual(
-  connectionCapability.allowed_presentation_modes,
-  contract.configuration.presentation_modes,
-);
-
-const invalidFixtureNames = (await readdir(invalidFixtureDirectory))
-  .filter((name) => name.endsWith(".json"))
-  .sort();
-const invalidFixtures = new Map();
-for (const name of invalidFixtureNames) {
-  const value = JSON.parse(
-    await readFile(path.join(invalidFixtureDirectory, name), "utf8"),
-  );
-  assert.ok(value.expected_error, `${name} misses expected_error`);
-  invalidFixtures.set(name, value);
-}
-
-for (const name of ["created-response.json", "resolved-response.json"]) {
-  const response = fixtures.get(name);
-  for (const field of contract.resolve.success_response_required_fields) {
-    assert.ok(Object.hasOwn(response, field), `${name} misses ${field}`);
-  }
-  assert.ok(response.accepted_source_revision_sequence > 0);
-  assert.equal(response.core_fallback, false);
-}
-
-const reconciliation = fixtures.get("reconciliation-required-response.json");
-for (const field of contract.resolve.reconciliation_response_required_fields) {
-  assert.ok(Object.hasOwn(reconciliation, field), `reconciliation response misses ${field}`);
-}
-assert.equal(reconciliation.outcome, "reconciliation_required");
-
-for (const name of ["to-discourse-request.json", "to-discourse-excerpt-request.json"]) {
-  const filePath = path.join(fixtureDirectory, name);
-  const raw = await readFile(filePath);
-  assert.ok(raw.length <= contract.resolve.maximum_json_bytes, `${name} exceeds JSON bound`);
-  const record = fixtures.get(name).bridge_record;
-  for (const field of contract.resolve.required_fields) {
-    assert.ok(Object.hasOwn(record, field), `${name} misses ${field}`);
-  }
-  assert.ok(contract.configuration.presentation_modes.includes(record.presentation_mode));
-  assert.ok(Number.isSafeInteger(record.source_revision_sequence));
-  assert.ok(record.source_revision_sequence > 0);
-  assert.ok(bytes(record.content_html) <= contract.resolve.field_rules.content_html_maximum_bytes);
-  assert.match(record.source_content_sha256, /^[a-f0-9]{64}$/);
-  if (record.content_disposition === "complete") {
-    assert.equal(bytes(record.content_html), record.source_content_bytes);
-    assert.equal(sha256(record.content_html), record.source_content_sha256);
-    assert.equal(Object.hasOwn(record, "read_more_url"), false);
-  } else {
-    assert.equal(record.content_disposition, "excerpt");
-    assert.equal(record.read_more_url, record.canonical_url);
-    assert.match(record.content_html, /Read More/);
-    assert.match(record.content_html, new RegExp(record.canonical_url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    assert.ok(record.source_content_bytes > bytes(record.content_html));
-  }
-  assert.ok(!raw.includes(Buffer.from("fullInteractive")));
-}
-
-const wikiUpdate = fixtures.get("to-discourse-wiki-update-request.json");
-assert.equal(wikiUpdate.bridge_record.external_id, wikiUpdate.stored.external_id);
-assert.equal(wikiUpdate.bridge_record.canonical_url, wikiUpdate.stored.canonical_url);
-assert.ok(
-  wikiUpdate.bridge_record.source_revision_sequence >
-    wikiUpdate.stored.source_revision_sequence,
-);
-assert.notEqual(
-  wikiUpdate.bridge_record.source_revision,
-  wikiUpdate.stored.source_revision,
-);
-assert.equal(
-  sha256(wikiUpdate.bridge_record.content_html),
-  wikiUpdate.bridge_record.source_content_sha256,
-);
-assert.equal(wikiUpdate.expected_outcome, "resolved");
-
-for (const name of [
-  "from-discourse-record.json",
-  "source-detail-inline.json",
-  "network-source-detail.json",
-  "network-spoke-source-detail.json",
-]) {
-  const value = fixtures.get(name);
-  const transport = value.content_transport ?? value.bridge_record.content_transport;
-  assert.equal(transport.mode, "inline");
-  assert.equal(bytes(transport.content_html), transport.byte_length);
-  assert.equal(sha256(transport.content_html), transport.sha256);
-}
-
-for (const name of ["source-detail-inline.json", "source-detail-chunked.json"]) {
-  const value = fixtures.get(name);
-  assertTimestamp(value.source_created_at, `${name}.source_created_at`);
-  assertTimestamp(value.source_updated_at, `${name}.source_updated_at`);
-  assert.ok(value.source_revision_sequence > 0);
-}
-
-const chunk = fixtures.get("source-content-chunk.json");
-const decoded = Buffer.from(chunk.content_base64, "base64");
-assert.equal(decoded.length, chunk.decoded_bytes);
-assert.equal(sha256(decoded), chunk.chunk_sha256);
-assert.ok(
-  decoded.length <=
-    contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes,
-);
-
-const resumedInventory = fixtures.get("source-inventory-resume-page.json");
-assert.equal(
-  resumedInventory.request.snapshot,
-  resumedInventory.response.snapshot,
-);
-for (const field of contract.source_publication.inventory.required_response_fields) {
-  assert.ok(
-    Object.hasOwn(resumedInventory.response, field),
-    `resumed inventory misses ${field}`,
-  );
-}
-assert.equal(resumedInventory.response.complete, true);
-assert.equal(resumedInventory.response.next_cursor, null);
-
-const work = fixtures.get("publication-work-claim.json").publication_work[0];
-for (const field of contract.publication_work.work_required_fields) {
-  assert.ok(Object.hasOwn(work, field), `publication work misses ${field}`);
-}
-assert.ok(contract.publication_work.actions.includes(work.action));
-assert.ok(Number.isSafeInteger(work.source_revision_sequence));
-assert.ok(work.source_revision_sequence > 0);
-assert.match(work.work_id, new RegExp(contract.publication_work.work_id_pattern));
-assert.match(work.lease_token, new RegExp(contract.publication_work.lease_token_pattern));
-for (const field of contract.publication_work.claim.response_required_fields) {
-  assert.ok(
-    Object.hasOwn(fixtures.get("publication-work-claim.json"), field),
-    `publication claim response misses ${field}`,
-  );
-}
-
-const restoreWork = fixtures.get("publication-work-restore.json").publication_work[0];
-assert.equal(restoreWork.action, "restore");
-assert.ok(contract.publication_work.actions.includes(restoreWork.action));
-for (const field of contract.publication_work.work_required_fields) {
-  assert.ok(Object.hasOwn(restoreWork, field), `restore work misses ${field}`);
-}
-
-const withdrawalWork = fixtures.get("publication-work-withdrawal.json").publication_work;
-assert.deepEqual(
-  withdrawalWork.map((item) => item.action),
-  ["hold", "unpublish"],
-);
-for (const item of withdrawalWork) {
-  for (const field of contract.publication_work.work_required_fields) {
-    assert.ok(Object.hasOwn(item, field), `withdrawal work misses ${field}`);
+function validateFromDiscourseRecord(value) {
+  const record = value.bridge_record;
+  for (const field of contract.records.required_record_fields) assert.ok(Object.hasOwn(record, field));
+  assert.equal(record.direction, "from_discourse");
+  for (const binding of record.bindings) {
+    for (const field of contract.records.destination_binding_fields) assert.ok(Object.hasOwn(binding, field));
   }
 }
 
-const renewal = fixtures.get("publication-lease-renewal.json");
-for (const field of contract.publication_work.renew.required_fields) {
-  assert.ok(Object.hasOwn(renewal.request, field), `renewal request misses ${field}`);
-}
-for (const field of contract.publication_work.renew.response_required_fields) {
-  assert.ok(Object.hasOwn(renewal.response, field), `renewal response misses ${field}`);
-}
-assert.ok(
-  renewal.response.total_lease_seconds <=
-    contract.publication_work.claim.maximum_total_lease_seconds,
-);
-
-const exhaustedWork = fixtures.get("publication-work-exhausted.json");
-assert.equal(
-  exhaustedWork.attempt_count,
-  contract.publication_work.maximum_automatic_attempts,
-);
-assert.equal(exhaustedWork.resulting_state, "operator_attention");
-assert.equal(exhaustedWork.next_retry_at, null);
-
-const retryWait = fixtures.get("publication-work-retry-wait.json");
-assert.equal(retryWait.resulting_state, "retry_wait");
-assert.equal(
-  retryWait.backoff_seconds,
-  contract.publication_work.retry_backoff_seconds[retryWait.attempt_count - 1],
-);
-assert.equal(
-  Date.parse(retryWait.next_retry_at) - Date.parse(retryWait.failed_at),
-  retryWait.backoff_seconds * 1000,
-);
-
-const acknowledgement = fixtures.get("publication-acknowledgement.json");
-for (const name of [
-  "publication-acknowledgement-create.json",
-  "publication-acknowledgement.json",
-  "publication-acknowledgement-static-pending.json",
-]) {
-  const value = fixtures.get(name);
-  for (const field of contract.publication_work.acknowledgement.required_fields) {
-    assert.ok(Object.hasOwn(value, field), `${name} misses ${field}`);
-  }
-}
-if (acknowledgement.verification_state === "verified") {
-  assert.ok(acknowledgement.publicly_verified_at);
-}
-assert.equal(acknowledgement.deployment_state, "deployed");
-assert.ok(acknowledgement.deployed_at);
-
-const createAcknowledgement = fixtures.get("publication-acknowledgement-create.json");
-assert.equal(createAcknowledgement.action, "publish");
-assert.equal(createAcknowledgement.deployment_state, "not_required");
-assert.equal(createAcknowledgement.verification_state, "not_required");
-assert.equal(Object.hasOwn(createAcknowledgement, "deployed_at"), false);
-assert.equal(Object.hasOwn(createAcknowledgement, "publicly_verified_at"), false);
-
-const pendingAcknowledgement = fixtures.get(
-  "publication-acknowledgement-static-pending.json",
-);
-assert.equal(pendingAcknowledgement.verification_state, "pending");
-assert.equal(pendingAcknowledgement.deployment_state, "pending");
-assert.equal(Object.hasOwn(pendingAcknowledgement, "deployed_at"), false);
-assert.equal(Object.hasOwn(pendingAcknowledgement, "publicly_verified_at"), false);
-
-const failure = fixtures.get("publication-failure.json");
-const registeredFailureCodes = new Set([
-  ...contract.failure_registry.retryable,
-  ...contract.failure_registry.terminal,
-]);
-assert.ok(registeredFailureCodes.has(failure.error_code));
-assert.ok(bytes(failure.error_detail) <= contract.common.error_detail_maximum_bytes);
-
-const catalog = fixtures.get("platform-catalog-segment.json");
-assert.ok(contract.platform_catalog.segment_types.includes(catalog.segment_type));
-assert.ok(catalog.items.length <= contract.platform_catalog.maximum_items_per_segment);
-assert.deepEqual(
-  catalog.items.map((item) => item.id),
-  contract.configuration.presentation_modes,
-);
-
-for (const name of ["network-source-detail.json", "network-spoke-source-detail.json"]) {
-  const network = fixtures.get(name).network_provenance;
-  for (const field of contract.discourse_network.required_provenance_fields) {
-    assert.ok(Object.hasOwn(network, field), `${name} provenance misses ${field}`);
-  }
-  assert.ok(contract.discourse_network.relationships.includes(network.relationship));
-  assert.ok(contract.discourse_network.managed_scopes.includes(network.managed_scope));
-  assert.equal(new Set(network.route_forum_ids).size, network.route_forum_ids.length);
-  assert.ok(network.route_forum_ids.length <= contract.discourse_network.route_maximum_forums);
+function validateUrlProofFixture(value) {
+  for (const field of contract.records.source_url_migration_attestation.required_response_fields) assert.ok(Object.hasOwn(value, field));
+  validateUrlProof(value);
+  assert.equal(value.transition_count, value.transitions.length);
 }
 
-const entitlement = fixtures.get("operator-entitlement.json");
-for (const field of operator.entitlement.required_fields) {
-  assert.ok(Object.hasOwn(entitlement, field), `operator entitlement misses ${field}`);
+const positiveHandlers = {
+  "connection-capability.json": (value) => validateConnectionCapability(value, contract),
+  "connection-capability-to-discourse.json": (value) => validateConnectionCapability(value, contract),
+  "created-response.json": (value) => validateResolveResponse(value, contract.resolve.success_response_required_fields, contract),
+  "resolved-response.json": (value) => validateResolveResponse(value, contract.resolve.success_response_required_fields, contract),
+  "reconciliation-required-response.json": (value) => validateResolveResponse(value, contract.resolve.reconciliation_response_required_fields, contract),
+  "rejected-response.json": (value) => validateErrorResponse(value, contract),
+  "to-discourse-request.json": (value) => validateResolveRecord(value.bridge_record, contract),
+  "to-discourse-excerpt-request.json": (value) => validateResolveRecord(value.bridge_record, contract),
+  "to-discourse-wiki-update-request.json": (value) => {
+    validateResolveRecord(value.bridge_record, contract);
+    validateRevisionTransition(value.stored, value.bridge_record);
+    assert.equal(value.stored.external_id, value.bridge_record.external_id);
+  },
+  "from-discourse-record.json": validateFromDiscourseRecord,
+  "source-inventory-page.json": (value) => validateInventory(value, contract),
+  "source-inventory-resume-page.json": (value) => {
+    assert.equal(value.request.snapshot, value.response.snapshot);
+    assert.equal(value.request.correlation_id, value.response.correlation_id);
+    validateInventory(value.response, contract);
+  },
+  "source-detail-inline.json": (value) => validateSourceDetail(value, contract),
+  "source-detail-chunked.json": (value) => validateSourceDetail(value, contract),
+  "network-source-detail.json": (value) => validateSourceDetail(value, contract),
+  "network-spoke-source-detail.json": (value) => validateSourceDetail(value, contract),
+  "source-content-chunk.json": (value) => validateChunk(value, null, contract),
+  "source-revocation.json": (value) => validateRevocationDetail(value, contract),
+  "source-revocation-index.json": (value) => validateRevocationIndex(value, contract),
+  "revocation-restart-trace.json": (value) => {
+    assert.equal(value.page_one.high_water, value.page_two.high_water);
+    assert.equal(value.page_two.complete, true);
+    assert.equal(value.restart.deduplicate_by, "revocation_id");
+    assert.equal(value.restart.read_does_not_acknowledge, true);
+  },
+  "source-url-proof.json": validateUrlProofFixture,
+  "publication-work-claim.json": validateClaimEnvelope,
+  "publication-work-restore.json": validateClaimEnvelope,
+  "publication-work-withdrawal.json": validateClaimEnvelope,
+  "publication-lease-renewal.json": validateRenewal,
+  "publication-acknowledgement-create.json": (value) => validateAcknowledgement(value, contract),
+  "publication-acknowledgement-static-pending.json": (value) => validateAcknowledgement(value, contract),
+  "publication-acknowledgement-static-deployed.json": (value) => validateAcknowledgement(value, contract),
+  "publication-acknowledgement.json": (value) => validateAcknowledgement(value, contract),
+  "publication-failure.json": (value) => validateFailure(value, contract),
+  "publication-deployment-failure.json": (value) => validateFailure(value, contract),
+  "publication-verification-failure.json": (value) => validateFailure(value, contract),
+  "publication-work-retry-wait.json": (value) => {
+    assert.equal(value.resulting_state, "retry_wait");
+    assert.equal(value.backoff_seconds, contract.publication_work.retry_backoff_seconds[value.attempt_count - 1]);
+    assert.equal(Date.parse(value.next_retry_at) - Date.parse(value.failed_at), value.backoff_seconds * 1000);
+  },
+  "publication-work-exhausted.json": (value) => {
+    assert.equal(value.attempt_count, contract.publication_work.maximum_total_attempts);
+    assert.equal(value.maximum_total_attempts, contract.publication_work.maximum_total_attempts);
+    assert.equal(value.resulting_state, "operator_attention");
+    assert.equal(value.next_retry_at, null);
+  },
+  "publication-static-trace.json": (value) => {
+    const synchronized = fixtures.get(value.synchronized);
+    const deployed = fixtures.get(value.deployed);
+    const verified = fixtures.get(value.verified);
+    validateStageTransition(synchronized, deployed);
+    validateStageTransition(deployed, verified);
+    assert.deepEqual(value.interruption_recovery_states, ["awaiting_deployment", "awaiting_verification"]);
+    assert.equal(value.terminal_state, "acknowledged");
+  },
+  "publication-retry-trace.json": (value) => {
+    assert.equal(value.initial_attempt, contract.publication_work.initial_attempts);
+    assert.deepEqual(value.failures.slice(0, -1).map((item) => item.backoff_seconds), contract.publication_work.retry_backoff_seconds);
+    assert.equal(value.failures.at(-1).attempt_count, contract.publication_work.maximum_total_attempts);
+    assert.equal(value.failures.at(-1).resulting_state, "operator_attention");
+    assert.equal(value.successful_retry.resulting_state, "acknowledged");
+    assert.equal(value.terminal_failure.resulting_state, "operator_attention");
+    assert.equal(value.manual_retry.customer_authorized && value.manual_retry.condition_corrected, true);
+    assert.equal(value.manual_retry.to_retry_generation, value.manual_retry.from_retry_generation + 1);
+    assert.equal(value.manual_retry.same_work_id, true);
+  },
+  "revision-supersession-trace.json": (value) => {
+    assert.equal(value.active.content_retained, true);
+    assert.equal(value.after_active_expiry.old_state, "superseded");
+    assert.equal(value.after_active_expiry.new_state, "available");
+    assert.equal(value.destination_identity_unchanged, true);
+  },
+  "platform-catalog-segment.json": (value) => validateCatalogSegment(value, contract),
+  "platform-catalog-containers.json": (value) => validateCatalogSegment(value, contract),
+  "platform-catalog-taxonomies.json": (value) => validateCatalogSegment(value, contract),
+  "platform-catalog-terms.json": (value) => validateCatalogSegment(value, contract),
+  "platform-catalog-authors.json": (value) => validateCatalogSegment(value, contract),
+  "platform-catalog-native-limits.json": (value) => validateCatalogSegment(value, contract),
+  "platform-catalog-update.json": (value) => validateCatalogUpdate(value, contract),
+  "operator-entitlement.json": (value) => validateOperatorEntitlement(value, operator, trust),
+  "operator-entitlement-test-vector.json": (value) => {
+    assert.equal(value.signing_domain, operator.entitlement.signing_domain);
+    const entitlement = structuredClone(fixtures.get("operator-entitlement.json"));
+    delete entitlement.signature;
+    assert.equal(value.canonical_json, canonicalize(entitlement));
+  },
+  "operator-enrollment-audit.json": validateAudit,
+  "operator-revocation-audit.json": validateAudit,
+  "network-operation-replay.json": (value) => {
+    validateReplay(value.immutable_operation, value.immutable_operation);
+    assert.equal(value.retained_result.mutated, false);
+  },
+  "network-forum-identity.json": (value) => {
+    assert.match(value.forum_id, new RegExp(contract.discourse_network.forum_id_pattern));
+    assert.equal(value.created_once, true);
+    assert.equal(value.protected_persistent, true);
+    assert.equal(value.automatic_rotation, false);
+  },
+  "cutover-manifest.json": (value) => {
+    assert.equal(value.adapter_protocol.version, contract.version);
+    for (const item of [value.adapter_protocol, value.shared_plugin, ...value.adapters]) assert.match(item.sha256, new RegExp(contract.common.sha256_pattern));
+    assert.notEqual(value.shared_plugin.version, contract.version);
+    assert.notEqual(value.adapters[0].version, contract.version);
+  },
+  "cutover-rehearsal.json": (value) => {
+    assert.equal(value.preflight, "passed");
+    assert.equal(value.mismatch_rejected_before_mutation, true);
+    assert.equal(value.one_item_canary, "passed");
+    assert.equal(value.ten_item_canary, "passed");
+  },
+};
+
+for (const name of positiveNames) {
+  assert.ok(positiveHandlers[name], `positive fixture has no validator: ${name}`);
+  positiveHandlers[name](fixtures.get(name));
 }
-assert.match(entitlement.issuer_id, new RegExp(operator.entitlement.issuer_id_pattern));
-assert.match(entitlement.signature, /^[A-Za-z0-9_-]+$/);
-for (const field of ["issued_at", "not_before", "expires_at", "grace_until"]) {
-  assertTimestamp(entitlement[field], `operator entitlement ${field}`);
-}
-assert.ok(Date.parse(entitlement.not_before) >= Date.parse(entitlement.issued_at));
-assert.ok(Date.parse(entitlement.expires_at) > Date.parse(entitlement.not_before));
-assert.ok(Date.parse(entitlement.grace_until) >= Date.parse(entitlement.expires_at));
 
-const revocationAudit = fixtures.get("operator-revocation-audit.json");
-for (const name of ["operator-enrollment-audit.json", "operator-revocation-audit.json"]) {
-  const audit = fixtures.get(name);
-  for (const field of operator.audit.required_fields) {
-    assert.ok(Object.hasOwn(audit, field), `${name} misses ${field}`);
-  }
-  assert.ok(operator.audit.outcomes.includes(audit.outcome));
-  assert.match(audit.event_id, new RegExp(operator.audit.event_id_pattern));
-}
-assert.equal(revocationAudit.outcome, "revoked");
+const baseComplete = fixtures.get("to-discourse-request.json").bridge_record;
+const baseExcerpt = fixtures.get("to-discourse-excerpt-request.json").bridge_record;
+const baseAck = fixtures.get("publication-acknowledgement.json");
+const baseNetwork = fixtures.get("network-source-detail.json").network_provenance;
+const validEntitlement = fixtures.get("operator-entitlement.json");
 
-assert.ok(
-  !contract.configuration.presentation_modes.includes(
-    invalidFixtures.get("full-interactive-request.json").bridge_record.presentation_mode,
-  ),
-);
+const negativeHandlers = {
+  "acknowledgement-revision-mismatch.json": (value) => validateAcknowledgementIdentity(value.work, value.acknowledgement),
+  "acknowledgement-stage-skipped.json": () => validateStageTransition(fixtures.get("publication-acknowledgement-static-pending.json"), fixtures.get("publication-acknowledgement.json")),
+  "acknowledgement-stale-stage-token.json": () => { const next = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); next.stage_token = fixtures.get("publication-acknowledgement-static-pending.json").stage_token; validateStageTransition(fixtures.get("publication-acknowledgement-static-pending.json"), next); },
+  "acknowledgement-verified-time-missing.json": () => { const value = structuredClone(baseAck); delete value.publicly_verified_at; validateAcknowledgement(value, contract); },
+  "capability-missing-correlation.json": (value) => { const capability = structuredClone(fixtures.get("connection-capability.json")); delete capability[value.remove_field]; validateConnectionCapability(capability, contract); },
+  "correlation-over-limit.json": (value) => validateConnectionCapability({ ...structuredClone(fixtures.get("connection-capability.json")), correlation_id: "x".repeat(value.byte_length) }, contract),
+  "catalog-authority-expansion.json": (value) => validateDirection(value.connection, { direction: value.requested_direction }),
+  "catalog-stale-revision.json": (value) => { const update = structuredClone(fixtures.get("platform-catalog-update.json")); update.request.base_catalog_revision = value.request_base_catalog_revision; validateCatalogUpdate(update, contract, value.current_catalog_revision); },
+  "catalog-removed-mapping.json": (value) => validateResolvedPolicy(value.policy, value.catalog_items),
+  "catalog-unknown-field.json": (value) => validateCatalogSegment({ ...structuredClone(fixtures.get("platform-catalog-authors.json")), [value.field]: value.value }, contract),
+  "excerpt-read-more-mismatch.json": (value) => validateResolveRecord({ ...structuredClone(baseExcerpt), ...value.bridge_record }, contract),
+  "full-interactive-request.json": (value) => validatePresentationMode(value.bridge_record.presentation_mode, contract),
+  "identity-url-conflict.json": (value) => validateIdentity(value.stored, value.incoming),
+  "lease-expired.json": (value) => validateLeaseTime(value.lease_expires_at, value.request_received_at),
+  "lease-renewal-over-limit.json": (value) => validateLeaseRenewal(value.current_total_lease_seconds, value.requested_lease_seconds, value.maximum_total_lease_seconds),
+  "malformed-timestamp.json": (value) => validateResolveRecord({ ...structuredClone(baseComplete), source_updated_at: value.source_updated_at }, contract),
+  "network-loop.json": (value) => validateNetwork(value.network_provenance, contract, value.local_forum_id),
+  "network-clone-identity-collision.json": (value) => validateForumClone(value.existing_forum_id, value.clone_forum_id, value.rotated_and_reauthorized),
+  "network-operation-replay-mismatch.json": (value) => validateReplay(value.stored, value.replay),
+  "network-repeated-route.json": (value) => validateNetwork({ ...structuredClone(baseNetwork), ...value.network_provenance }, contract, null),
+  "network-route-over-limit.json": (value) => validateNetwork({ ...structuredClone(baseNetwork), route_forum_ids: value.route_forum_ids }, contract, null),
+  "network-self-origin.json": (value) => validateNetwork({ ...structuredClone(baseNetwork), ...value.network_provenance }, contract, value.local_forum_id),
+  "network-unsupported-scope.json": (value) => validateNetwork({ ...structuredClone(baseNetwork), ...value.network_provenance }, contract, null),
+  "operator-entitlement-expired.json": validateEntitlementTime,
+  "operator-entitlement-grace-mutation.json": (value) => validateOperatorEntitlement(validEntitlement, operator, trust, { at: value.request_at, mutation: value.mutation }),
+  "operator-entitlement-invalid-signature.json": (value) => validateOperatorEntitlement({ ...structuredClone(validEntitlement), ...value.entitlement }, operator, trust),
+  "operator-entitlement-not-yet-valid.json": (value) => validateOperatorEntitlement(validEntitlement, operator, trust, { at: value.request_at }),
+  "operator-entitlement-replaced.json": (value) => validateOperatorEntitlement(validEntitlement, operator, trust, { state: value.state }),
+  "operator-entitlement-revoked.json": (value) => validateOperatorEntitlement(validEntitlement, operator, trust, { state: value.state }),
+  "operator-entitlement-wrong-forum.json": (value) => validateOperatorEntitlement(validEntitlement, operator, trust, { forumId: value.local_forum_id }),
+  "operator-entitlement-wrong-scope.json": (value) => validateOperatorEntitlement({ ...structuredClone(validEntitlement), scopes: value.entitlement.scopes }, operator, trust),
+  "over-limit-title.json": () => validateResolveRecord({ ...structuredClone(baseComplete), title: "x".repeat(contract.resolve.field_rules.title_maximum_bytes + 1) }, contract),
+  "revision-sequence-conflict.json": (value) => validateRevisionTransition(value.stored, value.incoming),
+  "secret-leak-error.json": (value) => validateErrorResponse(value.error_response, contract, [value.headers[contract.authentication.secret_header]]),
+  "snapshot-cursor-mismatch.json": (value) => validateCursorSnapshot(value.request, value.cursor_binding),
+  "source-content-integrity.json": (value) => validateChunkSet(value.descriptor, value.chunks, contract),
+  "source-content-over-bound.json": (value) => validateResolveRecord({ ...structuredClone(baseComplete), source_content_bytes: value.source_content_bytes }, contract),
+  "source-url-broken-ancestry.json": validateUrlProof,
+  "source-url-destination-collision.json": validateDestinationCollision,
+  "source-url-retired-conflict.json": validateRetiredUrl,
+  "stale-revision-request.json": (value) => validateRevisionTransition(value.stored, value.incoming),
+  "unknown-field.json": (value) => validateResolveRecord({ ...structuredClone(baseComplete), ...value.bridge_record }, contract),
+  "work-superseded.json": (value) => validateAcknowledgementIdentity(value.leased_work, value.late_acknowledgement, value.leased_work.state),
+  "wrong-connection-scope.json": (value) => validateScope(value.connection, value.request),
+  "wrong-contract-version.json": (value) => validateContractHeader(value.headers, contract),
+  "wrong-direction.json": (value) => validateDirection(value.connection, value.request),
+  "wrong-lease-token.json": (value) => validateAcknowledgement({ ...structuredClone(fixtures.get("publication-acknowledgement-create.json")), lease_token: value.acknowledgement.lease_token }, contract),
+};
 
-const invalidExcerpt = invalidFixtures.get("excerpt-read-more-mismatch.json").bridge_record;
-assert.notEqual(invalidExcerpt.read_more_url, invalidExcerpt.canonical_url);
-assert.doesNotMatch(invalidExcerpt.content_html, /Read More<\/a>/);
-
-const networkLoop = invalidFixtures.get("network-loop.json");
-assert.ok(
-  networkLoop.network_provenance.route_forum_ids.includes(networkLoop.local_forum_id),
-);
-
-const invalidEntitlement = invalidFixtures.get(
-  "operator-entitlement-wrong-scope.json",
-).entitlement;
-assert.ok(
-  invalidEntitlement.scopes.some(
-    (scope) => !operator.entitlement.allowed_scopes.includes(scope),
-  ),
-);
-
-const wrongLease = invalidFixtures.get("wrong-lease-token.json").acknowledgement;
-assert.doesNotMatch(
-  wrongLease.lease_token,
-  new RegExp(contract.publication_work.lease_token_pattern),
-);
-
-const wrongContractVersion = invalidFixtures.get("wrong-contract-version.json").headers;
-assert.notEqual(
-  wrongContractVersion[contract.authentication.contract_header],
-  contract.authentication.contract_header_value,
-);
-
-const revisionConflict = invalidFixtures.get("revision-sequence-conflict.json");
-assert.equal(
-  revisionConflict.stored.source_revision_sequence,
-  revisionConflict.incoming.source_revision_sequence,
-);
-assert.notEqual(
-  revisionConflict.stored.source_revision,
-  revisionConflict.incoming.source_revision,
-);
-assert.notEqual(
-  revisionConflict.stored.source_content_sha256,
-  revisionConflict.incoming.source_content_sha256,
-);
-
-const staleRevision = invalidFixtures.get("stale-revision-request.json");
-assert.ok(
-  staleRevision.incoming.source_revision_sequence <
-    staleRevision.stored.source_revision_sequence,
-);
-
-const identityConflict = invalidFixtures.get("identity-url-conflict.json");
-assert.equal(identityConflict.incoming.canonical_url, identityConflict.stored.canonical_url);
-assert.notEqual(identityConflict.incoming.external_id, identityConflict.stored.external_id);
-
-const cursorMismatch = invalidFixtures.get("snapshot-cursor-mismatch.json");
-assert.notEqual(cursorMismatch.request.snapshot, cursorMismatch.cursor_binding.snapshot);
-
-const integrityFailure = invalidFixtures.get("source-content-integrity.json");
-const integrityBytes = Buffer.concat(
-  integrityFailure.chunks.map((item) => Buffer.from(item.content_base64, "base64")),
-);
-assert.notEqual(sha256(integrityBytes), integrityFailure.descriptor.sha256);
-
-const acknowledgementMismatch = invalidFixtures.get(
-  "acknowledgement-revision-mismatch.json",
-);
-assert.notEqual(
-  acknowledgementMismatch.acknowledgement.source_revision,
-  acknowledgementMismatch.work.source_revision,
-);
-
-const missingVerificationTime = invalidFixtures.get(
-  "acknowledgement-verified-time-missing.json",
-).acknowledgement;
-assert.equal(missingVerificationTime.verification_state, "verified");
-assert.equal(Object.hasOwn(missingVerificationTime, "publicly_verified_at"), false);
-
-const renewalOverLimit = invalidFixtures.get("lease-renewal-over-limit.json");
-assert.ok(
-  renewalOverLimit.current_total_lease_seconds +
-    renewalOverLimit.requested_lease_seconds >
-    renewalOverLimit.maximum_total_lease_seconds,
-);
-
-const expiredLease = invalidFixtures.get("lease-expired.json");
-assert.ok(Date.parse(expiredLease.request_received_at) > Date.parse(expiredLease.lease_expires_at));
-
-const supersededWork = invalidFixtures.get("work-superseded.json");
-assert.notEqual(
-  supersededWork.leased_work.source_revision,
-  supersededWork.authoritative.source_revision,
-);
-assert.notEqual(
-  supersededWork.leased_work.policy_revision,
-  supersededWork.authoritative.policy_revision,
-);
-
-const brokenAncestry = invalidFixtures.get("source-url-broken-ancestry.json");
-assert.notEqual(
-  brokenAncestry.transitions.at(-1).new_url,
-  brokenAncestry.to_url,
-);
-
-const destinationCollision = invalidFixtures.get(
-  "source-url-destination-collision.json",
-);
-assert.equal(destinationCollision.to_url, destinationCollision.existing_binding.canonical_url);
-assert.notEqual(
-  destinationCollision.moving_resource_id,
-  destinationCollision.existing_binding.resource_id,
-);
-
-const retiredConflict = invalidFixtures.get("source-url-retired-conflict.json");
-assert.equal(retiredConflict.to_url, retiredConflict.retired_binding.canonical_url);
-assert.equal(retiredConflict.retired_binding.state, "retired");
-
-const catalogExpansion = invalidFixtures.get("catalog-authority-expansion.json");
-assert.equal(
-  catalogExpansion.connection.directions.includes(catalogExpansion.requested_direction),
-  false,
-);
-
-const expiredEntitlement = invalidFixtures.get("operator-entitlement-expired.json");
-assert.ok(
-  Date.parse(expiredEntitlement.request_at) >
-    Date.parse(expiredEntitlement.entitlement.grace_until),
-);
-
-const invalidSignature = invalidFixtures.get(
-  "operator-entitlement-invalid-signature.json",
-).entitlement;
-assert.doesNotMatch(invalidSignature.signature, /^[A-Za-z0-9_-]+$/);
-
-const selfOrigin = invalidFixtures.get("network-self-origin.json");
-assert.equal(selfOrigin.local_forum_id, selfOrigin.network_provenance.origin_forum_id);
-
-const repeatedRoute = invalidFixtures.get("network-repeated-route.json");
-assert.notEqual(
-  new Set(repeatedRoute.network_provenance.route_forum_ids).size,
-  repeatedRoute.network_provenance.route_forum_ids.length,
-);
-
-const unsupportedScope = invalidFixtures.get("network-unsupported-scope.json");
-assert.equal(
-  contract.discourse_network.managed_scopes.includes(
-    unsupportedScope.network_provenance.managed_scope,
-  ),
-  false,
-);
-
-const unknownField = invalidFixtures.get("unknown-field.json");
-assert.ok(Object.hasOwn(unknownField.bridge_record, "unexpected_control"));
-
-const overLimitTitle = invalidFixtures.get("over-limit-title.json");
-assert.ok(overLimitTitle.title_byte_length > overLimitTitle.maximum_title_bytes);
-
-const malformedTimestamp = invalidFixtures.get("malformed-timestamp.json");
-assert.doesNotMatch(malformedTimestamp.source_updated_at, rfc3339Utc);
-
-const wrongDirection = invalidFixtures.get("wrong-direction.json");
-assert.equal(
-  wrongDirection.connection.directions.includes(wrongDirection.request.direction),
-  false,
-);
-
-const wrongScope = invalidFixtures.get("wrong-connection-scope.json");
-assert.equal(wrongScope.connection.lanes.includes(wrongScope.request.lane), false);
-
-const secretLeak = invalidFixtures.get("secret-leak-error.json");
-assert.match(
-  secretLeak.error_response.message,
-  new RegExp(secretLeak.headers[contract.authentication.secret_header]),
-);
-
-const requiredNegativeErrors = new Set([
-  "unknown_field",
-  "malformed_value",
-  "validation_failed",
-  "integrity_failed",
-  "revision_conflict",
-  "identity_conflict",
-  "destination_collision",
-  "url_retired",
-  "cursor_snapshot_mismatch",
-  "lease_limit_exceeded",
-  "work_expired",
-  "work_superseded",
-  "direction_denied",
-  "scope_denied",
-  "entitlement_expired",
-  "entitlement_invalid_signature",
-  "secret_exposure",
-]);
-for (const expectedError of requiredNegativeErrors) {
-  assert.ok(
-    [...invalidFixtures.values()].some((fixture) => fixture.expected_error === expectedError),
-    `negative fixtures miss ${expectedError}`,
+for (const name of negativeNames) {
+  const fixture = invalid.get(name);
+  assert.ok(negativeHandlers[name], `negative fixture has no validator: ${name}`);
+  assert.throws(
+    () => negativeHandlers[name](fixture),
+    (error) => error instanceof ProtocolError && error.code === fixture.expected_error,
+    `${name} must fail with ${fixture.expected_error}`,
   );
 }
-for (const scope of entitlement.scopes) {
-  assert.ok(operator.entitlement.allowed_scopes.includes(scope), `unknown operator scope ${scope}`);
+
+const mutationCases = [
+  ["missing required field", () => { const value = structuredClone(baseComplete); delete value.source_revision; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["unknown field", () => validateResolveRecord({ ...structuredClone(baseComplete), invented_control: true }, contract), "unknown_field"],
+  ["invalid enum", () => validateResolveRecord({ ...structuredClone(baseComplete), presentation_mode: "fullInteractive" }, contract), "validation_failed"],
+  ["content bound", () => validateResolveRecord({ ...structuredClone(baseComplete), source_content_bytes: contract.resolve.source_content_maximum_bytes + 1 }, contract), "validation_failed"],
+  ["content hash", () => validateResolveRecord({ ...structuredClone(baseComplete), source_content_sha256: "0".repeat(64) }, contract), "integrity_failed"],
+  ["signature", () => { const value = structuredClone(validEntitlement); value.signature = `${value.signature[0] === "A" ? "B" : "A"}${value.signature.slice(1)}`; validateOperatorEntitlement(value, operator, trust); }, "entitlement_invalid_signature"],
+];
+for (const [name, operation, code] of mutationCases) {
+  assert.throws(operation, (error) => error instanceof ProtocolError && error.code === code, `mutation ${name} must fail with ${code}`);
 }
 
 const activeText = [
   JSON.stringify(contract),
   JSON.stringify(operator),
-  readme,
-  migration,
-  coverage,
-  ...fixtureNames.map((name) => JSON.stringify(fixtures.get(name))),
+  await readFile(path.join(root, "README.md"), "utf8"),
+  await readFile(path.join(root, "MIGRATION.md"), "utf8"),
+  ...positiveNames.map((name) => JSON.stringify(fixtures.get(name))),
 ].join("\n");
 assert.doesNotMatch(activeText, /fullInteractive/);
 assert.doesNotMatch(activeText, /Repeal OBBBA Forum|obbba-/i);
 
-console.log(
-  `Validated ${fixtureNames.length} positive and ${invalidFixtureNames.length} negative fixtures for ${contract.version}.`,
-);
+console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, and ${mutationCases.length} mutation classes for ${contract.version}.`);

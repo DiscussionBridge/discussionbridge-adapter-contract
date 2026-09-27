@@ -1,5 +1,5 @@
 {
-  "outcome": "rejected",
-  "reason": "connection_scope_denied",
-  "core_fallback": false
+  "error_code": "scope_denied",
+  "message": "The authenticated Content Connection does not authorize the requested scope.",
+  "correlation_id": "scope-denied-01"
 }

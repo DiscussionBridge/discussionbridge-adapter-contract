@@ -1,0 +1,9 @@
+{
+  "forum_id":"dbf_22222222222222222222222222222222",
+  "created_once":true,
+  "protected_persistent":true,
+  "restore_behavior":"preserve",
+  "clone_behavior":"disabled_until_rotated_and_reauthorized",
+  "automatic_rotation":false,
+  "correlation_id":"network-identity-01"
+}

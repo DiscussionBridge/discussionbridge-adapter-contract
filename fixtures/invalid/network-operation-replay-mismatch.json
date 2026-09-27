@@ -1,0 +1,5 @@
+{
+  "stored":{"origin_forum_id":"dbf_11111111111111111111111111111111","operation_id":"dbo_11111111111111111111111111111111","source_revision":"post:501:version:2","content_sha256":"ac86d44208a2a56defa0597f0f768da60448e4e3eb41be830090e10152efa8cb"},
+  "replay":{"origin_forum_id":"dbf_11111111111111111111111111111111","operation_id":"dbo_11111111111111111111111111111111","source_revision":"post:501:version:3","content_sha256":"bc86d44208a2a56defa0597f0f768da60448e4e3eb41be830090e10152efa8cb"},
+  "expected_error":"operation_replay_mismatch"
+}

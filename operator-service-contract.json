@@ -10,13 +10,19 @@
   "issuer": {
     "authority": "discussionbridge entitlement issuer",
     "public_key_algorithm": "Ed25519",
-    "trusted_key_source": "Forum-local protected configuration installed through an explicit customer-approved enrollment; never fetched from an entitlement-controlled URL.",
+    "trusted_key_source": "Forum-local protected configuration binds issuer_id and key_id to one exact Ed25519 public key installed through an explicit customer-approved enrollment; never fetched from an entitlement-controlled URL.",
+    "public_key_encoding": "base64url without padding of the 32-byte raw Ed25519 public key",
     "key_rotation_rule": "A new trusted public key is enrolled by a separate customer-approved action before it signs active entitlements. Old public keys remain available to verify retained audit history and may not issue new entitlements after their configured retirement time.",
     "key_revocation_rule": "Revoking a trusted key immediately disables every active entitlement signed only by that key and records a forum-local audit event."
   },
   "entitlement": {
-    "format": "signed canonical JSON",
+    "format": "signed RFC 8785 JSON Canonicalization Scheme payload",
     "signature_algorithm": "Ed25519",
+    "canonicalization": "RFC 8785 JCS",
+    "signature_excluded_fields": ["signature"],
+    "signing_domain": "DiscussionBridge-Operator-Service-Entitlement-v1\n",
+    "signing_input": "UTF-8 bytes of signing_domain immediately followed by RFC 8785 canonical JSON for the complete entitlement object with signature omitted",
+    "verification_rule": "Resolve the protected forum-local key by the exact issuer_id plus key_id pair, require a 32-byte Ed25519 public key, decode signature as canonical base64url without padding to exactly 64 bytes, and verify Ed25519 over signing_input before evaluating time, forum, provider, scope, state, or grace.",
     "required_fields": [
       "entitlement_version",
       "entitlement_id",
@@ -40,6 +46,7 @@
     "provider_name_maximum_bytes": 200,
     "key_id_maximum_bytes": 200,
     "signature_encoding": "base64url without padding",
+    "signature_decoded_bytes": 64,
     "timestamp_format": "RFC 3339 UTC with Z suffix and optional fractional seconds",
     "maximum_lifetime_seconds": 31536000,
     "maximum_grace_seconds": 604800,
@@ -63,6 +70,15 @@
     "expired",
     "revoked",
     "replaced"
+  ],
+  "verification_failures": [
+    "entitlement_invalid_signature",
+    "entitlement_wrong_forum",
+    "entitlement_not_yet_valid",
+    "entitlement_expired",
+    "entitlement_revoked",
+    "entitlement_replaced",
+    "scope_denied"
   ],
   "state_transitions": {
     "pending_enrollment": ["active", "revoked"],

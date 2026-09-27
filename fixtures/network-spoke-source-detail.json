@@ -28,5 +28,6 @@
     "operation_id": "dbo_22222222222222222222222222222222",
     "route_forum_ids": ["dbf_22222222222222222222222222222222"],
     "managed_scope": "first_post"
-  }
+  },
+  "correlation_id": "network-spoke-01"
 }

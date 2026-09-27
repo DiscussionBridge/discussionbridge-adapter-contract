@@ -19,8 +19,14 @@ headers, fields, routes, or state.
    `interactive`. Any other value blocks deployment; it is not normalized.
 6. Configure and validate `DISCUSSIONBRIDGE_FORUM_NAME` wherever Alpha.21
    requires it.
-7. Prepare the identical Alpha.21 plugin artifact for all forums and the exact
-   Alpha.21 adapter artifact for every installation of each platform.
+7. Prepare one exact shared-plugin artifact/version for all forums and one
+   exact adapter artifact/version for every installation of each platform.
+   Adapter Protocol Alpha.21 is the wire-contract version; it does not assign
+   the component package versions.
+8. Freeze a cutover manifest that binds the Alpha.21 contract artifact hash,
+   shared-plugin artifact/version/hash, every adapter artifact/version/hash,
+   receiver schema migration identity, configuration revision, connection and
+   destination-policy revisions, and consumer deployment identities.
 
 ## Receiver migration requirements
 
@@ -78,18 +84,22 @@ the later altered candidate as authority.
 ## Coordinated cutover
 
 1. Put every Alpha.20 worker/timer in a confirmed stopped state.
-2. Apply the same Alpha.21 plugin package to all controlled forums while
+2. Apply the exact shared-plugin package named in the cutover manifest to all controlled forums while
    adapter workers remain stopped.
 3. Run migrations and verify exact counts, identities, connection scope, and
    zero unrequested publication work.
-4. Install each platform's Alpha.21 adapter package through its normal package
-   path and verify protected configuration plus migrated state.
+4. Install each platform adapter package named in the cutover manifest through
+   its normal package path and verify protected configuration plus migrated state.
 5. Validate `GET /discussion-bridge/v1/connection.json` and the exact
    `X-DiscussionBridge-Contract: 0.2.0-alpha.21` boundary for every connection.
 6. Run one-item then ten-item canaries in each direction/profile.
 7. Enable bounded workers sequentially, proving interruption/restart and public
    verification before the next profile.
 8. Reconcile all mappings and only then retire the maintenance boundary.
+
+Every cutover proof records the exact manifest identity. A different contract,
+plugin, adapter, schema, configuration, or consumer identity is a different
+candidate and invalidates prior cutover evidence.
 
 ## Rollback boundary
 

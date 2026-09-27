@@ -4,7 +4,10 @@
   "source_revision": "post:501:version:2",
   "source_revision_sequence": 2,
   "policy_revision": "policy:2026-09-27:1",
+  "destination_policy_id": "destination:ghost:primary:1",
   "action": "publish",
+  "stage": "synchronized",
+  "stage_token": "1111111111111111111111111111111111111111111111111111111111111111",
   "destination_binding": {
     "binding_id": "dbb_33333333333333333333333333333333",
     "external_id": "ghost:post:national-program-update",

@@ -1,0 +1,11 @@
+{
+  "manifest_id":"dbm_11111111111111111111111111111111",
+  "adapter_protocol":{"version":"0.2.0-alpha.21","sha256":"1111111111111111111111111111111111111111111111111111111111111111"},
+  "shared_plugin":{"version":"0.2.0-alpha.51","sha256":"2222222222222222222222222222222222222222222222222222222222222222"},
+  "adapters":[{"profile":"ghost","version":"0.2.0-alpha.40","sha256":"3333333333333333333333333333333333333333333333333333333333333333"}],
+  "receiver_schema":"discussionbridge-schema-20260927-01",
+  "configuration_revision":"configuration:2026-09-27:1",
+  "policy_revisions":["policy:2026-09-27:1"],
+  "consumer_identities":["ghost:installation:demo-1"],
+  "correlation_id":"cutover-manifest-01"
+}

@@ -1,5 +1,5 @@
 {
   "descriptor": {"source_revision": "post:18:version:7", "byte_length": 16, "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "chunk_count": 1},
-  "chunks": [{"source_revision": "post:18:version:7", "chunk": 1, "chunk_count": 1, "decoded_bytes": 16, "chunk_sha256": "972af7f490eff83b749b287f1a80c26f04655c86d63e09d1e003a7460ade25e8", "content_base64": "PHA+Q2h1bmsgb25lPC9wPg=="}],
+  "chunks": [{"source_revision": "post:18:version:7", "chunk": 1, "chunk_count": 1, "decoded_bytes": 16, "chunk_sha256": "972af7f490eff83b749b287f1a80c26f04655c86d63e09d1e003a7460ade25e8", "content_base64": "PHA+Q2h1bmsgb25lPC9wPg==", "correlation_id": "integrity-failure-01"}],
   "expected_error": "integrity_failed"
 }

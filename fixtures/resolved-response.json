@@ -7,6 +7,7 @@
   "direction": "to_discourse",
   "accepted_source_revision": "wordpress:post:482:revision:9",
   "accepted_source_revision_sequence": 9,
-  "core_fallback": false
+  "core_fallback": false,
+  "correlation_id": "resolve-update-01"
 }
 

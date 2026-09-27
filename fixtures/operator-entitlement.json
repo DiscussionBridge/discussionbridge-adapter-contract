@@ -11,5 +11,5 @@
   "grace_until": "2027-10-04T18:00:00Z",
   "scopes": ["observe_health", "observe_publication", "retry_retryable_work"],
   "key_id": "discussionbridge-operator-2026-01",
-  "signature": "ZXhhbXBsZS1zaWduYXR1cmU"
+  "signature": "CoWk_EEtcpo-d8IT32Ak2nMFIkn8XfsWOoHzKoGGerbc-Dw7R6e1w9McdDHeWRiv9VNgsJ06upJu1OAUlLg_AA"
 }

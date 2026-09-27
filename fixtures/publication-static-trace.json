@@ -1,0 +1,8 @@
+{
+  "synchronized":"publication-acknowledgement-static-pending.json",
+  "deployed":"publication-acknowledgement-static-deployed.json",
+  "verified":"publication-acknowledgement.json",
+  "interruption_recovery_states":["awaiting_deployment","awaiting_verification"],
+  "terminal_state":"acknowledged",
+  "correlation_id":"static-trace-01"
+}

@@ -4,7 +4,10 @@
   "source_revision": "post:12:version:4",
   "source_revision_sequence": 4,
   "policy_revision": "policy:2026-09-27:1",
+  "destination_policy_id": "destination:statamic:primary:1",
   "action": "update",
+  "stage": "verified",
+  "stage_token": "4444444444444444444444444444444444444444444444444444444444444444",
   "destination_binding": {
     "binding_id": "dbb_11111111111111111111111111111111",
     "external_id": "page:site-7:roadmap",

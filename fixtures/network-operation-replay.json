@@ -1,0 +1,6 @@
+{
+  "ledger_key": {"origin_forum_id":"dbf_11111111111111111111111111111111","operation_id":"dbo_11111111111111111111111111111111"},
+  "immutable_operation": {"source_revision":"post:501:version:2","content_sha256":"ac86d44208a2a56defa0597f0f768da60448e4e3eb41be830090e10152efa8cb","route_forum_ids":["dbf_11111111111111111111111111111111"],"relationship":"hub_to_spoke","managed_scope":"first_post","policy_revision":"policy:2026-09-27:1"},
+  "retained_result": {"outcome":"resolved","resource_id":"c4965d46-e657-4af4-af47-6439e544eeb7","topic_id":101,"mutated":false,"route_forum_ids":["dbf_11111111111111111111111111111111","dbf_22222222222222222222222222222222"]},
+  "correlation_id":"network-replay-01"
+}

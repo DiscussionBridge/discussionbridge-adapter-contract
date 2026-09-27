@@ -1,5 +1,6 @@
 {
-  "leased_work": {"source_revision": "post:12:version:4", "policy_revision": "policy:2026-09-27:1", "state": "leased"},
+  "leased_work": {"source_revision": "post:12:version:4", "policy_revision": "policy:2026-09-27:1", "state": "superseded", "lease_expired_at": "2026-09-27T18:35:00Z"},
+  "late_acknowledgement": {"source_revision": "post:12:version:4", "policy_revision": "policy:2026-09-27:1", "received_at": "2026-09-27T18:36:00Z"},
   "authoritative": {"source_revision": "post:12:version:5", "policy_revision": "policy:2026-09-27:2"},
   "expected_error": "work_superseded"
 }

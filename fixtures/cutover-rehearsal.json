@@ -1,0 +1,9 @@
+{
+  "manifest_id":"dbm_11111111111111111111111111111111",
+  "preflight":"passed",
+  "mismatch_rejected_before_mutation":true,
+  "one_item_canary":"passed",
+  "ten_item_canary":"passed",
+  "rollback_boundary":"before_unrepresentable_alpha20_mutation",
+  "correlation_id":"cutover-rehearsal-01"
+}

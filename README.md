@@ -37,8 +37,10 @@ Every adapter request uses one independently issued Content Connection:
 Connections independently scope allowed origins, directions, and lanes. A
 missing or different contract version fails before mutation; Alpha.21 does not
 silently negotiate legacy behavior. Before work begins, the adapter validates
-the authenticated connection's effective contract, scope, forum name,
-presentation modes, catalog requirement, and policy revision through:
+the authenticated connection's effective contract, scope, conditionally
+present forum name, presentation modes, supported operations, finite bounds,
+exact resolved destination policies, catalog requirement, and policy revision
+through:
 
 `GET /discussion-bridge/v1/connection.json`
 
@@ -124,6 +126,10 @@ revision-pinned 32 KiB decoded base64 chunks. The adapter verifies every chunk,
 total byte count, and complete SHA-256 before parsing or publishing the
 reassembled UTF-8 HTML.
 
+The receiver accepts no source item larger than the connection-advertised
+finite Alpha.21 source bound (currently 16 MiB). This protects both sides from
+unbounded work without imposing a destination-content ceiling.
+
 Chunking bounds each API response; it is not a destination-content ceiling.
 The complete source is published whenever the destination accepts it. Only a
 real destination-native limit permits a safe destination excerpt with
@@ -139,20 +145,24 @@ Continuing publication uses:
 - `PUT /discussion-bridge/v1/publication-work/{work_id}/failure.json`
 
 Claims are bounded to at most 32 items. Each item names one exact source
-revision, policy revision, action, connection, presentation, attempt, and
+revision, policy revision, destination-policy ID, catalog revision, resolved
+native mappings/limit policy, action, connection, presentation, attempt, and
 lease. Workers may request leases up to one hour and renew within a four-hour
 maximum total lease for bounded static build/deploy/verification work.
 
-Acknowledgement is valid only for the exact active lease after the native
-operation succeeds. It preserves destination identity and separately records
-source revision, destination publication revision, synchronization, content
-disposition, deployment, and public verification. Dynamic destinations record
-deployment and verification as `not_required`. Static publication remains
-`pending` through build/deployment and is not complete until the exact deployed
-revision is publicly verified.
+The first `synchronized` acknowledgement is valid only for the exact active
+lease after the native operation succeeds. It preserves destination identity
+and separately records source revision, destination publication revision,
+synchronization, content disposition, deployment, and public verification.
+Dynamic destinations finish at `synchronized` with deployment and verification
+`not_required`. Static work persists at `awaiting_deployment`, then
+`awaiting_verification`, with new bounded stage tokens; only the exact ordered
+`synchronized` → `deployed` → `verified` trace becomes terminal. An
+interruption never repeats the native mutation or discards the binding.
 
-Registered transient failures retry at 60, 300, and 900 seconds, with no more
-than three automatic attempts. Authentication, scope, validation, unsupported
+The initial attempt is attempt 1. Registered transient failures after attempts
+1, 2, and 3 retry at 60, 300, and 900 seconds; a failure on attempt 4 enters
+operator attention. Authentication, scope, validation, unsupported
 content, identity, destination collision, reconciliation, and explicit
 operator-action conditions are terminal. Error detail is bounded, sanitized,
 and never controls retry classification.
@@ -169,6 +179,11 @@ authors, supported presentation modes, and actual native limits in segments of
 at most 100 items. Operator-approved mapping policy references an exact catalog
 revision.
 
+Each segment has an exact item schema and stable opaque native IDs. Updates
+atomically replace complete named segments only when the base catalog revision
+matches. Removed referenced items remain identifiable as unavailable and put
+dependent policy into operator attention rather than silently remapping it.
+
 Catalog data is descriptive only. It never authorizes a destination, expands a
 connection, selects presentation by itself, creates work, or silently remaps an
 existing publication.
@@ -180,6 +195,14 @@ spoke network. Each operation carries stable origin, content-authority,
 relationship, route, and first-post managed-scope provenance. A forum rejects
 its own origin, repeated routes, excessive hops, wrong relationships, and any
 scope other than the synchronized first post.
+
+The shared plugin creates one protected forum ID exactly once. Restores retain
+it; a clone stays network-disabled until an explicit audited rotation and peer
+reauthorization. A durable one-year replay ledger keys each operation by origin
+forum and operation ID: exact replay returns the retained result without a
+second mutation, while any immutable-field mismatch fails closed. The
+authenticated sender and route are checked before the local forum ID is
+appended exactly once.
 
 Readers must be able to distinguish hub-origin, Spoke A-origin, Spoke B-origin,
 and local topics. The shared plugin presents the origin forum, direction,
@@ -201,8 +224,21 @@ supply trust keys. Rotation enrolls the next key before use; revocation disables
 affected active entitlements while preserving verification of retained audit
 history.
 
+Entitlements sign the RFC 8785 canonical JSON object with `signature` omitted,
+prefixed by the exact `DiscussionBridge-Operator-Service-Entitlement-v1\n`
+domain. The unpadded base64url signature must decode to 64 bytes and verifies
+against the protected 32-byte Ed25519 key bound to the exact issuer/key pair.
+
 Operator entitlements and credentials never appear in adapter requests and
 never grant, replace, reveal, or expand Content Connection authorization.
+
+## Correlation and errors
+
+Every request supplies `X-DiscussionBridge-Correlation`. Every success and
+error response echoes the same bounded identifier in both that header and its
+`correlation_id` body field. Body/header mismatch fails before mutation. All
+errors use the exact `{error_code, message, correlation_id}` envelope and
+sanitize protected values.
 
 ## Platform-owned behavior
 

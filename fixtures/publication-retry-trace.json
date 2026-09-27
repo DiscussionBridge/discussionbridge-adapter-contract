@@ -1,0 +1,13 @@
+{
+  "initial_attempt":1,
+  "failures":[
+    {"attempt_count":1,"backoff_seconds":60,"resulting_state":"retry_wait"},
+    {"attempt_count":2,"backoff_seconds":300,"resulting_state":"retry_wait"},
+    {"attempt_count":3,"backoff_seconds":900,"resulting_state":"retry_wait"},
+    {"attempt_count":4,"backoff_seconds":null,"resulting_state":"operator_attention"}
+  ],
+  "successful_retry":{"attempt_count":2,"resulting_state":"acknowledged"},
+  "terminal_failure":{"attempt_count":1,"resulting_state":"operator_attention"},
+  "manual_retry":{"customer_authorized":true,"condition_corrected":true,"same_work_id":true,"from_retry_generation":0,"to_retry_generation":1,"reentry_state":"available","next_attempt_count":1},
+  "correlation_id":"retry-trace-01"
+}

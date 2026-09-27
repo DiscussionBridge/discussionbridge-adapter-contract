@@ -1,0 +1,8 @@
+{
+  "active":{"state":"leased","source_revision":"post:12:version:4","content_retained":true},
+  "newer":{"state":"blocked_by_active_binding_work","source_revision":"post:12:version:5"},
+  "after_active_expiry":{"old_state":"superseded","new_state":"available","old_content_retained_until_recovery_terminal":true},
+  "late_acknowledgement_error":"work_superseded",
+  "destination_identity_unchanged":true,
+  "correlation_id":"supersession-trace-01"
+}

@@ -1,0 +1,14 @@
+{
+  "contract_version":"0.2.0-alpha.21",
+  "connection_id":"dbc_222222222222222222222222",
+  "enabled":true,
+  "directions":["to_discourse"],
+  "lanes":["articles"],
+  "allowed_presentation_modes":["simple","full","interactive"],
+  "supported_operations":["resolve"],
+  "bounds":{"resolve_json_bytes":65536,"source_content_bytes":16777216,"claim_maximum_items":32,"lease_maximum_seconds":14400,"catalog_segment_items":100},
+  "destination_policies":[{"destination_policy_id":"destination:discourse:articles:1","profile":"discourse_as_publisher","presentation_mode":"interactive","container_mapping":{"source":"site:articles","destination":"discourse:category:articles"},"taxonomy_mapping":{"mode":"mapped_only"},"author_mapping":{"mode":"source_attribution"},"native_limit_policy":{"maximum_bytes":49152,"overflow_behavior":"excerpt_with_read_more"},"catalog_revision":"catalog:discourse:2026-09-27:1"}],
+  "catalog_required":false,
+  "policy_revision":"policy:2026-09-27:2",
+  "correlation_id":"capability-to-discourse-01"
+}

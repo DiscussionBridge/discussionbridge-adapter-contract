@@ -8,10 +8,18 @@
       "source_revision": "post:12:version:4",
       "source_revision_sequence": 4,
       "policy_revision": "policy:2026-09-27:1",
+      "destination_policy_id": "destination:statamic:primary:1",
+      "catalog_revision": "catalog:statamic:2026-09-27:1",
       "presentation_mode": "interactive",
+      "resolved_container": {"id":"statamic:collection:articles","kind":"collection"},
+      "resolved_taxonomy": [{"source_id":"discourse:tag:roadmap","destination_id":"statamic:term:roadmap"}],
+      "resolved_author": {"mode":"source_attribution","destination_id":null},
+      "native_limit_policy": {"maximum_bytes":2000000,"overflow_behavior":"excerpt_with_read_more"},
       "lease_token": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "stage_token": "2222222222222222222222222222222222222222222222222222222222222222",
       "lease_expires_at": "2026-09-27T18:35:00Z",
       "attempt_count": 1,
+      "retry_generation": 0,
       "correlation_id": "work-01"
     }
   ],

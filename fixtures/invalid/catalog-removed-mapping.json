@@ -1,0 +1,1 @@
+{"policy":{"container_mapping":{"source":"discourse:category:2","destination":"ghost:tag:removed"},"taxonomy_mapping":{"items":[]},"author_mapping":{"items":[]}},"catalog_items":[{"id":"ghost:tag:removed","available":false}],"expected_error":"policy_denied"}

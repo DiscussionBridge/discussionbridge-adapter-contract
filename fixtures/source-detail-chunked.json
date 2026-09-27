@@ -20,5 +20,6 @@
     "chunk_count": 3,
     "decoded_chunk_maximum_bytes": 32768
   },
-  "network_provenance": null
+  "network_provenance": null,
+  "correlation_id": "source-detail-chunked-01"
 }

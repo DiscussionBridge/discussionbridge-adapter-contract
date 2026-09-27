@@ -28,5 +28,6 @@
     "operation_id": "dbo_11111111111111111111111111111111",
     "route_forum_ids": ["dbf_11111111111111111111111111111111"],
     "managed_scope": "first_post"
-  }
+  },
+  "correlation_id": "network-hub-01"
 }

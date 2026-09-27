@@ -2,7 +2,8 @@
   "request": {
     "snapshot": "dbs_11111111111111111111111111111111",
     "cursor": "cursor_page_2_policy_1",
-    "limit": 25
+    "limit": 25,
+    "correlation_id": "inventory-02"
   },
   "response": {
     "snapshot": "dbs_11111111111111111111111111111111",
@@ -20,6 +21,7 @@
       }
     ],
     "next_cursor": null,
-    "complete": true
+    "complete": true,
+    "correlation_id": "inventory-02"
   }
 }

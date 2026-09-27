@@ -21,7 +21,7 @@ missing approved requirement.
 | A-01 | `contract.json#/configuration/presentation_modes` and `presentation_rule`. | Positive presentation catalog; invalid superseded third-mode fixture and test. |
 | A-02 | `contract.json#/configuration/forum_name`. | Connection capability fixture; README shared forum-name section. |
 | A-03 | `contract.json#/authentication/adapter_identity_role`. | Conformance assertion; README authentication boundary. |
-| A-04 | `contract.json#/connection_capability`. | `fixtures/connection-capability.json`. |
+| A-04 | `contract.json#/connection_capability`. | From-Discourse and pure-To-Discourse capability fixtures include supported operations, finite bounds, resolved destination policy, and conditional forum name. |
 | B-12 | Resolve/source/work `source_revision` plus positive monotonic `source_revision_sequence`. | Complete request, inventory, detail, work, acknowledgement, revocation, and revision-conflict fixtures. |
 | B-13 | Source-created/source-updated fields plus acknowledgement synchronization and public-verification times. | Request, source, record, and acknowledgement fixtures. |
 | B-14 | Exact applied source and destination publication revisions. | From-Discourse record and acknowledgement fixtures. |
@@ -36,22 +36,22 @@ missing approved requirement.
 | D-04 | Hold, unpublish, restore actions and durable binding states. | Work action/state registry and revocation fixture. |
 | E-01 | Opaque snapshot/cursor, policy-bound initial inventory, high-water, 30-day activity retention, expiry, and restart/deduplication rule. | Initial and resumed source-inventory fixtures plus cursor/snapshot mismatch fixture. |
 | E-02 | Revision-pinned source detail and bounded content transport. | Inline/chunked detail fixtures. |
-| E-03 | Cursor-based revocation index/detail, reasons, retention, and same-identity restore rule. | Revocation, hold/unpublish, and restore fixtures. |
-| E-04 | Bounded claim, lease, renewal, acknowledgement, failure, concurrency, expiry, and supersession rules. | Claim/renew/ack/failure fixtures and wrong-token, expired, over-limit, and superseded fixtures. |
-| E-05 | Receiver-owned retryable/terminal failure registry, attempts, backoff, exhaustion, and bounded manual retry. | Failure, retry-wait, and exhausted/operator-attention fixtures. |
+| E-03 | Cursor/high-water revocation index/detail, reasons, retention, restart deduplication, work-owned delivery acknowledgement, and same-identity restore rule. | Revocation index/detail and restart trace plus hold/unpublish/restore work. |
+| E-04 | Bounded claim, lease, renewal, staged acknowledgement, failure, serialized binding work, expiry, retention, and supersession rules. | Dynamic and static three-stage traces, interruption states, failure fixtures, and late-superseded negatives. |
+| E-05 | Receiver-owned retryable/terminal registry, one initial plus three retries, exact backoff/exhaustion, and bounded manual retry. | Complete retry trace plus failure, retry-wait, and exhausted/operator-attention fixtures. |
 | E-06 | Exact immutable `policy_revision` in inventory, work, and acknowledgement. | Inventory/work/ack fixtures. |
-| E-07 | Separate synchronization, deployment, and public verification; static completion rule. | Dynamic create, static pending, and static verified acknowledgement fixtures plus README durable-work section. |
-| E-08 | Work/correlation IDs across work and response flows. | Claim/ack/failure fixtures and bounds. |
-| F-01 | Segmented bounded descriptive catalog with no authorization authority. | Catalog schema and presentation segment fixture. |
-| F-02 | Exact `catalog_revision` referenced by operator policy. | Catalog fixture and authority rule. |
+| E-07 | Separate synchronization, deployment, and public verification; static completion rule. | Dynamic acknowledgement; static synchronized → deployed → verified trace; deployment/verification failures. |
+| E-08 | Required header/body correlation across every route and exact error envelope. | Correlated route fixtures plus missing/oversized/secret-exposure negatives. |
+| F-01 | Segmented bounded descriptive catalog with exact item and GET/PUT schemas and no authorization authority. | Positive fixtures for all six segments and update; unknown-field and authority-expansion negatives. |
+| F-02 | Exact `catalog_revision` referenced by operator policy. | Atomic update, stale revision, removed mapping, and authority rules/fixtures. |
 | F-03 | Native public pagination remains platform-owned. | README Platform-owned behavior. |
 | G-01 | Bounded source-author schema both directions without shared identity. | Source detail author fixture and authorship rules. |
 | G-02 | Bounded source category/tag identities for operator policy mapping. | Source detail taxonomy fixture and schema. |
-| H-01 | Separate signed Operator Service entitlement contract; one provider; protected forum-local trust-key enrollment and rotation. | `operator-service-contract.json` and valid entitlement fixture. |
-| H-02 | Scope, expiry, grace/read-only, replacement, revocation, and audit rules. | Operator contract states/rules, enrollment and revocation audit fixtures, expiry and invalid-signature fixtures. |
+| H-01 | Separate RFC 8785/Ed25519 Operator Service entitlement contract; one provider; protected issuer/key enrollment and rotation. | Real deterministic public-key/message/signature vector and executable cryptographic verification. |
+| H-02 | Scope, forum binding, validity, grace/read-only, replacement, revocation, and audit rules. | Enrollment/revocation audits plus tamper, wrong forum/key, not-yet-valid, expired, grace, revoked, replaced, and scope negatives. |
 | H-03 | Customer approval and provider audit remain separate from adapter credentials. | Operator contract rules and invalid-scope fixture. |
 | I-01 | Stable origin/content-authority forum provenance. | Network source detail fixture. |
-| I-02 | Operation ID, bounded route, self/repeat/over-limit rejection. | Network schema and loop-negative fixture. |
+| I-02 | Protected forum-ID lifecycle, durable operation replay, exact route append, and self/repeat/over-limit rejection. | Identity/replay fixtures plus clone, replay mismatch, loop, repeat, and over-limit negatives. |
 | I-03 | Only `first_post` is admitted; discussion/moderation/users remain local. | Network managed-scope schema and README. |
 | I-04 | Generic visible origin, direction, canonical source, local forum, and discussion boundary. | Network provenance fields and presentation rule. |
 | I-05 | No automatic cross-spoke transit. | Network rules. |
@@ -71,8 +71,15 @@ missing approved requirement.
   superseded presentation values rather than normalizing them, initializes
   revision state, keeps new publication scope default-off, defines sequential
   canaries, and fixes the rollback boundary.
+- The synthetic cutover manifest binds independently versioned protocol,
+  shared-plugin, adapter, schema, configuration, policy, and consumer
+  identities; rehearsal evidence rejects mismatches before mutation.
 - The candidate is derived from exact tag `v0.2.0-alpha.20`; the dirty Alpha.21
   working tree is not an implementation base.
+- Every positive fixture is accepted through an executable validator, every
+  negative fixture is rejected with its exact expected protocol code, real
+  Ed25519 verification runs locally, and mutation classes cover missing and
+  unknown fields, enum, bound, hash, and signature failures.
 
 ## Current audit result
 

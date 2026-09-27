@@ -3,10 +3,11 @@
   "platform_profile": "ghost",
   "segment_type": "presentation_modes",
   "items": [
-    {"id": "simple", "name": "Simple"},
-    {"id": "full", "name": "Full"},
-    {"id": "interactive", "name": "Interactive"}
+    {"id": "simple", "name": "Simple", "available": true},
+    {"id": "full", "name": "Full", "available": true},
+    {"id": "interactive", "name": "Interactive", "available": true}
   ],
   "next_cursor": null,
-  "complete": true
+  "complete": true,
+  "correlation_id": "catalog-presentation-01"
 }
