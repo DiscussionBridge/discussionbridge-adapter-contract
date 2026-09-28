@@ -39,6 +39,7 @@ import {
   validateReplay,
   validateRecordIndex,
   validateRecordShow,
+  validateRepositoryIdentity,
   validateResolvedPolicy,
   validateResolveRecord,
   validateResolveResponse,
@@ -60,6 +61,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const load = async (relative) => JSON.parse(await readFile(path.join(root, relative), "utf8"));
 const contract = await load("contract.json");
 const operator = await load("operator-service-contract.json");
+const packageMetadata = await load("package.json");
 const positiveDirectory = path.join(root, "fixtures");
 const negativeDirectory = path.join(positiveDirectory, "invalid");
 const positiveNames = (await readdir(positiveDirectory)).filter((name) => name.endsWith(".json")).sort();
@@ -75,6 +77,7 @@ assert.deepEqual(contract.configuration.presentation_modes, ["simple", "full", "
 assert.equal(contract.publication_work.initial_attempts + contract.publication_work.maximum_automatic_retries, contract.publication_work.maximum_total_attempts);
 assert.equal(contract.publication_work.retry_backoff_seconds.length, contract.publication_work.maximum_automatic_retries);
 assert.equal(operator.entitlement.canonicalization, "RFC 8785 JCS");
+validateRepositoryIdentity(packageMetadata, contract, operator);
 
 const trustVector = fixtures.get("operator-entitlement-test-vector.json");
 const trust = { [`${trustVector.issuer_id}:${trustVector.key_id}`]: trustVector.public_key_base64url };
@@ -219,6 +222,15 @@ for (const name of positiveNames) {
   positiveHandlers[name](fixtures.get(name));
 }
 
+const pendingRecord = structuredClone(fixtures.get("from-discourse-record.json").bridge_record);
+const pendingBinding = pendingRecord.bindings[0];
+pendingBinding.state = "pending";
+pendingBinding.deployment_state = "pending";
+pendingBinding.verification_state = "pending";
+delete pendingBinding.deployed_at;
+delete pendingBinding.publicly_verified_at;
+validateRecordShow({ bridge_record: pendingRecord, correlation_id: "pending-binding-01" }, contract);
+
 const baseComplete = fixtures.get("to-discourse-request.json").bridge_record;
 const baseExcerpt = fixtures.get("to-discourse-excerpt-request.json").bridge_record;
 const baseAck = fixtures.get("publication-acknowledgement.json");
@@ -318,6 +330,16 @@ const mutationCases = [
   ["error unknown field", () => validateErrorResponse({ ...structuredClone(fixtures.get("rejected-response.json")), unexpected: true }, contract), "unknown_field"],
   ["operator entitlement unknown field", () => validateOperatorEntitlement({ ...structuredClone(validEntitlement), unexpected: true }, operator, trust), "unknown_field"],
   ["operator audit unknown field", () => validateOperatorAudit({ ...structuredClone(fixtures.get("operator-enrollment-audit.json")), unexpected: true }, operator), "unknown_field"],
+  ["capability invented direction", () => { const value = structuredClone(fixtures.get("connection-capability.json")); value.directions = ["delete_everything"]; validateConnectionCapability(value, contract); }, "validation_failed"],
+  ["capability invalid authority metadata", () => { const value = structuredClone(fixtures.get("connection-capability.json")); value.lanes = [""]; value.catalog_required = "yes"; value.policy_revision = ""; value.supported_operations = ["resolve", "resolve"]; validateConnectionCapability(value, contract); }, "validation_failed"],
+  ["catalog malformed nested item", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.request.segments[0].items = [{ id: "", name: 123, available: "yes", unexpected: true }]; validateCatalogUpdate(value, contract); }, "unknown_field"],
+  ["catalog response scope mismatch", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.response.platform_profile = "wordpress"; validateCatalogUpdate(value, contract); }, "validation_failed"],
+  ["catalog accepted segments mismatch", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.response.accepted_segments = ["native_limits"]; validateCatalogUpdate(value, contract); }, "validation_failed"],
+  ["network malformed provenance", () => { const value = structuredClone(fixtures.get("network-source-detail.json")); value.network_provenance.origin_forum_id = "invalid"; value.network_provenance.operation_id = "reuse-me"; value.network_provenance.origin_topic_url = "javascript:alert(1)"; validateSourceDetail(value, contract); }, "validation_failed"],
+  ["pending binding premature deployed timestamp", () => { const value = structuredClone(pendingRecord); value.bindings[0].deployed_at = "2026-09-27T18:31:30Z"; validateRecordShow({ bridge_record: value, correlation_id: "pending-binding-02" }, contract); }, "validation_failed"],
+  ["package version mismatch", () => validateRepositoryIdentity({ ...packageMetadata, version: "0.2.0-alpha.20" }, contract, operator), "contract_version_mismatch"],
+  ["operator contract version mismatch", () => validateRepositoryIdentity(packageMetadata, contract, { ...operator, version: "0.2.0-alpha.20" }), "contract_version_mismatch"],
+  ["authentication header version mismatch", () => { const value = structuredClone(contract); value.authentication.contract_header_value = "0.2.0-alpha.20"; validateRepositoryIdentity(packageMetadata, value, operator); }, "contract_version_mismatch"],
 ];
 for (const [name, operation, code] of mutationCases) {
   assert.throws(operation, (error) => error instanceof ProtocolError && error.code === code, `mutation ${name} must fail with ${code}`);
