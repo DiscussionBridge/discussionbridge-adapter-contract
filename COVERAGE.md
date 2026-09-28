@@ -73,7 +73,8 @@ missing approved requirement.
   canaries, and fixes the rollback boundary.
 - The synthetic cutover manifest binds independently versioned protocol,
   shared-plugin, adapter, schema, configuration, policy, and consumer
-  identities; rehearsal evidence rejects mismatches before mutation.
+  identities; rehearsal evidence binds the canonical manifest content by
+  SHA-256 and rejects identity or artifact mismatches before mutation.
 - The candidate is derived from exact tag `v0.2.0-alpha.20`; the dirty Alpha.21
   working tree is not an implementation base.
 - Every positive fixture is accepted through an executable validator, every

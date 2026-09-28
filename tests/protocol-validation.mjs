@@ -80,27 +80,51 @@ function validateUtf8Bytes(value, name) {
   }
 }
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function validateHtmlStructure(value, name) {
+function analyzeHtml(value, name) {
   validUnicode(value, name);
   const stack = [];
+  const anchors = [];
+  let visibleText = "";
   const voidElements = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
-  const tokens = value.match(/<!--[\s\S]*?-->|<![^>]*>|<\/?[A-Za-z][^>]*>/g) ?? [];
+  const uncommented = value.replace(/<!--[\s\S]*?-->/g, "");
+  const tokenPattern = /<![^>]*>|<\/?[A-Za-z][^>]*>/g;
+  const tokens = uncommented.match(tokenPattern) ?? [];
   if (tokens.length === 0) fail("validation_failed", `${name} must contain HTML markup`);
+  let cursor = 0;
   for (const token of tokens) {
+    const index = uncommented.indexOf(token, cursor);
+    const text = uncommented.slice(cursor, index);
+    if (/[<>]/.test(text)) fail("validation_failed", `${name} contains malformed markup`);
+    visibleText += text;
+    for (const entry of stack) if (entry.anchor) entry.anchor.text += text;
+    cursor = index + token.length;
     if (token.startsWith("<!")) continue;
     const closing = /^<\//.test(token);
     const match = /^<\/?\s*([A-Za-z][A-Za-z0-9:-]*)/.exec(token);
     if (!match) fail("validation_failed", `${name} contains malformed markup`);
     const tag = match[1].toLowerCase();
     if (closing) {
-      if (stack.pop() !== tag) fail("validation_failed", `${name} contains mismatched markup`);
-    } else if (!voidElements.has(tag) && !/\/\s*>$/.test(token)) stack.push(tag);
+      if (stack.pop()?.tag !== tag) fail("validation_failed", `${name} contains mismatched markup`);
+    } else if (!voidElements.has(tag) && !/\/\s*>$/.test(token)) {
+      let anchor = null;
+      if (tag === "a") {
+        const attributes = new Map();
+        const attributeText = token.slice(match[0].length, -1);
+        const attributePattern = /\s+([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+        let attribute;
+        while ((attribute = attributePattern.exec(attributeText)) !== null) attributes.set(attribute[1].toLowerCase(), attribute[2] ?? attribute[3] ?? attribute[4] ?? "");
+        anchor = { href: attributes.get("href"), text: "" };
+        anchors.push(anchor);
+      }
+      stack.push({ tag, anchor });
+    }
   }
+  const trailing = uncommented.slice(cursor);
+  if (/[<>]/.test(trailing)) fail("validation_failed", `${name} contains malformed markup`);
+  visibleText += trailing;
+  for (const entry of stack) if (entry.anchor) entry.anchor.text += trailing;
   if (stack.length !== 0) fail("validation_failed", `${name} contains unclosed markup`);
+  return { anchors, visibleText };
 }
 
 function pattern(value, source, code = "validation_failed", name = "value") {
@@ -252,7 +276,7 @@ export function validateAuthenticationHeaders(value, contract) {
 
 export function validateResolveRecord(record, contract) {
   exactObject(record, contract.resolve.required_fields, contract.resolve.optional_fields, "bridge_record");
-  if (bytes(JSON.stringify(record)) > contract.resolve.maximum_json_bytes) fail("validation_failed", "resolve request exceeds maximum_json_bytes");
+  if (bytes(JSON.stringify({ bridge_record: record })) > contract.resolve.maximum_json_bytes) fail("validation_failed", "resolve request exceeds maximum_json_bytes");
   if (!contract.resolve.field_rules.direction.includes(record.direction)) fail("direction_denied");
   validatePresentationMode(record.presentation_mode, contract);
   nonblank(record.external_id, contract.resolve.field_rules.external_id_maximum_bytes, "external_id");
@@ -271,10 +295,10 @@ export function validateResolveRecord(record, contract) {
     if (Object.hasOwn(record, "read_more_url")) fail("validation_failed");
     if (bytes(record.content_html) !== record.source_content_bytes || sha256(record.content_html) !== record.source_content_sha256) fail("integrity_failed");
   } else if (record.content_disposition === "excerpt") {
-    validateHtmlStructure(record.content_html, "content_html");
+    const html = analyzeHtml(record.content_html, "content_html");
     if (record.read_more_url !== record.canonical_url) fail("validation_failed");
-    const link = new RegExp(`<a\\b[^>]*\\bhref\\s*=\\s*["']${escapeRegExp(record.canonical_url)}["'][^>]*>[^<]*Read More[^<]*<\\/a>`, "i");
-    if (!/excerpt/i.test(record.content_html) || !link.test(record.content_html)) fail("validation_failed", "excerpt requires a notice and Read More link");
+    const canonicalLink = html.anchors.some((anchor) => anchor.href === record.canonical_url && /Read\s+More/i.test(anchor.text));
+    if (!/excerpt/i.test(html.visibleText) || !canonicalLink) fail("validation_failed", "excerpt requires a notice and Read More link");
     if (record.source_content_bytes <= bytes(record.content_html)) fail("validation_failed");
   } else fail("validation_failed");
   if (Object.hasOwn(record, "lane")) nonblank(record.lane, contract.resolve.field_rules.lane_maximum_bytes, "lane");
@@ -350,7 +374,6 @@ export function validateRecord(record, contract) {
     if (synchronizationCount !== 0 && synchronizationCount !== synchronizationFields.length) fail("validation_failed", "synchronization fields must occur together");
     const awaitingFirstAcknowledgement = binding.state === "pending" && synchronizationCount === 0;
     if (!awaitingFirstAcknowledgement && synchronizationCount !== synchronizationFields.length) fail("validation_failed", "synchronization fields are required after synchronization");
-    if (awaitingFirstAcknowledgement && (binding.deployment_state !== "pending" || binding.verification_state !== "pending")) fail("validation_failed", "pre-ack migration binding must remain pending");
     if (synchronizationCount === synchronizationFields.length) {
       nonblank(binding.applied_source_revision, contract.common.source_revision_maximum_bytes, "applied_source_revision");
       nonblank(binding.publication_revision, contract.common.publication_revision_maximum_bytes, "publication_revision");
@@ -546,7 +569,7 @@ export function validateClaimResponse(value, contract) {
   correlation(value.correlation_id, contract);
 }
 
-export function validateRenewal(value, contract) {
+export function validateRenewal(value, contract, context) {
   exactObject(value, ["request", "response"], [], "renewal exchange");
   exactObject(value.request, contract.publication_work.renew.required_fields, [], "renewal request");
   exactObject(value.response, contract.publication_work.renew.response_required_fields, [], "renewal response");
@@ -556,6 +579,20 @@ export function validateRenewal(value, contract) {
   timestamp(value.response.lease_expires_at, "lease_expires_at");
   validateLeaseRenewal(0, value.response.total_lease_seconds, contract.publication_work.claim.maximum_total_lease_seconds);
   if (value.request.correlation_id !== value.response.correlation_id) fail("validation_failed");
+  object(context, "renewal context");
+  exactObject(context, ["work", "state", "claimed_at", "request_received_at", "current_total_lease_seconds"], [], "renewal context");
+  if (context.state !== "leased") fail("lease_conflict");
+  if (value.request.lease_token !== context.work.lease_token || value.response.work_id !== context.work.work_id) fail("lease_conflict");
+  validateLeaseTime(context.work.lease_expires_at, context.request_received_at);
+  nonnegativeInteger(context.current_total_lease_seconds, "current_total_lease_seconds");
+  timestamp(context.claimed_at, "claimed_at");
+  timestamp(context.request_received_at, "request_received_at");
+  if (compareTimestamps(context.request_received_at, context.claimed_at, "request_received_at", "claimed_at") < 0) fail("validation_failed");
+  if ((Date.parse(context.work.lease_expires_at) - Date.parse(context.claimed_at)) / 1000 !== context.current_total_lease_seconds) fail("validation_failed", "current lease total does not match claimed lease");
+  validateLeaseRenewal(context.current_total_lease_seconds, value.request.requested_lease_seconds, contract.publication_work.claim.maximum_total_lease_seconds);
+  if (value.response.total_lease_seconds !== context.current_total_lease_seconds + value.request.requested_lease_seconds) fail("validation_failed", "total lease seconds do not match renewal");
+  const expectedExpiry = new Date(Date.parse(context.work.lease_expires_at) + value.request.requested_lease_seconds * 1000).toISOString().replace(".000Z", "Z");
+  if (compareTimestamps(value.response.lease_expires_at, expectedExpiry, "response.lease_expires_at", "expected lease expiry") !== 0) fail("validation_failed", "lease expiry does not match renewal");
   correlation(value.request.correlation_id, contract);
 }
 
@@ -594,15 +631,19 @@ export function validateAcknowledgement(value, contract) {
   correlation(value.correlation_id, contract);
 }
 
-export function validateStageTransition(previous, next, issuedNextStageToken) {
+export function validateStageTransition(previous, next, previousResponse) {
   const order = ["synchronized", "deployed", "verified"];
   if (order.indexOf(next.stage) !== order.indexOf(previous.stage) + 1) fail("stage_conflict");
+  object(previousResponse, "previous acknowledgement response");
+  if (previousResponse.accepted_stage !== previous.stage || previousResponse.terminal !== false || !Object.hasOwn(previousResponse, "next_stage_token")) fail("stage_conflict");
+  if (previous.deployment_state === "not_required" || previous.verification_state === "not_required") fail("stage_conflict", "terminal dynamic acknowledgement cannot advance");
   for (const field of ["resource_id", "source_revision", "source_revision_sequence", "policy_revision", "destination_policy_id", "action"]) {
     if (canonicalize(previous[field]) !== canonicalize(next[field])) fail("revision_conflict");
   }
   if (canonicalize(previous.destination_binding) !== canonicalize(next.destination_binding)) fail("identity_conflict");
-  pattern(issuedNextStageToken, "^[a-f0-9]{64}$", "stage_conflict", "issued next_stage_token");
-  if (next.stage_token !== issuedNextStageToken || previous.stage_token === next.stage_token) fail("stage_conflict");
+  if (next.synchronized_at !== previous.synchronized_at) fail("identity_conflict");
+  pattern(previousResponse.next_stage_token, "^[a-f0-9]{64}$", "stage_conflict", "issued next_stage_token");
+  if (next.stage_token !== previousResponse.next_stage_token || previous.stage_token === next.stage_token) fail("stage_conflict");
 }
 
 export function validateAcknowledgementResponse(value, contract) {
@@ -827,26 +868,39 @@ export function validateOperatorEntitlement(entitlement, operator, trust, contex
   if (compareTimestamps(entitlement.not_before, entitlement.issued_at) < 0) fail("validation_failed");
   if (compareTimestamps(entitlement.expires_at, entitlement.not_before) <= 0 || (Date.parse(entitlement.expires_at) - Date.parse(entitlement.issued_at)) / 1000 > operator.entitlement.maximum_lifetime_seconds) fail("validation_failed");
   if (compareTimestamps(entitlement.grace_until, entitlement.expires_at) < 0 || (Date.parse(entitlement.grace_until) - Date.parse(entitlement.expires_at)) / 1000 > operator.entitlement.maximum_grace_seconds) fail("validation_failed");
-  if (context.forumId && context.forumId !== entitlement.forum_id) fail("entitlement_wrong_forum");
-  if (context.at !== undefined) timestamp(context.at, "context.at");
-  if (context.state !== undefined && !operator.states.includes(context.state)) fail("scope_denied");
-  if (context.state === "revoked") fail("entitlement_revoked");
-  if (context.state === "replaced") fail("entitlement_replaced");
-  if (["pending_enrollment", "expired"].includes(context.state)) fail(context.state === "expired" ? "entitlement_expired" : "scope_denied");
-  if (context.at && compareTimestamps(context.at, entitlement.not_before, "context.at", "not_before") < 0) fail("entitlement_not_yet_valid");
-  if (context.at && compareTimestamps(context.at, entitlement.grace_until, "context.at", "grace_until") > 0) fail("entitlement_expired");
-  if (context.scope !== undefined) {
-    if (!operator.entitlement.allowed_scopes.includes(context.scope) || !entitlement.scopes.includes(context.scope)) fail("scope_denied");
-  }
-  if (context.mutation === true) {
-    if (!context.forumId || !context.at || context.state !== "active" || !context.scope) fail("scope_denied");
-    if (context.scope.startsWith("observe_") || context.scope.startsWith("prepare_")) fail("scope_denied");
-    if (compareTimestamps(context.at, entitlement.expires_at, "context.at", "expires_at") > 0) fail("scope_denied");
+  if (Object.keys(context).length > 0) {
+    exactObject(context, ["forumId", "at", "state", "scope", "mutation"], ["operationSha256", "proposalId", "customerApproval"], "operator execution context");
+    pattern(context.forumId, operator.entitlement.forum_id_pattern, "scope_denied", "context.forumId");
+    timestamp(context.at, "context.at");
+    enumValue(context.state, operator.states, "context.state");
+    enumValue(context.scope, operator.entitlement.allowed_scopes, "context.scope");
+    boolean(context.mutation, "context.mutation");
+    if (context.forumId !== entitlement.forum_id) fail("entitlement_wrong_forum");
+    if (!entitlement.scopes.includes(context.scope)) fail("scope_denied");
+    if (context.state === "revoked") fail("entitlement_revoked");
+    if (context.state === "replaced") fail("entitlement_replaced");
+    if (context.state === "pending_enrollment") fail("scope_denied");
+    if (context.state === "expired") fail("entitlement_expired");
+    if (compareTimestamps(context.at, entitlement.not_before, "context.at", "not_before") < 0) fail("entitlement_not_yet_valid");
+    if (compareTimestamps(context.at, entitlement.grace_until, "context.at", "grace_until") > 0) fail("entitlement_expired");
+    const observation = context.scope.startsWith("observe_");
+    const preparation = context.scope.startsWith("prepare_");
+    const requiresMutation = !observation && !preparation;
+    if (context.mutation !== requiresMutation) fail("scope_denied");
+    if (context.state === "grace_read_only" && !observation) fail("scope_denied");
+    if (context.state === "active" && compareTimestamps(context.at, entitlement.expires_at, "context.at", "expires_at") > 0) fail("scope_denied");
     if (context.scope.startsWith("apply_customer_approved_")) {
-      const approval = context.customerApproval;
-      if (!approval || approval.providerId !== entitlement.provider_id || approval.forumId !== entitlement.forum_id || approval.scope !== context.scope || approval.operationSha256 !== context.operationSha256 || compareTimestamps(approval.expiresAt, context.at, "approval.expiresAt", "context.at") < 0) fail("scope_denied");
+      pattern(context.operationSha256, operator.audit.operation_sha256_pattern, "scope_denied", "context.operationSha256");
+      requiredString(context.proposalId, "context.proposalId");
+      exactObject(context.customerApproval, ["providerId", "forumId", "scope", "operationSha256", "proposalId", "expiresAt"], [], "customer approval");
+      pattern(context.customerApproval.providerId, operator.entitlement.provider_id_pattern, "scope_denied", "approval.providerId");
+      pattern(context.customerApproval.forumId, operator.entitlement.forum_id_pattern, "scope_denied", "approval.forumId");
+      pattern(context.customerApproval.operationSha256, operator.audit.operation_sha256_pattern, "scope_denied", "approval.operationSha256");
+      requiredString(context.customerApproval.proposalId, "approval.proposalId");
+      timestamp(context.customerApproval.expiresAt, "approval.expiresAt");
+      if (context.customerApproval.providerId !== entitlement.provider_id || context.customerApproval.forumId !== entitlement.forum_id || context.customerApproval.scope !== context.scope || context.customerApproval.operationSha256 !== context.operationSha256 || context.customerApproval.proposalId !== context.proposalId || compareTimestamps(context.customerApproval.expiresAt, context.at, "approval.expiresAt", "context.at") < 0) fail("scope_denied");
     }
-  } else if (context.state === "active" && context.at && compareTimestamps(context.at, entitlement.expires_at, "context.at", "expires_at") > 0) fail("scope_denied");
+  }
 }
 
 export function validateRevisionTransition(stored, incoming) {
@@ -889,6 +943,8 @@ export function validateIdentity(stored, incoming) {
 
 export function validateAcknowledgementIdentity(work, acknowledgement, state = "leased") {
   if (state === "superseded") fail("work_superseded");
+  const expectedState = { synchronized: "leased", deployed: "awaiting_deployment", verified: "awaiting_verification" }[acknowledgement.stage];
+  if (state !== expectedState) fail("stage_conflict", "acknowledgement is not legal for current work state");
   if (Object.hasOwn(work, "lease_token") && work.lease_token !== acknowledgement.lease_token) fail("reconciliation_required");
   if (Object.hasOwn(work, "stage_token") && work.stage_token !== acknowledgement.stage_token) fail("stage_conflict");
   for (const field of ["resource_id", "destination_policy_id", "action"]) {
@@ -994,8 +1050,10 @@ export function validateCutoverManifest(value, contract) {
 }
 
 export function validateCutoverRehearsal(value, manifest, contract) {
-  exactObject(value, ["manifest_id", "preflight", "mismatch_rejected_before_mutation", "one_item_canary", "ten_item_canary", "rollback_boundary", "correlation_id"], [], "cutover rehearsal");
+  exactObject(value, ["manifest_id", "manifest_sha256", "preflight", "mismatch_rejected_before_mutation", "one_item_canary", "ten_item_canary", "rollback_boundary", "correlation_id"], [], "cutover rehearsal");
   if (value.manifest_id !== manifest.manifest_id) fail("reconciliation_required", "cutover rehearsal manifest mismatch");
+  pattern(value.manifest_sha256, contract.common.sha256_pattern, "validation_failed", "manifest_sha256");
+  if (value.manifest_sha256 !== sha256(canonicalize(manifest))) fail("reconciliation_required", "cutover rehearsal artifact mismatch");
   for (const field of ["preflight", "one_item_canary", "ten_item_canary"]) if (value[field] !== "passed") fail("validation_failed");
   if (value.mismatch_rejected_before_mutation !== true) fail("validation_failed");
   requiredString(value.rollback_boundary, "rollback_boundary");
@@ -1013,6 +1071,11 @@ export function validateRetryTrace(value, contract) {
     if (failure.backoff_seconds !== (final ? null : contract.publication_work.retry_backoff_seconds[index])) fail("validation_failed");
     if (failure.resulting_state !== (final ? "operator_attention" : "retry_wait")) fail("validation_failed");
   }
+  exactObject(value.successful_retry, ["attempt_count", "resulting_state"], [], "successful retry");
+  if (!Number.isSafeInteger(value.successful_retry.attempt_count) || value.successful_retry.attempt_count < 1 || value.successful_retry.attempt_count > contract.publication_work.maximum_total_attempts || value.successful_retry.resulting_state !== "acknowledged") fail("validation_failed");
+  exactObject(value.terminal_failure, ["attempt_count", "resulting_state"], [], "terminal failure");
+  positiveInteger(value.terminal_failure.attempt_count, "terminal failure attempt_count");
+  if (value.terminal_failure.resulting_state !== "operator_attention") fail("validation_failed");
   exactObject(value.manual_retry, ["customer_authorized", "condition_corrected", "same_work_id", "from_retry_generation", "to_retry_generation", "reentry_state", "next_attempt_count"], [], "manual retry");
   if (value.manual_retry.customer_authorized !== true || value.manual_retry.condition_corrected !== true || value.manual_retry.same_work_id !== true) fail("validation_failed");
   nonnegativeInteger(value.manual_retry.from_retry_generation, "from_retry_generation");
