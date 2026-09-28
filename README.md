@@ -6,7 +6,7 @@ runtime authority. The contract and conformance fixtures describe the public
 adapter boundary; they do not introduce a broker, installer, or shared adapter
 runtime.
 
-Version `0.2.0-alpha.21` is derived directly from the known-solid Alpha.20
+Version `0.2.0-alpha.22` is derived directly from the known-solid Alpha.20
 contract. It adds the shared behavior required for source revisions,
 set-and-forget initial and continuing publication, directional oversized
 content, destination acknowledgement, Operator Service, and the Discourse
@@ -32,10 +32,10 @@ Every adapter request uses one independently issued Content Connection:
 
 - `X-DiscussionBridge-Connection: dbc_<24 lowercase hexadecimal characters>`
 - `X-DiscussionBridge-Secret: <one-time connection secret>`
-- `X-DiscussionBridge-Contract: 0.2.0-alpha.21`
+- `X-DiscussionBridge-Contract: 0.2.0-alpha.22`
 
 Connections independently scope allowed origins, directions, and lanes. A
-missing or different contract version fails before mutation; Alpha.21 does not
+missing or different contract version fails before mutation; Alpha.22 does not
 silently negotiate legacy behavior. Before work begins, the adapter validates
 the authenticated connection's effective contract, scope, conditionally
 present forum name, presentation modes, supported operations, finite bounds,
@@ -71,7 +71,7 @@ Published platform content resolves through:
 
 `POST /discussion-bridge/v1/bridge-records/resolve.json`
 
-Alpha.21 retains Alpha.20 identity, adoption, and fail-closed reconciliation.
+Alpha.22 retains Alpha.20 identity, adoption, and fail-closed reconciliation.
 It additionally requires the source revision, source-created and source-updated
 times, presentation mode, complete source byte count/hash, and whether the
 bounded `content_html` is complete or an excerpt.
@@ -127,7 +127,7 @@ total byte count, and complete SHA-256 before parsing or publishing the
 reassembled UTF-8 HTML.
 
 The receiver accepts no source item larger than the connection-advertised
-finite Alpha.21 source bound (currently 16 MiB). This protects both sides from
+finite Alpha.22 source bound (currently 16 MiB). This protects both sides from
 unbounded work without imposing a destination-content ceiling.
 
 Chunking bounds each API response; it is not a destination-content ceiling.

@@ -1,6 +1,6 @@
 {
   "contract": "discussionbridge-adapter",
-  "version": "0.2.0-alpha.21",
+  "version": "0.2.0-alpha.22",
   "authority": {
     "runtime": "discussionbridge-for-discourse",
     "scope_rule": "The authenticated Content Connection is the only adapter authorization and scope authority.",
@@ -10,10 +10,10 @@
     "connection_header": "X-DiscussionBridge-Connection",
     "secret_header": "X-DiscussionBridge-Secret",
     "contract_header": "X-DiscussionBridge-Contract",
-    "contract_header_value": "0.2.0-alpha.21",
+    "contract_header_value": "0.2.0-alpha.22",
     "connection_id_pattern": "^dbc_[a-f0-9]{24}$",
     "adapter_identity_role": "diagnostic_only",
-    "version_rule": "Every authenticated Alpha.21 request supplies the exact contract header. A missing or different value fails before mutation and never triggers compatibility behavior."
+    "version_rule": "Every authenticated Alpha.22 request supplies the exact contract header. A missing or different value fails before mutation and never triggers compatibility behavior."
   },
   "profiles": [
     "astro",
@@ -110,13 +110,13 @@
       "source_updated_at",
       "content_disposition",
       "source_content_bytes",
-      "source_content_sha256"
+      "source_content_sha256",
+      "correlation_id"
     ],
     "optional_fields": [
       "lane",
       "adapter_id",
       "adapter_version",
-      "correlation_id",
       "visibility",
       "source_authors",
       "primary_source_author_id",
@@ -247,6 +247,28 @@
       "verification_state",
       "publicly_verified_at"
     ],
+    "destination_binding_required_fields": [
+      "binding_id",
+      "connection_id",
+      "role",
+      "state",
+      "external_id",
+      "canonical_url",
+      "presentation_mode",
+      "content_disposition",
+      "deployment_state",
+      "verification_state"
+    ],
+    "destination_binding_synchronization_fields": [
+      "applied_source_revision",
+      "publication_revision",
+      "synchronized_at"
+    ],
+    "destination_binding_event_timestamp_fields": [
+      "deployed_at",
+      "publicly_verified_at"
+    ],
+    "destination_binding_field_rule": "A pending migration binding awaiting its first Alpha.22 acknowledgement retains stable binding, connection, role, destination identity, presentation, content disposition, deployment, and verification state while applied_source_revision, publication_revision, and synchronized_at are absent. The three synchronization fields become required together when synchronization occurs. deployed_at and publicly_verified_at remain absent until their matching events and become required when those events occur.",
     "deployment_states": ["not_required", "pending", "deployed", "failed"],
     "deployment_transitions": {
       "not_required": [],

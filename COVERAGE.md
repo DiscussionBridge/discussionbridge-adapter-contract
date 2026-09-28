@@ -1,8 +1,8 @@
-# Alpha.21 Matrix Coverage Ledger
+# Alpha.22 Matrix Coverage Ledger
 
 This ledger maps every item in
 `planning/ADAPTER_PROTOCOL_ALPHA20_SUCCESSOR_CHANGE_MATRIX.md` to the exact
-Alpha.21 candidate artifact. It prevents a green parser test from hiding a
+Alpha.22 candidate artifact. It prevents a green parser test from hiding a
 missing approved requirement.
 
 ## Retained Alpha.20 behavior

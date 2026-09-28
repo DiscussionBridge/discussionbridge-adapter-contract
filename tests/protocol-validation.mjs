@@ -10,7 +10,7 @@ export class ProtocolError extends Error {
 
 const bytes = (value) => Buffer.byteLength(value, "utf8");
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
-const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
+const timestampPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$/;
 const base64urlPattern = /^[A-Za-z0-9_-]+$/;
 
 function fail(code, message) {
@@ -34,7 +34,73 @@ function nonblank(value, maximum, name) {
 
 function timestamp(value, name) {
   if (typeof value !== "string") fail("validation_failed", `${name} is required`);
-  if (!timestampPattern.test(value) || !Number.isFinite(Date.parse(value))) fail("malformed_value", `${name} is not RFC 3339 UTC`);
+  const match = timestampPattern.exec(value);
+  if (!match) fail("malformed_value", `${name} is not RFC 3339 UTC`);
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (month < 1 || month > 12 || day < 1 || day > days[month - 1] || hour > 23 || minute > 59 || second > 59) fail("malformed_value", `${name} is not a real RFC 3339 UTC instant`);
+}
+
+function timestampParts(value, name) {
+  timestamp(value, name);
+  const match = timestampPattern.exec(value);
+  const instant = new Date(0);
+  instant.setUTCFullYear(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  instant.setUTCHours(Number(match[4]), Number(match[5]), Number(match[6]), 0);
+  const second = BigInt(Math.trunc(instant.getTime() / 1000));
+  return { second, fraction: match[7] ?? "" };
+}
+
+function compareTimestamps(left, right, leftName = "left timestamp", rightName = "right timestamp") {
+  const a = timestampParts(left, leftName);
+  const b = timestampParts(right, rightName);
+  if (a.second !== b.second) return a.second < b.second ? -1 : 1;
+  const width = Math.max(a.fraction.length, b.fraction.length);
+  const af = a.fraction.padEnd(width, "0");
+  const bf = b.fraction.padEnd(width, "0");
+  return af === bf ? 0 : af < bf ? -1 : 1;
+}
+
+function validUnicode(value, name) {
+  if (typeof value !== "string" || Buffer.from(value, "utf8").toString("utf8") !== value) fail("validation_failed", `${name} is not valid UTF-8 text`);
+}
+
+function validateUtf8Bytes(value, name) {
+  try {
+    new TextDecoder("utf-8", { fatal: true }).decode(value);
+  } catch {
+    fail("integrity_failed", `${name} is not valid UTF-8`);
+  }
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function validateHtmlStructure(value, name) {
+  validUnicode(value, name);
+  const stack = [];
+  const voidElements = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
+  const tokens = value.match(/<!--[\s\S]*?-->|<![^>]*>|<\/?[A-Za-z][^>]*>/g) ?? [];
+  if (tokens.length === 0) fail("validation_failed", `${name} must contain HTML markup`);
+  for (const token of tokens) {
+    if (token.startsWith("<!")) continue;
+    const closing = /^<\//.test(token);
+    const match = /^<\/?\s*([A-Za-z][A-Za-z0-9:-]*)/.exec(token);
+    if (!match) fail("validation_failed", `${name} contains malformed markup`);
+    const tag = match[1].toLowerCase();
+    if (closing) {
+      if (stack.pop() !== tag) fail("validation_failed", `${name} contains mismatched markup`);
+    } else if (!voidElements.has(tag) && !/\/\s*>$/.test(token)) stack.push(tag);
+  }
+  if (stack.length !== 0) fail("validation_failed", `${name} contains unclosed markup`);
 }
 
 function pattern(value, source, code = "validation_failed", name = "value") {
@@ -123,7 +189,6 @@ export function validateConnectionCapability(value, contract) {
   if (value.directions.includes("from_discourse")) nonblank(value.forum_name, contract.configuration.forum_name.maximum_bytes, "forum_name");
   if (Object.hasOwn(value, "forum_name") && !value.directions.includes("from_discourse")) nonblank(value.forum_name, contract.configuration.forum_name.maximum_bytes, "forum_name");
   uniqueStrings(value.allowed_presentation_modes, "allowed_presentation_modes", contract.configuration.presentation_modes);
-  if (value.allowed_presentation_modes.join("|") !== contract.configuration.presentation_modes.join("|")) fail("validation_failed");
   uniqueStrings(value.supported_operations, "supported_operations", contract.connection_capability.supported_operations);
   boolean(value.catalog_required, "catalog_required");
   nonblank(value.policy_revision, contract.common.policy_revision_maximum_bytes, "policy_revision");
@@ -145,6 +210,7 @@ export function validateConnectionCapability(value, contract) {
     policyIds.add(policy.destination_policy_id);
     if (!contract.profiles.includes(policy.profile)) fail("validation_failed");
     validatePresentationMode(policy.presentation_mode, contract);
+    if (!value.allowed_presentation_modes.includes(policy.presentation_mode)) fail("policy_denied", "destination policy presentation is outside effective connection policy");
     const rules = contract.connection_capability.destination_policy_field_rules;
     exactObject(policy.container_mapping, rules.container_mapping_required_fields, [], "container mapping");
     requiredString(policy.container_mapping.source, "container mapping source");
@@ -152,9 +218,23 @@ export function validateConnectionCapability(value, contract) {
     exactObject(policy.taxonomy_mapping, rules.taxonomy_mapping_required_fields, rules.taxonomy_mapping_optional_fields, "taxonomy mapping");
     exactObject(policy.author_mapping, rules.author_mapping_required_fields, rules.author_mapping_optional_fields, "author mapping");
     if (!rules.mapping_modes.includes(policy.taxonomy_mapping.mode) || !rules.mapping_modes.includes(policy.author_mapping.mode)) fail("validation_failed");
-    if (Object.hasOwn(policy.taxonomy_mapping, "items") && !Array.isArray(policy.taxonomy_mapping.items)) fail("validation_failed", "taxonomy mapping items must be an array");
+    if (Object.hasOwn(policy.taxonomy_mapping, "items")) {
+      if (!Array.isArray(policy.taxonomy_mapping.items)) fail("validation_failed", "taxonomy mapping items must be an array");
+      for (const item of policy.taxonomy_mapping.items) {
+        exactObject(item, ["source", "destination"], [], "taxonomy mapping item");
+        requiredString(item.source, "taxonomy mapping source");
+        requiredString(item.destination, "taxonomy mapping destination");
+      }
+    }
     if (Object.hasOwn(policy.author_mapping, "destination_id")) requiredString(policy.author_mapping.destination_id, "author destination_id");
-    if (Object.hasOwn(policy.author_mapping, "items") && !Array.isArray(policy.author_mapping.items)) fail("validation_failed", "author mapping items must be an array");
+    if (Object.hasOwn(policy.author_mapping, "items")) {
+      if (!Array.isArray(policy.author_mapping.items)) fail("validation_failed", "author mapping items must be an array");
+      for (const item of policy.author_mapping.items) {
+        exactObject(item, ["source", "destination"], [], "author mapping item");
+        requiredString(item.source, "author mapping source");
+        requiredString(item.destination, "author mapping destination");
+      }
+    }
     exactObject(policy.native_limit_policy, rules.native_limit_policy_required_fields, [], "native limit policy");
     if (!Number.isSafeInteger(policy.native_limit_policy.maximum_bytes) || policy.native_limit_policy.maximum_bytes < 1 || !rules.overflow_behaviors.includes(policy.native_limit_policy.overflow_behavior)) fail("validation_failed");
     requiredString(policy.catalog_revision, "catalog_revision");
@@ -172,12 +252,16 @@ export function validateAuthenticationHeaders(value, contract) {
 
 export function validateResolveRecord(record, contract) {
   exactObject(record, contract.resolve.required_fields, contract.resolve.optional_fields, "bridge_record");
+  if (bytes(JSON.stringify(record)) > contract.resolve.maximum_json_bytes) fail("validation_failed", "resolve request exceeds maximum_json_bytes");
   if (!contract.resolve.field_rules.direction.includes(record.direction)) fail("direction_denied");
   validatePresentationMode(record.presentation_mode, contract);
   nonblank(record.external_id, contract.resolve.field_rules.external_id_maximum_bytes, "external_id");
-  nonblank(record.canonical_url, contract.resolve.field_rules.canonical_url_maximum_bytes, "canonical_url");
+  httpUrl(record.canonical_url, contract.resolve.field_rules.canonical_url_maximum_bytes, "canonical_url");
   nonblank(record.title, contract.resolve.field_rules.title_maximum_bytes, "title");
+  validUnicode(record.content_html, "content_html");
   if (bytes(record.content_html) > contract.resolve.field_rules.content_html_maximum_bytes) fail("validation_failed", "content_html too large");
+  if (!contract.resolve.field_rules.published.includes(record.published)) fail("validation_failed", "published is invalid");
+  nonblank(record.source_revision, contract.resolve.field_rules.source_revision_maximum_bytes, "source_revision");
   positiveInteger(record.source_revision_sequence, "source_revision_sequence");
   timestamp(record.source_created_at, "source_created_at");
   timestamp(record.source_updated_at, "source_updated_at");
@@ -187,14 +271,50 @@ export function validateResolveRecord(record, contract) {
     if (Object.hasOwn(record, "read_more_url")) fail("validation_failed");
     if (bytes(record.content_html) !== record.source_content_bytes || sha256(record.content_html) !== record.source_content_sha256) fail("integrity_failed");
   } else if (record.content_disposition === "excerpt") {
-    if (record.read_more_url !== record.canonical_url || !record.content_html.includes("Read More") || !record.content_html.includes(record.canonical_url)) fail("validation_failed");
+    validateHtmlStructure(record.content_html, "content_html");
+    if (record.read_more_url !== record.canonical_url) fail("validation_failed");
+    const link = new RegExp(`<a\\b[^>]*\\bhref\\s*=\\s*["']${escapeRegExp(record.canonical_url)}["'][^>]*>[^<]*Read More[^<]*<\\/a>`, "i");
+    if (!/excerpt/i.test(record.content_html) || !link.test(record.content_html)) fail("validation_failed", "excerpt requires a notice and Read More link");
     if (record.source_content_bytes <= bytes(record.content_html)) fail("validation_failed");
   } else fail("validation_failed");
-  if (Object.hasOwn(record, "correlation_id")) correlation(record.correlation_id, contract);
+  if (Object.hasOwn(record, "lane")) nonblank(record.lane, contract.resolve.field_rules.lane_maximum_bytes, "lane");
+  if (Object.hasOwn(record, "adapter_id")) nonblank(record.adapter_id, contract.resolve.field_rules.adapter_id_maximum_bytes, "adapter_id");
+  if (Object.hasOwn(record, "adapter_version")) nonblank(record.adapter_version, contract.resolve.field_rules.adapter_version_maximum_bytes, "adapter_version");
+  if (Object.hasOwn(record, "visibility")) enumValue(record.visibility, contract.resolve.field_rules.visibility, "visibility");
+  if (Object.hasOwn(record, "existing_topic_id")) positiveInteger(record.existing_topic_id, "existing_topic_id");
+  if (Object.hasOwn(record, "source_authors")) {
+    if (!Array.isArray(record.source_authors) || record.source_authors.length > contract.resolve.field_rules.source_authors_maximum_items) fail("validation_failed");
+    const ids = new Set();
+    for (const author of record.source_authors) {
+      exactObject(author, contract.authorship_and_taxonomy.source_author_fields, [], "source author");
+      nonblank(author.source_author_id, contract.resolve.field_rules.source_author_id_maximum_bytes, "source_author_id");
+      nonblank(author.source_author_name, contract.resolve.field_rules.source_author_name_maximum_bytes, "source_author_name");
+      httpUrl(author.source_author_url, contract.authorship_and_taxonomy.source_author_url_maximum_bytes, "source_author_url");
+      if (ids.has(author.source_author_id)) fail("validation_failed", "duplicate source author");
+      ids.add(author.source_author_id);
+    }
+    if (Object.hasOwn(record, "primary_source_author_id") && !ids.has(record.primary_source_author_id)) fail("validation_failed", "primary source author is not present");
+  } else if (Object.hasOwn(record, "primary_source_author_id")) fail("validation_failed", "primary source author requires source_authors");
+  correlation(record.correlation_id, contract);
 }
 
 export function validateResolveResponse(value, fields, contract) {
   exactObject(value, [...fields, "correlation_id"], [], "resolve response");
+  enumValue(value.outcome, Object.values(contract.resolve.outcomes), "outcome");
+  requiredString(value.reason, "reason");
+  enumValue(value.direction, contract.resolve.field_rules.direction, "direction");
+  if (Object.hasOwn(value, "accepted_source_revision")) {
+    if (![contract.resolve.outcomes[200], contract.resolve.outcomes[201]].includes(value.outcome)) fail("validation_failed");
+    uuid(value.resource_id, contract, "resource_id");
+    positiveInteger(value.topic_id, "topic_id");
+    httpUrl(value.topic_url, contract.resolve.field_rules.canonical_url_maximum_bytes, "topic_url");
+    nonblank(value.accepted_source_revision, contract.common.source_revision_maximum_bytes, "accepted_source_revision");
+    positiveInteger(value.accepted_source_revision_sequence, "accepted_source_revision_sequence");
+  } else {
+    if (value.outcome !== contract.resolve.outcomes[409]) fail("validation_failed");
+    for (const field of ["resource_id", "topic_id", "topic_url"]) if (value[field] !== null) fail("validation_failed", `${field} must be null for an unresolved conflict`);
+    uniqueStrings(value.conflict_fields, "conflict_fields");
+  }
   correlation(value.correlation_id, contract);
   if (value.core_fallback !== false) fail("validation_failed");
 }
@@ -213,9 +333,9 @@ export function validateRecord(record, contract) {
   timestamp(record.source_updated_at, "source_updated_at");
   if (!Array.isArray(record.bindings)) fail("validation_failed");
   for (const binding of record.bindings) {
-    const conditionalTimestamps = ["deployed_at", "publicly_verified_at"];
-    const requiredFields = contract.records.destination_binding_fields.filter((field) => !conditionalTimestamps.includes(field));
-    exactObject(binding, requiredFields, conditionalTimestamps, "destination binding");
+    const synchronizationFields = contract.records.destination_binding_synchronization_fields;
+    const eventTimestamps = contract.records.destination_binding_event_timestamp_fields;
+    exactObject(binding, contract.records.destination_binding_required_fields, [...synchronizationFields, ...eventTimestamps], "destination binding");
     pattern(binding.binding_id, contract.records.binding_id_pattern);
     pattern(binding.connection_id, contract.authentication.connection_id_pattern);
     enumValue(binding.role, contract.records.binding_roles, "binding role");
@@ -223,12 +343,19 @@ export function validateRecord(record, contract) {
     nonblank(binding.external_id, contract.resolve.field_rules.external_id_maximum_bytes, "binding external_id");
     httpUrl(binding.canonical_url, contract.resolve.field_rules.canonical_url_maximum_bytes, "binding canonical_url");
     validatePresentationMode(binding.presentation_mode, contract);
-    nonblank(binding.applied_source_revision, contract.common.source_revision_maximum_bytes, "applied_source_revision");
-    nonblank(binding.publication_revision, contract.common.publication_revision_maximum_bytes, "publication_revision");
     enumValue(binding.content_disposition, ["complete", "excerpt"], "binding content_disposition");
-    timestamp(binding.synchronized_at, "synchronized_at");
     enumValue(binding.deployment_state, contract.records.deployment_states, "deployment_state");
     enumValue(binding.verification_state, contract.records.verification_states, "verification_state");
+    const synchronizationCount = synchronizationFields.filter((field) => Object.hasOwn(binding, field)).length;
+    if (synchronizationCount !== 0 && synchronizationCount !== synchronizationFields.length) fail("validation_failed", "synchronization fields must occur together");
+    const awaitingFirstAcknowledgement = binding.state === "pending" && synchronizationCount === 0;
+    if (!awaitingFirstAcknowledgement && synchronizationCount !== synchronizationFields.length) fail("validation_failed", "synchronization fields are required after synchronization");
+    if (awaitingFirstAcknowledgement && (binding.deployment_state !== "pending" || binding.verification_state !== "pending")) fail("validation_failed", "pre-ack migration binding must remain pending");
+    if (synchronizationCount === synchronizationFields.length) {
+      nonblank(binding.applied_source_revision, contract.common.source_revision_maximum_bytes, "applied_source_revision");
+      nonblank(binding.publication_revision, contract.common.publication_revision_maximum_bytes, "publication_revision");
+      timestamp(binding.synchronized_at, "synchronized_at");
+    }
     if (binding.deployment_state === "deployed") timestamp(binding.deployed_at, "deployed_at");
     else if (Object.hasOwn(binding, "deployed_at")) fail("validation_failed", "deployed_at must be absent until deployed");
     if (binding.verification_state === "verified") {
@@ -247,6 +374,7 @@ export function validateRecordIndex(value, contract) {
   for (const record of value.records) validateRecord(record, contract);
   positiveInteger(value.page, "page");
   positiveInteger(value.total_pages, "total_pages");
+  if (value.page > contract.records.maximum_page || value.total_pages > contract.records.maximum_page || value.page > value.total_pages) fail("validation_failed");
   correlation(value.correlation_id, contract);
 }
 
@@ -284,7 +412,7 @@ function validateTransport(transport, contract) {
     if (transport.media_type !== "text/html; charset=utf-8") fail("validation_failed");
     nonnegativeInteger(transport.byte_length, "byte_length");
     pattern(transport.sha256, contract.common.sha256_pattern, "validation_failed", "sha256");
-    if (typeof transport.content_html !== "string") fail("validation_failed");
+    validUnicode(transport.content_html, "content_html");
     if (bytes(transport.content_html) !== transport.byte_length || sha256(transport.content_html) !== transport.sha256) fail("integrity_failed");
     if (transport.byte_length > contract.source_publication.content_transport.inline.maximum_content_html_bytes) fail("validation_failed");
   } else if (transport.mode === "chunked") {
@@ -363,6 +491,7 @@ export function validateChunkSet(descriptor, chunks, contract) {
   }
   const complete = Buffer.concat(ordered.map((chunk) => Buffer.from(chunk.content_base64, "base64")));
   if (complete.length !== descriptor.byte_length || sha256(complete) !== descriptor.sha256) fail("integrity_failed");
+  validateUtf8Bytes(complete, "reassembled content");
 }
 
 export function validateWork(value, contract) {
@@ -413,6 +542,7 @@ export function validateClaimResponse(value, contract) {
   if (!Array.isArray(value.publication_work) || value.publication_work.length > contract.publication_work.claim.maximum_items) fail("validation_failed");
   for (const item of value.publication_work) validateWork(item, contract);
   timestamp(value.claimed_at, "claimed_at");
+  for (const item of value.publication_work) if (compareTimestamps(item.lease_expires_at, value.claimed_at, "lease_expires_at", "claimed_at") <= 0) fail("work_expired");
   correlation(value.correlation_id, contract);
 }
 
@@ -464,14 +594,15 @@ export function validateAcknowledgement(value, contract) {
   correlation(value.correlation_id, contract);
 }
 
-export function validateStageTransition(previous, next) {
+export function validateStageTransition(previous, next, issuedNextStageToken) {
   const order = ["synchronized", "deployed", "verified"];
   if (order.indexOf(next.stage) !== order.indexOf(previous.stage) + 1) fail("stage_conflict");
   for (const field of ["resource_id", "source_revision", "source_revision_sequence", "policy_revision", "destination_policy_id", "action"]) {
     if (canonicalize(previous[field]) !== canonicalize(next[field])) fail("revision_conflict");
   }
   if (canonicalize(previous.destination_binding) !== canonicalize(next.destination_binding)) fail("identity_conflict");
-  if (previous.stage_token === next.stage_token) fail("stage_conflict");
+  pattern(issuedNextStageToken, "^[a-f0-9]{64}$", "stage_conflict", "issued next_stage_token");
+  if (next.stage_token !== issuedNextStageToken || previous.stage_token === next.stage_token) fail("stage_conflict");
 }
 
 export function validateAcknowledgementResponse(value, contract) {
@@ -497,6 +628,7 @@ export function validateFailure(value, contract) {
   pattern(value.lease_token, contract.publication_work.lease_token_pattern, "reconciliation_required", "lease_token");
   if (![...contract.failure_registry.retryable, ...contract.failure_registry.terminal].includes(value.error_code)) fail("validation_failed");
   nonblank(value.error_detail, contract.common.error_detail_maximum_bytes, "error_detail");
+  if (value.error_detail.includes(value.lease_token)) fail("secret_exposure");
   timestamp(value.failed_at, "failed_at");
   correlation(value.correlation_id, contract);
 }
@@ -526,6 +658,7 @@ function validateCatalogItems(segmentType, items, contract) {
 
 export function validateCatalogSegment(value, contract) {
   exactObject(value, contract.platform_catalog.get_required_response_fields, [], "catalog segment");
+  if (bytes(JSON.stringify(value)) > contract.platform_catalog.maximum_json_bytes) fail("validation_failed", "catalog response exceeds maximum_json_bytes");
   requiredString(value.catalog_revision, "catalog_revision");
   enumValue(value.platform_profile, contract.profiles, "platform_profile");
   validateCatalogItems(value.segment_type, value.items, contract);
@@ -536,6 +669,7 @@ export function validateCatalogSegment(value, contract) {
 
 export function validateCatalogUpdate(value, contract, currentRevision = null) {
   exactObject(value, ["request", "response"], [], "catalog update exchange");
+  if (bytes(JSON.stringify(value.request)) > contract.platform_catalog.maximum_json_bytes) fail("validation_failed", "catalog request exceeds maximum_json_bytes");
   exactObject(value.request, contract.platform_catalog.put_required_request_fields, [], "catalog update request");
   exactObject(value.response, contract.platform_catalog.put_required_response_fields, [], "catalog update response");
   enumValue(value.request.platform_profile, contract.profiles, "request platform_profile");
@@ -573,7 +707,8 @@ export function validateRevocationCursor(request, binding) {
 
 export function validateResolvedPolicy(policy, catalogItems) {
   const available = new Map(catalogItems.map((item) => [item.id, item.available]));
-  for (const mapping of [policy.container_mapping, ...(policy.taxonomy_mapping?.items ?? []), ...(policy.author_mapping?.items ?? [])]) {
+  const directAuthor = policy.author_mapping?.destination_id ? [{ destination: policy.author_mapping.destination_id }] : [];
+  for (const mapping of [policy.container_mapping, ...(policy.taxonomy_mapping?.items ?? []), ...(policy.author_mapping?.items ?? []), ...directAuthor]) {
     if (mapping?.destination && available.get(mapping.destination) !== true) fail("policy_denied");
   }
 }
@@ -615,6 +750,7 @@ export function validateRevocationIndex(value, contract) {
 
 export function validateErrorResponse(value, contract, protectedValues = []) {
   exactObject(value, contract.error_responses.required_fields, [], "error response");
+  if (bytes(JSON.stringify(value)) > contract.error_responses.maximum_json_bytes) fail("validation_failed", "error response exceeds maximum_json_bytes");
   correlation(value.correlation_id, contract);
   if (bytes(value.message) > contract.common.error_detail_maximum_bytes) fail("validation_failed");
   for (const protectedValue of protectedValues) if (protectedValue && value.message.includes(protectedValue)) fail("secret_exposure");
@@ -659,7 +795,8 @@ export function validateReplay(stored, replay) {
 }
 
 export function validateForumClone(existingForumId, cloneForumId, rotatedAndReauthorized) {
-  if (existingForumId === cloneForumId && rotatedAndReauthorized !== true) fail("identity_conflict");
+  if (existingForumId === cloneForumId) fail("identity_conflict");
+  if (rotatedAndReauthorized !== true) fail("identity_conflict");
 }
 
 export function validateOperatorEntitlement(entitlement, operator, trust, context = {}) {
@@ -671,7 +808,7 @@ export function validateOperatorEntitlement(entitlement, operator, trust, contex
   pattern(entitlement.issuer_id, operator.entitlement.issuer_id_pattern, "entitlement_invalid_signature");
   nonblank(entitlement.provider_name, operator.entitlement.provider_name_maximum_bytes, "provider_name");
   nonblank(entitlement.key_id, operator.entitlement.key_id_maximum_bytes, "key_id");
-  if (!Array.isArray(entitlement.scopes) || entitlement.scopes.length === 0) fail("scope_denied");
+  if (!Array.isArray(entitlement.scopes)) fail("entitlement_invalid_signature");
   const signature = entitlement.signature;
   const signatureBytes = Buffer.from(signature, "base64url");
   if (!base64urlPattern.test(signature) || signature.includes("=") || signatureBytes.length !== operator.entitlement.signature_decoded_bytes || signatureBytes.toString("base64url") !== signature) fail("entitlement_invalid_signature");
@@ -684,22 +821,41 @@ export function validateOperatorEntitlement(entitlement, operator, trust, contex
   delete unsigned.signature;
   const message = Buffer.from(`${operator.entitlement.signing_domain}${canonicalize(unsigned)}`, "utf8");
   if (!verify(null, message, publicKey, signatureBytes)) fail("entitlement_invalid_signature");
+  if (entitlement.scopes.length === 0) fail("scope_denied");
   for (const scope of entitlement.scopes) if (!operator.entitlement.allowed_scopes.includes(scope)) fail("scope_denied");
   for (const field of ["issued_at", "not_before", "expires_at", "grace_until"]) timestamp(entitlement[field], field);
-  if (Date.parse(entitlement.not_before) < Date.parse(entitlement.issued_at)) fail("validation_failed");
-  if (Date.parse(entitlement.expires_at) <= Date.parse(entitlement.not_before) || (Date.parse(entitlement.expires_at) - Date.parse(entitlement.issued_at)) / 1000 > operator.entitlement.maximum_lifetime_seconds) fail("validation_failed");
-  if (Date.parse(entitlement.grace_until) < Date.parse(entitlement.expires_at) || (Date.parse(entitlement.grace_until) - Date.parse(entitlement.expires_at)) / 1000 > operator.entitlement.maximum_grace_seconds) fail("validation_failed");
+  if (compareTimestamps(entitlement.not_before, entitlement.issued_at) < 0) fail("validation_failed");
+  if (compareTimestamps(entitlement.expires_at, entitlement.not_before) <= 0 || (Date.parse(entitlement.expires_at) - Date.parse(entitlement.issued_at)) / 1000 > operator.entitlement.maximum_lifetime_seconds) fail("validation_failed");
+  if (compareTimestamps(entitlement.grace_until, entitlement.expires_at) < 0 || (Date.parse(entitlement.grace_until) - Date.parse(entitlement.expires_at)) / 1000 > operator.entitlement.maximum_grace_seconds) fail("validation_failed");
   if (context.forumId && context.forumId !== entitlement.forum_id) fail("entitlement_wrong_forum");
+  if (context.at !== undefined) timestamp(context.at, "context.at");
+  if (context.state !== undefined && !operator.states.includes(context.state)) fail("scope_denied");
   if (context.state === "revoked") fail("entitlement_revoked");
   if (context.state === "replaced") fail("entitlement_replaced");
-  if (context.at && Date.parse(context.at) < Date.parse(entitlement.not_before)) fail("entitlement_not_yet_valid");
-  if (context.at && Date.parse(context.at) > Date.parse(entitlement.grace_until)) fail("entitlement_expired");
-  if (context.at && Date.parse(context.at) > Date.parse(entitlement.expires_at) && context.mutation === true) fail("scope_denied");
+  if (["pending_enrollment", "expired"].includes(context.state)) fail(context.state === "expired" ? "entitlement_expired" : "scope_denied");
+  if (context.at && compareTimestamps(context.at, entitlement.not_before, "context.at", "not_before") < 0) fail("entitlement_not_yet_valid");
+  if (context.at && compareTimestamps(context.at, entitlement.grace_until, "context.at", "grace_until") > 0) fail("entitlement_expired");
+  if (context.scope !== undefined) {
+    if (!operator.entitlement.allowed_scopes.includes(context.scope) || !entitlement.scopes.includes(context.scope)) fail("scope_denied");
+  }
+  if (context.mutation === true) {
+    if (!context.forumId || !context.at || context.state !== "active" || !context.scope) fail("scope_denied");
+    if (context.scope.startsWith("observe_") || context.scope.startsWith("prepare_")) fail("scope_denied");
+    if (compareTimestamps(context.at, entitlement.expires_at, "context.at", "expires_at") > 0) fail("scope_denied");
+    if (context.scope.startsWith("apply_customer_approved_")) {
+      const approval = context.customerApproval;
+      if (!approval || approval.providerId !== entitlement.provider_id || approval.forumId !== entitlement.forum_id || approval.scope !== context.scope || approval.operationSha256 !== context.operationSha256 || compareTimestamps(approval.expiresAt, context.at, "approval.expiresAt", "context.at") < 0) fail("scope_denied");
+    }
+  } else if (context.state === "active" && context.at && compareTimestamps(context.at, entitlement.expires_at, "context.at", "expires_at") > 0) fail("scope_denied");
 }
 
 export function validateRevisionTransition(stored, incoming) {
+  for (const field of ["external_id", "source_created_at"]) {
+    if (Object.hasOwn(stored, field) && Object.hasOwn(incoming, field) && stored[field] !== incoming[field]) fail("identity_conflict");
+  }
   if (incoming.source_revision_sequence < stored.source_revision_sequence) fail("revision_conflict");
   if (incoming.source_revision_sequence === stored.source_revision_sequence && (incoming.source_revision !== stored.source_revision || incoming.source_content_sha256 !== stored.source_content_sha256)) fail("reconciliation_required");
+  if (incoming.source_revision_sequence > stored.source_revision_sequence && incoming.source_revision === stored.source_revision) fail("reconciliation_required");
 }
 
 export function validateDirection(connection, request) {
@@ -711,15 +867,20 @@ export function validateScope(connection, request) {
 }
 
 export function validateLeaseTime(leaseExpiresAt, receivedAt) {
-  if (Date.parse(receivedAt) > Date.parse(leaseExpiresAt)) fail("work_expired");
+  if (compareTimestamps(receivedAt, leaseExpiresAt, "received_at", "lease_expires_at") > 0) fail("work_expired");
 }
 
 export function validateLeaseRenewal(current, requested, maximum) {
+  nonnegativeInteger(current, "current_total_lease_seconds");
+  positiveInteger(requested, "requested_lease_seconds");
+  positiveInteger(maximum, "maximum_total_lease_seconds");
   if (current + requested > maximum) fail("lease_limit_exceeded");
 }
 
 export function validateCursorSnapshot(request, binding) {
-  if (request.snapshot !== binding.snapshot) fail("cursor_snapshot_mismatch");
+  for (const field of ["snapshot", "connection_id", "policy_revision"]) {
+    if (Object.hasOwn(binding, field) && request[field] !== binding[field]) fail("cursor_snapshot_mismatch");
+  }
 }
 
 export function validateIdentity(stored, incoming) {
@@ -728,6 +889,11 @@ export function validateIdentity(stored, incoming) {
 
 export function validateAcknowledgementIdentity(work, acknowledgement, state = "leased") {
   if (state === "superseded") fail("work_superseded");
+  if (Object.hasOwn(work, "lease_token") && work.lease_token !== acknowledgement.lease_token) fail("reconciliation_required");
+  if (Object.hasOwn(work, "stage_token") && work.stage_token !== acknowledgement.stage_token) fail("stage_conflict");
+  for (const field of ["resource_id", "destination_policy_id", "action"]) {
+    if (Object.hasOwn(work, field) && work[field] !== acknowledgement[field]) fail("identity_conflict");
+  }
   if (work.source_revision !== acknowledgement.source_revision || work.source_revision_sequence !== acknowledgement.source_revision_sequence || work.policy_revision !== acknowledgement.policy_revision) fail("revision_conflict");
 }
 
@@ -771,6 +937,9 @@ export function validateOperatorAudit(value, operator) {
   exactObject(value, operator.audit.required_fields, [], "operator audit");
   pattern(value.event_id, operator.audit.event_id_pattern);
   pattern(value.operation_sha256, operator.audit.operation_sha256_pattern);
+  pattern(value.forum_id, operator.entitlement.forum_id_pattern);
+  pattern(value.provider_id, operator.entitlement.provider_id_pattern);
+  pattern(value.entitlement_id, operator.entitlement.entitlement_id_pattern);
   timestamp(value.occurred_at, "occurred_at");
   for (const field of ["forum_id", "provider_id", "entitlement_id", "actor", "scope", "action", "target_type", "target_id", "customer_approval_id"]) requiredString(value[field], field);
   if (!operator.audit.outcomes.includes(value.outcome)) fail("validation_failed");
@@ -796,7 +965,7 @@ export function validateRepositoryIdentity(packageMetadata, contract, operator) 
 }
 
 export function validateEntitlementTime(value) {
-  if (Date.parse(value.request_at) > Date.parse(value.entitlement.grace_until)) fail("entitlement_expired");
+  if (compareTimestamps(value.request_at, value.entitlement.grace_until, "request_at", "grace_until") > 0) fail("entitlement_expired");
 }
 
 export function validateCutoverManifest(value, contract) {
@@ -806,6 +975,10 @@ export function validateCutoverManifest(value, contract) {
   requiredString(value.manifest_id, "manifest_id");
   requiredString(value.adapter_protocol.version, "adapter protocol version");
   requiredString(value.shared_plugin.version, "shared plugin version");
+  requiredString(value.receiver_schema, "receiver_schema");
+  requiredString(value.configuration_revision, "configuration_revision");
+  uniqueStrings(value.policy_revisions, "policy_revisions");
+  uniqueStrings(value.consumer_identities, "consumer_identities");
   if (!Array.isArray(value.adapters) || value.adapters.length === 0) fail("validation_failed");
   const profiles = new Set();
   for (const adapter of value.adapters) {
@@ -817,5 +990,32 @@ export function validateCutoverManifest(value, contract) {
   }
   for (const artifact of [value.adapter_protocol, value.shared_plugin, ...value.adapters]) pattern(artifact.sha256, contract.common.sha256_pattern);
   if (value.adapter_protocol.version !== contract.version) fail("validation_failed");
+  correlation(value.correlation_id, contract);
+}
+
+export function validateCutoverRehearsal(value, manifest, contract) {
+  exactObject(value, ["manifest_id", "preflight", "mismatch_rejected_before_mutation", "one_item_canary", "ten_item_canary", "rollback_boundary", "correlation_id"], [], "cutover rehearsal");
+  if (value.manifest_id !== manifest.manifest_id) fail("reconciliation_required", "cutover rehearsal manifest mismatch");
+  for (const field of ["preflight", "one_item_canary", "ten_item_canary"]) if (value[field] !== "passed") fail("validation_failed");
+  if (value.mismatch_rejected_before_mutation !== true) fail("validation_failed");
+  requiredString(value.rollback_boundary, "rollback_boundary");
+  correlation(value.correlation_id, contract);
+}
+
+export function validateRetryTrace(value, contract) {
+  if (value.initial_attempt !== contract.publication_work.initial_attempts) fail("validation_failed");
+  if (!Array.isArray(value.failures) || value.failures.length !== contract.publication_work.maximum_total_attempts) fail("validation_failed");
+  for (let index = 0; index < value.failures.length; index += 1) {
+    const failure = value.failures[index];
+    exactObject(failure, ["attempt_count", "backoff_seconds", "resulting_state"], [], "retry failure");
+    if (failure.attempt_count !== index + 1) fail("validation_failed");
+    const final = index === value.failures.length - 1;
+    if (failure.backoff_seconds !== (final ? null : contract.publication_work.retry_backoff_seconds[index])) fail("validation_failed");
+    if (failure.resulting_state !== (final ? "operator_attention" : "retry_wait")) fail("validation_failed");
+  }
+  exactObject(value.manual_retry, ["customer_authorized", "condition_corrected", "same_work_id", "from_retry_generation", "to_retry_generation", "reentry_state", "next_attempt_count"], [], "manual retry");
+  if (value.manual_retry.customer_authorized !== true || value.manual_retry.condition_corrected !== true || value.manual_retry.same_work_id !== true) fail("validation_failed");
+  nonnegativeInteger(value.manual_retry.from_retry_generation, "from_retry_generation");
+  if (value.manual_retry.to_retry_generation !== value.manual_retry.from_retry_generation + 1 || value.manual_retry.reentry_state !== "available" || value.manual_retry.next_attempt_count !== contract.publication_work.initial_attempts) fail("validation_failed");
   correlation(value.correlation_id, contract);
 }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,6 +22,7 @@ import {
   validateCorrelationExchange,
   validateCursorSnapshot,
   validateCutoverManifest,
+  validateCutoverRehearsal,
   validateDestinationCollision,
   validateDirection,
   validateEntitlementTime,
@@ -44,6 +46,7 @@ import {
   validateResolveRecord,
   validateResolveResponse,
   validateRetiredUrl,
+  validateRetryTrace,
   validateRevisionTransition,
   validateRevocationDetail,
   validateRevocationCursor,
@@ -72,11 +75,16 @@ const invalid = new Map();
 for (const name of negativeNames) invalid.set(name, await load(`fixtures/invalid/${name}`));
 
 assert.equal(contract.contract, "discussionbridge-adapter");
-assert.equal(contract.version, "0.2.0-alpha.21");
+assert.equal(contract.version, "0.2.0-alpha.22");
 assert.deepEqual(contract.configuration.presentation_modes, ["simple", "full", "interactive"]);
 assert.equal(contract.publication_work.initial_attempts + contract.publication_work.maximum_automatic_retries, contract.publication_work.maximum_total_attempts);
 assert.equal(contract.publication_work.retry_backoff_seconds.length, contract.publication_work.maximum_automatic_retries);
 assert.equal(operator.entitlement.canonicalization, "RFC 8785 JCS");
+assert.deepEqual(
+  [...new Set([...contract.records.destination_binding_required_fields, ...contract.records.destination_binding_synchronization_fields, ...contract.records.destination_binding_event_timestamp_fields])].sort(),
+  [...contract.records.destination_binding_fields].sort(),
+  "destination binding required/conditional fields must exactly cover the declared field vocabulary",
+);
 validateRepositoryIdentity(packageMetadata, contract, operator);
 
 const trustVector = fixtures.get("operator-entitlement-test-vector.json");
@@ -126,7 +134,10 @@ const positiveHandlers = {
   "publication-work-withdrawal.json": (value) => validateClaimResponse(value, contract),
   "publication-lease-renewal.json": (value) => validateRenewal(value, contract),
   "publication-acknowledgement-create.json": (value) => validateAcknowledgement(value, contract),
-  "publication-acknowledgement-static-pending.json": (value) => validateAcknowledgement(value, contract),
+  "publication-acknowledgement-static-pending.json": (value) => {
+    validateAcknowledgement(value, contract);
+    validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], value);
+  },
   "publication-acknowledgement-static-deployed.json": (value) => validateAcknowledgement(value, contract),
   "publication-acknowledgement.json": (value) => validateAcknowledgement(value, contract),
   "publication-acknowledgement-responses.json": (value) => {
@@ -154,12 +165,14 @@ const positiveHandlers = {
     const synchronized = fixtures.get(value.synchronized);
     const deployed = fixtures.get(value.deployed);
     const verified = fixtures.get(value.verified);
-    validateStageTransition(synchronized, deployed);
-    validateStageTransition(deployed, verified);
+    const responses = fixtures.get("publication-acknowledgement-responses.json");
+    validateStageTransition(synchronized, deployed, responses.synchronized.next_stage_token);
+    validateStageTransition(deployed, verified, responses.deployed.next_stage_token);
     assert.deepEqual(value.interruption_recovery_states, ["awaiting_deployment", "awaiting_verification"]);
     assert.equal(value.terminal_state, "acknowledged");
   },
   "publication-retry-trace.json": (value) => {
+    validateRetryTrace(value, contract);
     assert.equal(value.initial_attempt, contract.publication_work.initial_attempts);
     assert.deepEqual(value.failures.slice(0, -1).map((item) => item.backoff_seconds), contract.publication_work.retry_backoff_seconds);
     assert.equal(value.failures.at(-1).attempt_count, contract.publication_work.maximum_total_attempts);
@@ -210,10 +223,7 @@ const positiveHandlers = {
     assert.notEqual(value.adapters[0].version, contract.version);
   },
   "cutover-rehearsal.json": (value) => {
-    assert.equal(value.preflight, "passed");
-    assert.equal(value.mismatch_rejected_before_mutation, true);
-    assert.equal(value.one_item_canary, "passed");
-    assert.equal(value.ten_item_canary, "passed");
+    validateCutoverRehearsal(value, fixtures.get("cutover-manifest.json"), contract);
   },
 };
 
@@ -231,6 +241,22 @@ delete pendingBinding.deployed_at;
 delete pendingBinding.publicly_verified_at;
 validateRecordShow({ bridge_record: pendingRecord, correlation_id: "pending-binding-01" }, contract);
 
+const preAcknowledgementRecord = structuredClone(pendingRecord);
+for (const field of contract.records.destination_binding_synchronization_fields) delete preAcknowledgementRecord.bindings[0][field];
+validateRecordShow({ bridge_record: preAcknowledgementRecord, correlation_id: "pre-ack-migration-01" }, contract);
+
+const restrictedCapability = structuredClone(fixtures.get("connection-capability.json"));
+restrictedCapability.allowed_presentation_modes = ["interactive"];
+validateConnectionCapability(restrictedCapability, contract);
+
+validateOperatorEntitlement(fixtures.get("operator-entitlement.json"), operator, trust, {
+  forumId: fixtures.get("operator-entitlement.json").forum_id,
+  at: "2026-09-28T00:00:00Z",
+  state: "active",
+  scope: "retry_retryable_work",
+  mutation: true,
+});
+
 const baseComplete = fixtures.get("to-discourse-request.json").bridge_record;
 const baseExcerpt = fixtures.get("to-discourse-excerpt-request.json").bridge_record;
 const baseAck = fixtures.get("publication-acknowledgement.json");
@@ -240,8 +266,8 @@ const validEntitlement = fixtures.get("operator-entitlement.json");
 const negativeHandlers = {
   "acknowledgement-deployed-terminal.json": (value) => validateAcknowledgementResponse({ ...structuredClone(fixtures.get("publication-acknowledgement-responses.json").verified), accepted_stage: value.accepted_stage, terminal: value.terminal }, contract),
   "acknowledgement-revision-mismatch.json": (value) => validateAcknowledgementIdentity(value.work, value.acknowledgement),
-  "acknowledgement-stage-skipped.json": () => validateStageTransition(fixtures.get("publication-acknowledgement-static-pending.json"), fixtures.get("publication-acknowledgement.json")),
-  "acknowledgement-stale-stage-token.json": () => { const next = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); next.stage_token = fixtures.get("publication-acknowledgement-static-pending.json").stage_token; validateStageTransition(fixtures.get("publication-acknowledgement-static-pending.json"), next); },
+  "acknowledgement-stage-skipped.json": () => validateStageTransition(fixtures.get("publication-acknowledgement-static-pending.json"), fixtures.get("publication-acknowledgement.json"), fixtures.get("publication-acknowledgement-responses.json").synchronized.next_stage_token),
+  "acknowledgement-stale-stage-token.json": () => { const next = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); next.stage_token = fixtures.get("publication-acknowledgement-static-pending.json").stage_token; validateStageTransition(fixtures.get("publication-acknowledgement-static-pending.json"), next, fixtures.get("publication-acknowledgement-responses.json").synchronized.next_stage_token); },
   "acknowledgement-verified-time-missing.json": () => { const value = structuredClone(baseAck); delete value.publicly_verified_at; validateAcknowledgement(value, contract); },
   "capability-missing-correlation.json": (value) => { const capability = structuredClone(fixtures.get("connection-capability.json")); delete capability[value.remove_field]; validateConnectionCapability(capability, contract); },
   "correlation-over-limit.json": (value) => validateConnectionCapability({ ...structuredClone(fixtures.get("connection-capability.json")), correlation_id: "x".repeat(value.byte_length) }, contract),
@@ -294,6 +320,8 @@ const negativeHandlers = {
   "wrong-lease-token.json": (value) => validateAcknowledgement({ ...structuredClone(fixtures.get("publication-acknowledgement-create.json")), lease_token: value.acknowledgement.lease_token }, contract),
 };
 
+assert.deepEqual(Object.keys(negativeHandlers).sort(), negativeNames, "negative fixture corpus and handlers must agree bidirectionally");
+
 for (const name of negativeNames) {
   const fixture = invalid.get(name);
   assert.ok(negativeHandlers[name], `negative fixture has no validator: ${name}`);
@@ -330,13 +358,62 @@ const mutationCases = [
   ["error unknown field", () => validateErrorResponse({ ...structuredClone(fixtures.get("rejected-response.json")), unexpected: true }, contract), "unknown_field"],
   ["operator entitlement unknown field", () => validateOperatorEntitlement({ ...structuredClone(validEntitlement), unexpected: true }, operator, trust), "unknown_field"],
   ["operator audit unknown field", () => validateOperatorAudit({ ...structuredClone(fixtures.get("operator-enrollment-audit.json")), unexpected: true }, operator), "unknown_field"],
+  ["resolve published false", () => validateResolveRecord({ ...structuredClone(baseComplete), published: false }, contract), "validation_failed"],
+  ["resolve null source revision", () => validateResolveRecord({ ...structuredClone(baseComplete), source_revision: null }, contract), "validation_failed"],
+  ["resolve blank source revision", () => validateResolveRecord({ ...structuredClone(baseComplete), source_revision: "" }, contract), "validation_failed"],
+  ["resolve oversized source revision", () => validateResolveRecord({ ...structuredClone(baseComplete), source_revision: "x".repeat(contract.common.source_revision_maximum_bytes + 1) }, contract), "validation_failed"],
+  ["resolve executable canonical URL", () => validateResolveRecord({ ...structuredClone(baseComplete), canonical_url: "javascript:alert(1)" }, contract), "validation_failed"],
+  ["resolve private visibility", () => validateResolveRecord({ ...structuredClone(baseComplete), visibility: "private" }, contract), "validation_failed"],
+  ["resolve oversized lane", () => validateResolveRecord({ ...structuredClone(baseComplete), lane: "x".repeat(contract.resolve.field_rules.lane_maximum_bytes + 1) }, contract), "validation_failed"],
+  ["resolve negative existing topic", () => validateResolveRecord({ ...structuredClone(baseComplete), existing_topic_id: -1 }, contract), "validation_failed"],
+  ["resolve excessive authors", () => validateResolveRecord({ ...structuredClone(baseComplete), source_authors: Array.from({ length: contract.resolve.field_rules.source_authors_maximum_items + 1 }, () => ({})) }, contract), "validation_failed"],
+  ["resolve oversized adapter identity", () => validateResolveRecord({ ...structuredClone(baseComplete), adapter_id: "x".repeat(contract.resolve.field_rules.adapter_id_maximum_bytes + 1) }, contract), "validation_failed"],
+  ["resolve missing body correlation", () => { const value = structuredClone(baseComplete); delete value.correlation_id; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["resolve response null identity", () => validateResolveResponse({ ...structuredClone(fixtures.get("resolved-response.json")), resource_id: null }, contract.resolve.success_response_required_fields, contract), "validation_failed"],
+  ["resolve response arbitrary outcome", () => validateResolveResponse({ ...structuredClone(fixtures.get("resolved-response.json")), outcome: "maybe" }, contract.resolve.success_response_required_fields, contract), "validation_failed"],
+  ["resolve response wrong direction", () => validateResolveResponse({ ...structuredClone(fixtures.get("resolved-response.json")), direction: "from_discourse" }, contract.resolve.success_response_required_fields, contract), "validation_failed"],
+  ["resolve response executable topic URL", () => validateResolveResponse({ ...structuredClone(fixtures.get("resolved-response.json")), topic_url: "javascript:alert(1)" }, contract.resolve.success_response_required_fields, contract), "validation_failed"],
+  ["impossible calendar timestamp", () => validateResolveRecord({ ...structuredClone(baseComplete), source_updated_at: "2026-02-30T12:00:00Z" }, contract), "malformed_value"],
+  ["hour 24 timestamp", () => validateResolveRecord({ ...structuredClone(baseComplete), source_updated_at: "2026-09-27T24:00:00Z" }, contract), "malformed_value"],
+  ["renewal negative total", () => { const value = structuredClone(fixtures.get("publication-lease-renewal.json")); value.response.total_lease_seconds = -1; validateRenewal(value, contract); }, "validation_failed"],
+  ["renewal nonnumeric total", () => { const value = structuredClone(fixtures.get("publication-lease-renewal.json")); value.response.total_lease_seconds = "1200"; validateRenewal(value, contract); }, "validation_failed"],
+  ["catalog request byte ceiling", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.request.segments[0].items[0].name = "x".repeat(contract.platform_catalog.maximum_json_bytes); validateCatalogUpdate(value, contract); }, "validation_failed"],
+  ["record index page ceiling", () => { const value = structuredClone(fixtures.get("bridge-record-index.json")); value.page = contract.records.maximum_page + 1; value.total_pages = value.page; validateRecordIndex(value, contract); }, "validation_failed"],
+  ["operator audit malformed forum", () => validateOperatorAudit({ ...structuredClone(fixtures.get("operator-enrollment-audit.json")), forum_id: "invalid" }, operator), "validation_failed"],
+  ["cutover null receiver schema", () => validateCutoverManifest({ ...structuredClone(fixtures.get("cutover-manifest.json")), receiver_schema: null }, contract), "validation_failed"],
+  ["cutover rehearsal manifest mismatch", () => validateCutoverRehearsal({ ...structuredClone(fixtures.get("cutover-rehearsal.json")), manifest_id: "dbm_22222222222222222222222222222222" }, fixtures.get("cutover-manifest.json"), contract), "reconciliation_required"],
+  ["oversized error response", () => { const value = structuredClone(fixtures.get("rejected-response.json")); value.message = "x".repeat(contract.error_responses.maximum_json_bytes); validateErrorResponse(value, contract); }, "validation_failed"],
   ["capability invented direction", () => { const value = structuredClone(fixtures.get("connection-capability.json")); value.directions = ["delete_everything"]; validateConnectionCapability(value, contract); }, "validation_failed"],
   ["capability invalid authority metadata", () => { const value = structuredClone(fixtures.get("connection-capability.json")); value.lanes = [""]; value.catalog_required = "yes"; value.policy_revision = ""; value.supported_operations = ["resolve", "resolve"]; validateConnectionCapability(value, contract); }, "validation_failed"],
+  ["capability malformed nested mapping", () => { const value = structuredClone(fixtures.get("connection-capability.json")); value.destination_policies[0].author_mapping.items = [null]; validateConnectionCapability(value, contract); }, "validation_failed"],
   ["catalog malformed nested item", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.request.segments[0].items = [{ id: "", name: 123, available: "yes", unexpected: true }]; validateCatalogUpdate(value, contract); }, "unknown_field"],
   ["catalog response scope mismatch", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.response.platform_profile = "wordpress"; validateCatalogUpdate(value, contract); }, "validation_failed"],
   ["catalog accepted segments mismatch", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.response.accepted_segments = ["native_limits"]; validateCatalogUpdate(value, contract); }, "validation_failed"],
   ["network malformed provenance", () => { const value = structuredClone(fixtures.get("network-source-detail.json")); value.network_provenance.origin_forum_id = "invalid"; value.network_provenance.operation_id = "reuse-me"; value.network_provenance.origin_topic_url = "javascript:alert(1)"; validateSourceDetail(value, contract); }, "validation_failed"],
   ["pending binding premature deployed timestamp", () => { const value = structuredClone(pendingRecord); value.bindings[0].deployed_at = "2026-09-27T18:31:30Z"; validateRecordShow({ bridge_record: value, correlation_id: "pending-binding-02" }, contract); }, "validation_failed"],
+  ["pre-ack binding partial synchronization facts", () => { const value = structuredClone(preAcknowledgementRecord); value.bindings[0].publication_revision = "invented:revision"; validateRecordShow({ bridge_record: value, correlation_id: "pre-ack-migration-02" }, contract); }, "validation_failed"],
+  ["valid-shaped wrong lease token", () => { const work = fixtures.get("publication-work-claim.json").publication_work[0]; const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.lease_token = "d".repeat(64); validateAcknowledgement(ack, contract); validateAcknowledgementIdentity(work, ack); }, "reconciliation_required"],
+  ["valid-shaped wrong stage token", () => { const work = fixtures.get("publication-work-claim.json").publication_work[0]; const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.stage_token = "d".repeat(64); validateAcknowledgement(ack, contract); validateAcknowledgementIdentity(work, ack); }, "stage_conflict"],
+  ["wrong acknowledgement resource", () => { const work = fixtures.get("publication-work-claim.json").publication_work[0]; const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.resource_id = "b4965d46-e657-4af4-af47-6439e544eeb8"; validateAcknowledgementIdentity(work, ack); }, "identity_conflict"],
+  ["wrong acknowledgement destination policy", () => { const work = fixtures.get("publication-work-claim.json").publication_work[0]; const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.destination_policy_id = "destination:other:1"; validateAcknowledgementIdentity(work, ack); }, "identity_conflict"],
+  ["wrong acknowledgement action", () => { const work = fixtures.get("publication-work-claim.json").publication_work[0]; const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.action = "publish"; validateAcknowledgementIdentity(work, ack); }, "identity_conflict"],
+  ["unissued next stage token", () => { const previous = fixtures.get("publication-acknowledgement-static-pending.json"); const next = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); next.stage_token = "a".repeat(64); validateStageTransition(previous, next, fixtures.get("publication-acknowledgement-responses.json").synchronized.next_stage_token); }, "stage_conflict"],
+  ["same revision reused at higher sequence", () => { const stored = { source_revision: "revision:1", source_revision_sequence: 1, source_content_sha256: "a".repeat(64) }; const incoming = { source_revision: "revision:1", source_revision_sequence: 2, source_content_sha256: "b".repeat(64) }; validateRevisionTransition(stored, incoming); }, "reconciliation_required"],
+  ["cursor connection mismatch", () => validateCursorSnapshot({ snapshot: "snap:1", connection_id: "dbc_222222222222222222222222", policy_revision: "policy:1" }, { snapshot: "snap:1", connection_id: "dbc_111111111111111111111111", policy_revision: "policy:1" }), "cursor_snapshot_mismatch"],
+  ["cursor policy mismatch", () => validateCursorSnapshot({ snapshot: "snap:1", connection_id: "dbc_111111111111111111111111", policy_revision: "policy:2" }, { snapshot: "snap:1", connection_id: "dbc_111111111111111111111111", policy_revision: "policy:1" }), "cursor_snapshot_mismatch"],
+  ["removed direct author mapping", () => validateResolvedPolicy({ container_mapping: {}, taxonomy_mapping: { items: [] }, author_mapping: { destination_id: "author:removed", items: [] } }, [{ id: "author:removed", available: false }]), "policy_denied"],
+  ["same forum clone after claimed rotation", () => validateForumClone("dbf_11111111111111111111111111111111", "dbf_11111111111111111111111111111111", true), "identity_conflict"],
+  ["claim expired before issuance", () => { const value = structuredClone(fixtures.get("publication-work-claim.json")); value.publication_work[0].lease_expires_at = "2026-09-27T18:29:59Z"; validateClaimResponse(value, contract); }, "work_expired"],
+  ["fractional lease expiry", () => validateLeaseTime("2026-09-27T18:30:00.0000Z", "2026-09-27T18:30:00.0001Z"), "work_expired"],
+  ["invalid manual retry transition", () => { const value = structuredClone(fixtures.get("publication-retry-trace.json")); value.manual_retry.next_attempt_count = 999; value.manual_retry.reentry_state = "acknowledged"; validateRetryTrace(value, contract); }, "validation_failed"],
+  ["observation scope cannot mutate", () => validateOperatorEntitlement(validEntitlement, operator, trust, { forumId: validEntitlement.forum_id, at: "2026-09-28T00:00:00Z", state: "active", scope: "observe_health", mutation: true }), "scope_denied"],
+  ["pending entitlement cannot mutate", () => validateOperatorEntitlement(validEntitlement, operator, trust, { forumId: validEntitlement.forum_id, at: "2026-09-28T00:00:00Z", state: "pending_enrollment", scope: "retry_retryable_work", mutation: true }), "scope_denied"],
+  ["expired entitlement state", () => validateOperatorEntitlement(validEntitlement, operator, trust, { forumId: validEntitlement.forum_id, at: "2026-09-28T00:00:00Z", state: "expired", scope: "retry_retryable_work", mutation: true }), "entitlement_expired"],
+  ["invalid entitlement evaluation time", () => validateOperatorEntitlement(validEntitlement, operator, trust, { forumId: validEntitlement.forum_id, at: "not-a-time", state: "active", scope: "retry_retryable_work", mutation: true }), "malformed_value"],
+  ["tampered empty scopes verify before scope", () => validateOperatorEntitlement({ ...structuredClone(validEntitlement), scopes: [] }, operator, trust), "entitlement_invalid_signature"],
+  ["failure leaks lease token", () => { const value = structuredClone(fixtures.get("publication-failure.json")); value.error_detail = `failure ${value.lease_token}`; validateFailure(value, contract); }, "secret_exposure"],
+  ["excerpt plain text read more", () => { const value = structuredClone(baseExcerpt); value.content_html = `Excerpt Read More ${value.canonical_url}`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["chunk set invalid UTF-8", () => { const content = Buffer.from([0xff]); const digest = createHash("sha256").update(content).digest("hex"); const descriptor = { source_revision: "revision:invalid-utf8", byte_length: 1, sha256: digest, chunk_count: 1 }; const chunks = [{ source_revision: descriptor.source_revision, chunk: 1, chunk_count: 1, decoded_bytes: 1, chunk_sha256: digest, content_base64: content.toString("base64"), correlation_id: "invalid-utf8-01" }]; validateChunkSet(descriptor, chunks, contract); }, "integrity_failed"],
   ["package version mismatch", () => validateRepositoryIdentity({ ...packageMetadata, version: "0.2.0-alpha.20" }, contract, operator), "contract_version_mismatch"],
   ["operator contract version mismatch", () => validateRepositoryIdentity(packageMetadata, contract, { ...operator, version: "0.2.0-alpha.20" }), "contract_version_mismatch"],
   ["authentication header version mismatch", () => { const value = structuredClone(contract); value.authentication.contract_header_value = "0.2.0-alpha.20"; validateRepositoryIdentity(packageMetadata, value, operator); }, "contract_version_mismatch"],

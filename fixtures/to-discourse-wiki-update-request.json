@@ -19,7 +19,8 @@
     "source_updated_at": "2026-09-28T01:00:00Z",
     "content_disposition": "complete",
     "source_content_bytes": 55,
-    "source_content_sha256": "5168e252e37f0f8d27f1d5265db328f541c932779047cb9e110170eb7ef1655c"
+    "source_content_sha256": "5168e252e37f0f8d27f1d5265db328f541c932779047cb9e110170eb7ef1655c",
+    "correlation_id": "wiki-update-01"
   },
   "expected_outcome": "resolved"
 }
