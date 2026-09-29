@@ -1,4 +1,7 @@
 import { createHash, createPublicKey, verify } from "node:crypto";
+import { calc } from "@csstools/css-calc";
+import { generate as generateCss, lexer as cssLexer, parse as parseCss } from "css-tree";
+import { JSDOM } from "jsdom";
 import { parseFragment } from "parse5";
 
 export class ProtocolError extends Error {
@@ -17,6 +20,20 @@ const base64urlPattern = /^[A-Za-z0-9_-]+$/;
 function fail(code, message) {
   throw new ProtocolError(code, message);
 }
+
+export function parseProtocolJson(text) {
+  if (typeof text !== "string") fail("validation_failed", "protocol JSON must be text");
+  return JSON.parse(text, (key, value, context) => {
+    if (key === "existing_topic_id" && typeof value === "number" && /^-?(?:0|[1-9]\d*)$/.test(context.source)) {
+      return BigInt(context.source);
+    }
+    return value;
+  });
+}
+
+const stringifyProtocolJson = (value) => JSON.stringify(value, (_key, item) => (
+  typeof item === "bigint" ? JSON.rawJSON(item.toString()) : item
+));
 
 function object(value, name = "value") {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("validation_failed", `${name} must be an object`);
@@ -93,11 +110,9 @@ function analyzeHtml(value, name) {
   const parseErrors = [];
   const fragment = parseFragment(value, { onParseError: (error) => parseErrors.push(error.code) });
   if (parseErrors.length > 0) fail("validation_failed", `${name} contains malformed HTML: ${parseErrors[0]}`);
-  const anchors = [];
-  let visibleText = "";
-  const htmlNamespace = "http://www.w3.org/1999/xhtml";
-  const inertElements = new Set(["iframe", "noembed", "noframes", "script", "style", "template", "textarea", "title", "xmp"]);
-  const attribute = (node, attributeName) => node.attrs?.find((entry) => entry.name === attributeName)?.value;
+  if (!fragment.childNodes.some((node) => node.tagName)) fail("validation_failed", `${name} must contain HTML markup`);
+  const dom = new JSDOM("<!doctype html><body></body>");
+  dom.window.document.body.innerHTML = value;
   const decodeCssEscapes = (text) => text
     .replace(/\\\r\n|\\[\n\r\f]/g, "")
     .replace(/\\([0-9a-f]{1,6})[\t\n\f\r ]?|\\([^0-9a-f\n\r\f])/gi, (_match, hex, escaped) => {
@@ -107,70 +122,102 @@ function analyzeHtml(value, name) {
       }
       return escaped;
     });
-  const inlineStyle = (style) => {
-    const declarations = new Map();
-    for (const declaration of (style ?? "").replace(/\/\*[\s\S]*?\*\//g, "").split(";")) {
-      const separator = declaration.indexOf(":");
-      if (separator < 0) continue;
-      const property = decodeCssEscapes(declaration.slice(0, separator)).trim().toLowerCase();
-      let propertyValue = decodeCssEscapes(declaration.slice(separator + 1)).trim().toLowerCase();
-      const important = /!\s*important\s*$/.test(propertyValue);
-      propertyValue = propertyValue.replace(/!\s*important\s*$/, "").trim();
-      const existing = declarations.get(property);
-      if (!existing || important || !existing.important) declarations.set(property, { value: propertyValue, important });
+  for (const element of dom.window.document.body.querySelectorAll("[style]")) {
+    try {
+      const declarations = parseCss(element.getAttribute("style"), { context: "declarationList" });
+      const normalized = [];
+      declarations.children.forEach((declaration) => {
+        const property = decodeCssEscapes(declaration.property).toLowerCase();
+        if (property.startsWith("--")) {
+          normalized.push(`${property}:${generateCss(declaration.value)}${declaration.important ? "!important" : ""}`);
+          return;
+        }
+        const generatedValue = generateCss(declaration.value);
+        const valueText = ["display", "visibility", "content-visibility", "opacity"].includes(property)
+          ? decodeCssEscapes(generatedValue)
+          : generatedValue;
+        const valueAst = parseCss(valueText, { context: "value" });
+        if (cssLexer.matchProperty(property, valueAst).matched) {
+          normalized.push(`${property}:${valueText}${declaration.important ? "!important" : ""}`);
+        }
+      });
+      element.setAttribute("style", normalized.join(";"));
+    } catch {
+      // Leave the original declaration list for the CSSOM's own error recovery.
     }
-    return declarations;
+  }
+  const anchors = [];
+  let visibleText = "";
+  const htmlNamespace = "http://www.w3.org/1999/xhtml";
+  const inertElements = new Set(["datalist", "iframe", "noembed", "noframes", "noscript", "script", "style", "template", "textarea", "title", "xmp"]);
+  const opacityIsTransparent = (value) => {
+    let normalized = value.trim().toLowerCase();
+    try {
+      normalized = calc(normalized);
+    } catch {
+      return false;
+    }
+    const match = normalized.match(/^([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?)(%)?$/i);
+    return match !== null && Number(match[1]) <= 0;
   };
-  const stack = [...fragment.childNodes].reverse().map((node) => ({
+  const stack = [...dom.window.document.body.childNodes].reverse().map((node) => ({
     node,
-    parent: { displayed: true, visibility: "visible", opaque: true },
+    parent: { displayed: true, visible: true, opaque: true },
     activeAnchors: [],
     detailsVisible: true,
   }));
   while (stack.length > 0) {
     const { node, parent, activeAnchors, detailsVisible } = stack.pop();
-    if (node.nodeName === "#text") {
-      if (parent.displayed && parent.visibility === "visible" && parent.opaque) {
-        visibleText += node.value;
-        for (const anchor of activeAnchors) anchor.text += node.value;
+    if (node.nodeType === dom.window.Node.TEXT_NODE) {
+      if (detailsVisible && parent.displayed && parent.visible && parent.opaque) {
+        visibleText += node.nodeValue;
+        for (const anchor of activeAnchors) anchor.text += node.nodeValue;
       }
       continue;
     }
-    if (!node.tagName) {
-      const children = node.childNodes ?? [];
+    if (node.nodeType !== dom.window.Node.ELEMENT_NODE) {
+      const children = [...(node.childNodes ?? [])];
       for (let index = children.length - 1; index >= 0; index -= 1) stack.push({ node: children[index], parent, activeAnchors, detailsVisible: true });
       continue;
     }
-    const styles = inlineStyle(attribute(node, "style"));
-    const display = styles.get("display")?.value;
-    const contentVisibility = styles.get("content-visibility")?.value;
-    const declaredVisibility = styles.get("visibility")?.value;
-    const opacity = styles.get("opacity")?.value;
-    const zeroOpacity = opacity !== undefined && /^(?:[-+]?0+(?:\.0*)?|[-+]?\.0+)$/.test(opacity);
+    const tagName = node.localName;
+    let styles;
+    try {
+      styles = dom.window.getComputedStyle(node);
+    } catch {
+      styles = {
+        display: "inline",
+        contentVisibility: "visible",
+        visibility: parent.visible ? "visible" : "hidden",
+        opacity: "1",
+      };
+    }
+    const svgDisplay = node.namespaceURI !== htmlNamespace && node.getAttribute("display")?.trim().toLowerCase() === "none";
+    const svgVisibility = node.namespaceURI !== htmlNamespace ? node.getAttribute("visibility")?.trim().toLowerCase() : undefined;
+    const svgOpacity = node.namespaceURI !== htmlNamespace ? node.getAttribute("opacity")?.trim() : undefined;
     const structurallyHidden = !detailsVisible
-      || attribute(node, "hidden") !== undefined
-      || attribute(node, "inert") !== undefined
-      || attribute(node, "aria-hidden")?.toLowerCase() === "true"
-      || inertElements.has(node.tagName)
-      || (node.tagName === "dialog" && attribute(node, "open") === undefined);
+      || node.hasAttribute("hidden")
+      || node.hasAttribute("inert")
+      || node.getAttribute("aria-hidden")?.toLowerCase() === "true"
+      || inertElements.has(tagName)
+      || (tagName === "dialog" && !node.hasAttribute("open"))
+      || node.hasAttribute("popover");
     const current = {
-      displayed: parent.displayed && !structurallyHidden && display !== "none" && contentVisibility !== "hidden",
-      visibility: ["hidden", "collapse", "visible"].includes(declaredVisibility) ? declaredVisibility : parent.visibility,
-      opaque: parent.opaque && !zeroOpacity,
+      displayed: parent.displayed && !structurallyHidden && styles.display !== "none" && styles.contentVisibility !== "hidden" && !svgDisplay,
+      visible: styles.visibility === "visible" && svgVisibility !== "hidden" && svgVisibility !== "collapse",
+      opaque: parent.opaque && !opacityIsTransparent(styles.opacity || "1") && !opacityIsTransparent(svgOpacity || "1"),
     };
-    const visible = current.displayed && current.visibility === "visible" && current.opaque;
     const nextAnchors = [...activeAnchors];
-    if (node.tagName === "a" && node.namespaceURI === htmlNamespace && visible) {
-      const anchor = { href: attribute(node, "href"), text: "" };
+    if (tagName === "a" && node.namespaceURI === htmlNamespace && current.displayed && current.opaque) {
+      const anchor = { href: node.getAttribute("href"), text: "" };
       anchors.push(anchor);
       nextAnchors.push(anchor);
     }
-    if (node.tagName === "template") continue;
-    const children = node.childNodes ?? [];
-    const closedDetails = node.tagName === "details" && attribute(node, "open") === undefined;
+    const children = [...node.childNodes];
+    const closedDetails = tagName === "details" && !node.hasAttribute("open");
     let visibleSummary = -1;
     if (closedDetails) {
-      visibleSummary = children.findIndex((child) => child.tagName === "summary" && child.namespaceURI === htmlNamespace);
+      visibleSummary = children.findIndex((child) => child.nodeType === dom.window.Node.ELEMENT_NODE && child.localName === "summary" && child.namespaceURI === htmlNamespace);
     }
     for (let index = children.length - 1; index >= 0; index -= 1) {
       stack.push({
@@ -181,7 +228,7 @@ function analyzeHtml(value, name) {
       });
     }
   }
-  if (!fragment.childNodes.some((node) => node.tagName)) fail("validation_failed", `${name} must contain HTML markup`);
+  dom.window.close();
   return { anchors, visibleText };
 }
 
@@ -194,7 +241,9 @@ function positiveInteger(value, name) {
 }
 
 function positiveSigned64Integer(value, name) {
-  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0 || value >= 2 ** 63) {
+  const validBigInt = typeof value === "bigint" && value > 0n && value <= 9223372036854775807n;
+  const validNumber = typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+  if (!validBigInt && !validNumber) {
     fail("validation_failed", `${name} must be a positive signed 64-bit integer`);
   }
 }
@@ -340,7 +389,7 @@ export function validateAuthenticationHeaders(value, contract) {
 
 export function validateResolveRecord(record, contract) {
   exactObject(record, contract.resolve.required_fields, contract.resolve.optional_fields, "bridge_record");
-  if (bytes(JSON.stringify({ bridge_record: record })) > contract.resolve.maximum_json_bytes) fail("validation_failed", "resolve request exceeds maximum_json_bytes");
+  if (bytes(stringifyProtocolJson({ bridge_record: record })) > contract.resolve.maximum_json_bytes) fail("validation_failed", "resolve request exceeds maximum_json_bytes");
   if (!contract.resolve.field_rules.direction.includes(record.direction)) fail("direction_denied");
   validatePresentationMode(record.presentation_mode, contract);
   nonblank(record.external_id, contract.resolve.field_rules.external_id_maximum_bytes, "external_id");
@@ -943,6 +992,7 @@ export function validateOperatorEntitlement(entitlement, operator, trust, contex
   nonblank(entitlement.key_id, operator.entitlement.key_id_maximum_bytes, "key_id");
   if (!Array.isArray(entitlement.scopes)) fail("entitlement_invalid_signature");
   const signature = entitlement.signature;
+  if (typeof signature !== "string") fail("entitlement_invalid_signature");
   const signatureBytes = Buffer.from(signature, "base64url");
   if (!base64urlPattern.test(signature) || signature.includes("=") || signatureBytes.length !== operator.entitlement.signature_decoded_bytes || signatureBytes.toString("base64url") !== signature) fail("entitlement_invalid_signature");
   const trustKey = trust?.[`${entitlement.issuer_id}:${entitlement.key_id}`];
@@ -1188,6 +1238,7 @@ export function validateRetryTrace(value, contract) {
   exactObject(value.manual_retry, ["customer_authorized", "condition_corrected", "same_work_id", "from_retry_generation", "to_retry_generation", "reentry_state", "next_attempt_count"], [], "manual retry");
   if (value.manual_retry.customer_authorized !== true || value.manual_retry.condition_corrected !== true || value.manual_retry.same_work_id !== true) fail("validation_failed");
   nonnegativeInteger(value.manual_retry.from_retry_generation, "from_retry_generation");
+  nonnegativeInteger(value.manual_retry.to_retry_generation, "to_retry_generation");
   if (value.manual_retry.to_retry_generation !== value.manual_retry.from_retry_generation + 1 || value.manual_retry.reentry_state !== "available" || value.manual_retry.next_attempt_count !== contract.publication_work.initial_attempts) fail("validation_failed");
   correlation(value.correlation_id, contract);
 }

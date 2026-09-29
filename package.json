@@ -7,6 +7,9 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@csstools/css-calc": "3.4.1",
+    "css-tree": "3.2.1",
+    "jsdom": "30.1.0",
     "parse5": "8.0.1"
   }
 }
