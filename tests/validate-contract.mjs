@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   ProtocolError,
   canonicalize,
@@ -182,6 +182,10 @@ const positiveHandlers = {
   "publication-acknowledgement.json": (value) => validateAcknowledgement(value, contract),
   "publication-acknowledgement-responses.json": (value) => {
     for (const response of Object.values(value)) validateAcknowledgementResponse(response, contract);
+    validateAcknowledgementResponse(value.dynamic, contract, {
+      work: { work_id: value.dynamic.work_id },
+      acknowledgement: fixtures.get("publication-acknowledgement-create.json"),
+    });
     assert.equal(value.synchronized.next_stage_token, fixtures.get("publication-acknowledgement-static-deployed.json").stage_token);
     assert.equal(value.deployed.next_stage_token, fixtures.get("publication-acknowledgement.json").stage_token);
     assert.equal(value.verified.terminal, true);
@@ -209,17 +213,17 @@ const positiveHandlers = {
     const claimedWork = fixtures.get("publication-work-claim.json").publication_work[0];
     validateAcknowledgement(synchronized, contract);
     validateAcknowledgementIdentity(claimedWork, synchronized, "leased", acknowledgementContext);
-    validateAcknowledgementResponse(responses.synchronized, contract);
+    validateAcknowledgementResponse(responses.synchronized, contract, { work: claimedWork, acknowledgement: synchronized });
     validateCorrelationExchange({ request_header: synchronized.correlation_id, request_body: synchronized.correlation_id, response_header: responses.synchronized.correlation_id, response_body: responses.synchronized.correlation_id }, contract);
     validateStageTransition(synchronized, deployed, responses.synchronized);
     validateAcknowledgement(deployed, contract);
     validateAcknowledgementIdentity({ ...claimedWork, stage_token: responses.synchronized.next_stage_token }, deployed, "awaiting_deployment", { received_at: "2026-09-27T18:36:00Z" });
-    validateAcknowledgementResponse(responses.deployed, contract);
+    validateAcknowledgementResponse(responses.deployed, contract, { work: claimedWork, acknowledgement: deployed });
     validateCorrelationExchange({ request_header: deployed.correlation_id, request_body: deployed.correlation_id, response_header: responses.deployed.correlation_id, response_body: responses.deployed.correlation_id }, contract);
     validateStageTransition(deployed, verified, responses.deployed);
     validateAcknowledgement(verified, contract);
     validateAcknowledgementIdentity({ ...claimedWork, stage_token: responses.deployed.next_stage_token }, verified, "awaiting_verification", { received_at: "2026-09-27T18:37:00Z" });
-    validateAcknowledgementResponse(responses.verified, contract);
+    validateAcknowledgementResponse(responses.verified, contract, { work: claimedWork, acknowledgement: verified });
     validateCorrelationExchange({ request_header: verified.correlation_id, request_body: verified.correlation_id, response_header: responses.verified.correlation_id, response_body: responses.verified.correlation_id }, contract);
     assert.deepEqual(value.interruption_recovery_states, ["awaiting_deployment", "awaiting_verification"]);
     assert.equal(value.terminal_state, "acknowledged");
@@ -318,6 +322,26 @@ validateResolveRecord(namedEntityExcerpt, contract);
 const optionalEndTagExcerpt = structuredClone(formattedExcerpt);
 optionalEndTagExcerpt.content_html = `<p>This is a bounded excerpt.<p><a href="${optionalEndTagExcerpt.canonical_url}">Read More</a>`;
 validateResolveRecord(optionalEndTagExcerpt, contract);
+const cascadedVisibleExcerpt = structuredClone(formattedExcerpt);
+cascadedVisibleExcerpt.content_html = `<p>This is a bounded excerpt.</p><p><a style="display:none;display:inline" href="${cascadedVisibleExcerpt.canonical_url}">Read More</a></p>`;
+validateResolveRecord(cascadedVisibleExcerpt, contract);
+const importantVisibleExcerpt = structuredClone(formattedExcerpt);
+importantVisibleExcerpt.content_html = `<p>This is a bounded excerpt.</p><p><a style="display:none;display:inline !important" href="${importantVisibleExcerpt.canonical_url}">Read More</a></p>`;
+validateResolveRecord(importantVisibleExcerpt, contract);
+const inheritedVisibilityExcerpt = structuredClone(formattedExcerpt);
+inheritedVisibilityExcerpt.content_html = `<div style="visibility:hidden"><p style="visibility:visible">This is a bounded excerpt. <a href="${inheritedVisibilityExcerpt.canonical_url}">Read More</a></p></div>`;
+validateResolveRecord(inheritedVisibilityExcerpt, contract);
+const openDialogExcerpt = structuredClone(formattedExcerpt);
+openDialogExcerpt.content_html = `<dialog open><p>This is a bounded excerpt.</p><a href="${openDialogExcerpt.canonical_url}">Read More</a></dialog>`;
+validateResolveRecord(openDialogExcerpt, contract);
+const summaryExcerpt = structuredClone(formattedExcerpt);
+summaryExcerpt.content_html = `<details><summary>This is a bounded excerpt. <a href="${summaryExcerpt.canonical_url}">Read More</a></summary><p>Hidden detail.</p></details>`;
+validateResolveRecord(summaryExcerpt, contract);
+const deeplyNestedExcerpt = structuredClone(formattedExcerpt);
+deeplyNestedExcerpt.content_html = `${"<div>".repeat(4000)}<p>This is a bounded excerpt.</p><a href="${deeplyNestedExcerpt.canonical_url}">Read More</a>${"</div>".repeat(4000)}`;
+validateResolveRecord(deeplyNestedExcerpt, contract);
+validateResolveRecord({ ...structuredClone(fixtures.get("to-discourse-request.json").bridge_record), existing_topic_id: 2 ** 53 }, contract);
+validateResolveRecord({ ...structuredClone(fixtures.get("to-discourse-request.json").bridge_record), existing_topic_id: 2 ** 63 - 1024 }, contract);
 
 const fractionalRenewal = structuredClone(fixtures.get("publication-lease-renewal.json"));
 fractionalRenewal.response.lease_expires_at = "2026-09-27T18:50:00.0001Z";
@@ -532,7 +556,7 @@ const mutationCases = [
   ["wrong acknowledgement action", () => { const work = fixtures.get("publication-work-claim.json").publication_work[0]; const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.action = "publish"; validateAcknowledgementIdentity(work, ack, "leased", acknowledgementContext); }, "identity_conflict"],
   ["expired first acknowledgement", () => validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], fixtures.get("publication-acknowledgement-static-pending.json"), "leased", { ...acknowledgementContext, received_at: "2026-09-27T18:36:00Z" }), "work_expired"],
   ["synchronization after receipt", () => { const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.synchronized_at = "2026-09-27T18:31:01Z"; validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], ack, "leased", acknowledgementContext); }, "validation_failed"],
-  ["synchronization before claim", () => { const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.synchronized_at = "2026-09-27T18:29:00Z"; validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], ack, "leased", { received_at: "2026-09-27T18:29:30Z", claimed_at: claimedWorkFixture.claimed_at }); }, "validation_failed"],
+  ["synchronization before claim", () => { const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.synchronized_at = "2026-09-27T18:29:00Z"; validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], ack, "leased", { received_at: "2026-09-27T18:31:00Z", claimed_at: claimedWorkFixture.claimed_at }); }, "validation_failed"],
   ["unissued next stage token", () => { const previous = fixtures.get("publication-acknowledgement-static-pending.json"); const next = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); next.stage_token = "a".repeat(64); validateStageTransition(previous, next, fixtures.get("publication-acknowledgement-responses.json").synchronized); }, "stage_conflict"],
   ["terminal dynamic acknowledgement advancement", () => validateStageTransition(fixtures.get("publication-acknowledgement-create.json"), fixtures.get("publication-acknowledgement-static-deployed.json"), { ...fixtures.get("publication-acknowledgement-responses.json").dynamic, terminal: false, next_stage_token: "3".repeat(64) }), "stage_conflict"],
   ["stage transition changed synchronized time", () => { const next = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); next.synchronized_at = "2026-09-27T18:31:01Z"; validateStageTransition(fixtures.get("publication-acknowledgement-static-pending.json"), next, fixtures.get("publication-acknowledgement-responses.json").synchronized); }, "identity_conflict"],
@@ -594,8 +618,20 @@ const mutationCases = [
   ["excerpt spaced tag trap", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p>< a href="${value.canonical_url}">Read More</ a>`; validateResolveRecord(value, contract); }, "validation_failed"],
   ["excerpt commented display none", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><a style="display:/**/none" href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
   ["excerpt commented visibility hidden", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><a style="visibility:/**/hidden" href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt closed dialog link", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><dialog><a href="${value.canonical_url}">Read More</a></dialog>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt closed details body link", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><details><summary>More</summary><a href="${value.canonical_url}">Read More</a></details>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt escaped display property", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><a style="d\\69splay:none" href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt escaped display value", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><a style="display:\\6e one" href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt spaced important", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><a style="display:none ! important" href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt zero opacity", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><a style="opacity:0" href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt MathML anchor", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><math><a href="${value.canonical_url}">Read More</a></math>`; validateResolveRecord(value, contract); }, "validation_failed"],
   ["excerpt iframe anchor text", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><iframe><a href="${value.canonical_url}">Read More</a></iframe>`; validateResolveRecord(value, contract); }, "validation_failed"],
   ["excerpt xmp anchor text", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><xmp><a href="${value.canonical_url}">Read More</a></xmp>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["acknowledgement response foreign synchronized work", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").synchronized); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement-static-pending.json") }); }, "identity_conflict"],
+  ["acknowledgement response foreign deployed work", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").deployed); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement-static-deployed.json") }); }, "identity_conflict"],
+  ["acknowledgement response foreign verified work", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").verified); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement.json") }); }, "identity_conflict"],
+  ["acknowledgement response wrong terminal stage", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").verified); response.accepted_stage = "synchronized"; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement.json") }); }, "stage_conflict"],
+  ["existing topic exceeds signed 64-bit range", () => validateResolveRecord({ ...structuredClone(baseComplete), existing_topic_id: 2 ** 63 }, contract), "validation_failed"],
   ["chunk set invalid UTF-8", () => { const content = Buffer.from([0xff]); const digest = createHash("sha256").update(content).digest("hex"); const descriptor = { source_revision: "revision:invalid-utf8", byte_length: 1, sha256: digest, chunk_count: 1 }; const chunks = [{ source_revision: descriptor.source_revision, chunk: 1, chunk_count: 1, decoded_bytes: 1, chunk_sha256: digest, content_base64: content.toString("base64"), correlation_id: "invalid-utf8-01" }]; validateChunkSet(descriptor, chunks, contract); }, "integrity_failed"],
   ["package version mismatch", () => validateRepositoryIdentity({ ...packageMetadata, version: "0.2.0-alpha.20" }, contract, operator), "contract_version_mismatch"],
   ["operator contract version mismatch", () => validateRepositoryIdentity(packageMetadata, contract, { ...operator, version: "0.2.0-alpha.20" }), "contract_version_mismatch"],
@@ -604,6 +640,42 @@ const mutationCases = [
 for (const [name, operation, code] of mutationCases) {
   assert.throws(operation, (error) => error instanceof ProtocolError && error.code === code, `mutation ${name} must fail with ${code}`);
 }
+
+const validatorSource = await readFile(path.join(root, "tests", "protocol-validation.mjs"), "utf8");
+const parse5Url = pathToFileURL(path.join(root, "node_modules", "parse5", "dist", "index.js")).href;
+async function loadValidatorMutation(label, search, replacement) {
+  assert.equal(validatorSource.split(search).length, 2, `${label} mutation target must occur exactly once`);
+  const source = validatorSource
+    .replace('from "parse5";', `from "${parse5Url}";`)
+    .replace(search, replacement);
+  return import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#${encodeURIComponent(label)}`);
+}
+
+const chronologyMutant = await loadValidatorMutation(
+  "synchronization-before-claim-guard",
+  ' || compareTimestamps(acknowledgement.synchronized_at, context.claimed_at, "synchronized_at", "claimed_at") < 0',
+  "",
+);
+const isolatedPreClaimAcknowledgement = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json"));
+isolatedPreClaimAcknowledgement.synchronized_at = "2026-09-27T18:29:00Z";
+assert.doesNotThrow(() => chronologyMutant.validateAcknowledgementIdentity(
+  claimedWorkFixture.publication_work[0],
+  isolatedPreClaimAcknowledgement,
+  "leased",
+  { received_at: "2026-09-27T18:31:00Z", claimed_at: claimedWorkFixture.claimed_at },
+), "isolated chronology regression must detect removal of only the synchronization-before-claim guard");
+
+const responseBindingMutant = await loadValidatorMutation(
+  "acknowledgement-response-work-binding",
+  'if (value.work_id !== context.work.work_id) fail("identity_conflict", "acknowledgement response names another work item");',
+  "",
+);
+const foreignVerifiedResponse = structuredClone(fixtures.get("publication-acknowledgement-responses.json").verified);
+foreignVerifiedResponse.work_id = `dbw_${"9".repeat(32)}`;
+assert.doesNotThrow(() => responseBindingMutant.validateAcknowledgementResponse(foreignVerifiedResponse, contract, {
+  work: claimedWorkFixture.publication_work[0],
+  acknowledgement: fixtures.get("publication-acknowledgement.json"),
+}), "foreign-work regression must detect removal of the response work binding");
 
 const activeText = [
   JSON.stringify(contract),
@@ -615,4 +687,4 @@ const activeText = [
 assert.doesNotMatch(activeText, /fullInteractive/);
 assert.doesNotMatch(activeText, /Repeal OBBBA Forum|obbba-/i);
 
-console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, and ${mutationCases.length} mutation classes for ${contract.version}.`);
+console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 2 targeted source-reversion probes for ${contract.version}.`);

@@ -95,41 +95,92 @@ function analyzeHtml(value, name) {
   if (parseErrors.length > 0) fail("validation_failed", `${name} contains malformed HTML: ${parseErrors[0]}`);
   const anchors = [];
   let visibleText = "";
+  const htmlNamespace = "http://www.w3.org/1999/xhtml";
   const inertElements = new Set(["iframe", "noembed", "noframes", "script", "style", "template", "textarea", "title", "xmp"]);
   const attribute = (node, attributeName) => node.attrs?.find((entry) => entry.name === attributeName)?.value;
-  const hiddenByStyle = (style) => {
-    const declarations = (style ?? "").replace(/\/\*[\s\S]*?\*\//g, "").toLowerCase().split(";");
-    return declarations.some((declaration) => {
-      const separator = declaration.indexOf(":");
-      if (separator < 0) return false;
-      const property = declaration.slice(0, separator).trim();
-      const propertyValue = declaration.slice(separator + 1).replace(/!important\s*$/, "").trim();
-      return (property === "display" && propertyValue === "none") || (property === "visibility" && propertyValue === "hidden") || (property === "content-visibility" && propertyValue === "hidden");
+  const decodeCssEscapes = (text) => text
+    .replace(/\\\r\n|\\[\n\r\f]/g, "")
+    .replace(/\\([0-9a-f]{1,6})[\t\n\f\r ]?|\\([^0-9a-f\n\r\f])/gi, (_match, hex, escaped) => {
+      if (hex) {
+        const codePoint = Number.parseInt(hex, 16);
+        return codePoint === 0 || codePoint > 0x10ffff ? "\uFFFD" : String.fromCodePoint(codePoint);
+      }
+      return escaped;
     });
+  const inlineStyle = (style) => {
+    const declarations = new Map();
+    for (const declaration of (style ?? "").replace(/\/\*[\s\S]*?\*\//g, "").split(";")) {
+      const separator = declaration.indexOf(":");
+      if (separator < 0) continue;
+      const property = decodeCssEscapes(declaration.slice(0, separator)).trim().toLowerCase();
+      let propertyValue = decodeCssEscapes(declaration.slice(separator + 1)).trim().toLowerCase();
+      const important = /!\s*important\s*$/.test(propertyValue);
+      propertyValue = propertyValue.replace(/!\s*important\s*$/, "").trim();
+      const existing = declarations.get(property);
+      if (!existing || important || !existing.important) declarations.set(property, { value: propertyValue, important });
+    }
+    return declarations;
   };
-  const visit = (node, parentVisible, activeAnchors) => {
+  const stack = [...fragment.childNodes].reverse().map((node) => ({
+    node,
+    parent: { displayed: true, visibility: "visible", opaque: true },
+    activeAnchors: [],
+    detailsVisible: true,
+  }));
+  while (stack.length > 0) {
+    const { node, parent, activeAnchors, detailsVisible } = stack.pop();
     if (node.nodeName === "#text") {
-      if (parentVisible) {
+      if (parent.displayed && parent.visibility === "visible" && parent.opaque) {
         visibleText += node.value;
         for (const anchor of activeAnchors) anchor.text += node.value;
       }
-      return;
+      continue;
     }
     if (!node.tagName) {
-      for (const child of node.childNodes ?? []) visit(child, parentVisible, activeAnchors);
-      return;
+      const children = node.childNodes ?? [];
+      for (let index = children.length - 1; index >= 0; index -= 1) stack.push({ node: children[index], parent, activeAnchors, detailsVisible: true });
+      continue;
     }
-    const hidden = attribute(node, "hidden") !== undefined || attribute(node, "aria-hidden")?.toLowerCase() === "true" || hiddenByStyle(attribute(node, "style"));
-    const visible = parentVisible && !hidden && !inertElements.has(node.tagName);
+    const styles = inlineStyle(attribute(node, "style"));
+    const display = styles.get("display")?.value;
+    const contentVisibility = styles.get("content-visibility")?.value;
+    const declaredVisibility = styles.get("visibility")?.value;
+    const opacity = styles.get("opacity")?.value;
+    const zeroOpacity = opacity !== undefined && /^(?:[-+]?0+(?:\.0*)?|[-+]?\.0+)$/.test(opacity);
+    const structurallyHidden = !detailsVisible
+      || attribute(node, "hidden") !== undefined
+      || attribute(node, "inert") !== undefined
+      || attribute(node, "aria-hidden")?.toLowerCase() === "true"
+      || inertElements.has(node.tagName)
+      || (node.tagName === "dialog" && attribute(node, "open") === undefined);
+    const current = {
+      displayed: parent.displayed && !structurallyHidden && display !== "none" && contentVisibility !== "hidden",
+      visibility: ["hidden", "collapse", "visible"].includes(declaredVisibility) ? declaredVisibility : parent.visibility,
+      opaque: parent.opaque && !zeroOpacity,
+    };
+    const visible = current.displayed && current.visibility === "visible" && current.opaque;
     const nextAnchors = [...activeAnchors];
-    if (node.tagName === "a" && visible) {
+    if (node.tagName === "a" && node.namespaceURI === htmlNamespace && visible) {
       const anchor = { href: attribute(node, "href"), text: "" };
       anchors.push(anchor);
       nextAnchors.push(anchor);
     }
-    if (node.tagName !== "template") for (const child of node.childNodes ?? []) visit(child, visible, nextAnchors);
-  };
-  for (const child of fragment.childNodes) visit(child, true, []);
+    if (node.tagName === "template") continue;
+    const children = node.childNodes ?? [];
+    const closedDetails = node.tagName === "details" && attribute(node, "open") === undefined;
+    let visibleSummary = -1;
+    if (closedDetails) {
+      visibleSummary = children.findIndex((child) => child.tagName === "summary" && child.namespaceURI === htmlNamespace);
+    }
+    for (let index = children.length - 1; index >= 0; index -= 1) {
+      stack.push({
+        node: children[index],
+        parent: current,
+        activeAnchors: nextAnchors,
+        detailsVisible: !closedDetails || index === visibleSummary,
+      });
+    }
+  }
   if (!fragment.childNodes.some((node) => node.tagName)) fail("validation_failed", `${name} must contain HTML markup`);
   return { anchors, visibleText };
 }
@@ -140,6 +191,12 @@ function pattern(value, source, code = "validation_failed", name = "value") {
 
 function positiveInteger(value, name) {
   if (!Number.isSafeInteger(value) || value <= 0) fail("validation_failed", `${name} must be a positive integer`);
+}
+
+function positiveSigned64Integer(value, name) {
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0 || value >= 2 ** 63) {
+    fail("validation_failed", `${name} must be a positive signed 64-bit integer`);
+  }
 }
 
 function nonnegativeInteger(value, name) {
@@ -312,7 +369,7 @@ export function validateResolveRecord(record, contract) {
   if (Object.hasOwn(record, "adapter_id")) nonblank(record.adapter_id, contract.resolve.field_rules.adapter_id_maximum_bytes, "adapter_id");
   if (Object.hasOwn(record, "adapter_version")) nonblank(record.adapter_version, contract.resolve.field_rules.adapter_version_maximum_bytes, "adapter_version");
   if (Object.hasOwn(record, "visibility")) enumValue(record.visibility, contract.resolve.field_rules.visibility, "visibility");
-  if (Object.hasOwn(record, "existing_topic_id")) positiveInteger(record.existing_topic_id, "existing_topic_id");
+  if (Object.hasOwn(record, "existing_topic_id")) positiveSigned64Integer(record.existing_topic_id, "existing_topic_id");
   if (Object.hasOwn(record, "source_authors")) {
     if (!Array.isArray(record.source_authors) || record.source_authors.length > contract.resolve.field_rules.source_authors_maximum_items) fail("validation_failed");
     const ids = new Set();
@@ -669,7 +726,7 @@ export function validateStageTransition(previous, next, previousResponse) {
   if (next.stage_token !== previousResponse.next_stage_token || previous.stage_token === next.stage_token) fail("stage_conflict");
 }
 
-export function validateAcknowledgementResponse(value, contract) {
+export function validateAcknowledgementResponse(value, contract, context = undefined) {
   exactObject(value, contract.publication_work.acknowledgement.response_required_fields, contract.publication_work.acknowledgement.response_conditional_fields, "acknowledgement response");
   pattern(value.work_id, contract.publication_work.work_id_pattern);
   if (!contract.publication_work.acknowledgement.stages.includes(value.accepted_stage)) fail("stage_conflict");
@@ -685,6 +742,18 @@ export function validateAcknowledgementResponse(value, contract) {
     if (value.resulting_state !== expected) fail("stage_conflict");
   }
   correlation(value.correlation_id, contract);
+  if (context !== undefined) {
+    exactObject(context, ["work", "acknowledgement"], [], "acknowledgement response context");
+    object(context.work, "acknowledgement response work");
+    object(context.acknowledgement, "acknowledgement response request");
+    if (value.work_id !== context.work.work_id) fail("identity_conflict", "acknowledgement response names another work item");
+    if (value.accepted_stage !== context.acknowledgement.stage) fail("stage_conflict", "acknowledgement response accepted stage does not match request");
+    const dynamicTerminal = context.acknowledgement.stage === "synchronized"
+      && context.acknowledgement.deployment_state === "not_required"
+      && context.acknowledgement.verification_state === "not_required";
+    const expectedTerminal = dynamicTerminal || context.acknowledgement.stage === "verified";
+    if (value.terminal !== expectedTerminal) fail("stage_conflict", "acknowledgement response terminal state does not match request");
+  }
 }
 
 export function validateFailure(value, contract) {
