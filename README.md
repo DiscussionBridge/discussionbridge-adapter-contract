@@ -46,6 +46,13 @@ through:
 
 That response reports receiver policy and never expands it.
 
+The capability response is limited to 64 KiB, 100 lanes, 100 destination
+policies, and 1,000 taxonomy or author mappings per policy. Opaque mapping,
+policy, catalog, container and destination identifiers are limited to 255 UTF-8
+bytes; lane names are limited to 64 bytes. Duplicate source identities within
+one mapping array are rejected, while deliberate many-to-one destination
+mappings remain valid.
+
 `adapter_id` and `adapter_version` remain diagnostic provenance, not a second
 identity or authorization mechanism.
 
@@ -81,6 +88,13 @@ larger authoritative platform publication is represented by structurally valid
 bounded HTML that identifies itself as an excerpt and contains a prominent
 **Read More** link to the exact canonical platform source. Blind HTML
 truncation is invalid.
+
+The complete excerpt body—including its notice and Read More link—fits within
+48 KiB. Its final two top-level elements are attribute-free paragraphs inside
+the ordinary Discourse first-post body: a text-only excerpt notice, then a
+paragraph containing only the exact canonical `Read More` link. This is not a
+topic or theme footer. Excerpts contain no `style`, stylesheet `link`, `script`,
+or `base` element and are bounded to 1,024 parsed elements and depth 64.
 
 Normal and wiki changes deliver a new opaque `source_revision` and a greater
 positive `source_revision_sequence` against the same stable native
@@ -126,6 +140,12 @@ revision-pinned 32 KiB decoded base64 chunks. The adapter verifies every chunk,
 total byte count, and complete SHA-256 before parsing or publishing the
 reassembled UTF-8 HTML.
 
+The source-detail metadata envelope is limited to 256 KiB. It carries at most
+20 categories and 100 tags; their opaque IDs are limited to 255 UTF-8 bytes and
+their descriptive names to 200 bytes. Duplicate category or tag source IDs are
+rejected. These metadata limits do not cap the complete source publication,
+which continues to use the bounded inline/chunked content transport.
+
 The receiver accepts no source item larger than the connection-advertised
 finite Alpha.22 source bound (currently 16 MiB). This protects both sides from
 unbounded work without imposing a destination-content ceiling.
@@ -149,6 +169,11 @@ revision, policy revision, destination-policy ID, catalog revision, resolved
 native mappings/limit policy, action, connection, presentation, attempt, and
 lease. Workers may request leases up to one hour and renew within a four-hour
 maximum total lease for bounded static build/deploy/verification work.
+
+Each publication work item is limited to 128 KiB and at most 120 resolved
+taxonomy entries. Resolved opaque identifiers are limited to 255 UTF-8 bytes,
+container kinds to 100 bytes, and duplicate taxonomy source IDs are rejected.
+Several source IDs may intentionally map to the same destination ID.
 
 The first `synchronized` acknowledgement is valid only for the exact active
 lease after the native operation succeeds. It preserves destination identity

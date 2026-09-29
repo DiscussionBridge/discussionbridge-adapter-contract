@@ -21,12 +21,12 @@ missing approved requirement.
 | A-01 | `contract.json#/configuration/presentation_modes` and `presentation_rule`. | Positive presentation catalog; invalid superseded third-mode fixture and test. |
 | A-02 | `contract.json#/configuration/forum_name`. | Connection capability fixture; README shared forum-name section. |
 | A-03 | `contract.json#/authentication/adapter_identity_role`. | Conformance assertion; README authentication boundary. |
-| A-04 | `contract.json#/connection_capability`. | From-Discourse and pure-To-Discourse capability fixtures include supported operations, finite bounds, resolved destination policy, and conditional forum name. |
+| A-04 | `contract.json#/connection_capability`. | From-Discourse and pure-To-Discourse capability fixtures include supported operations, finite bounds, resolved destination policy, and conditional forum name. Raw 64 KiB, 100-lane, 100-policy, 1,000-mapping, 255-byte identifier, 64-byte lane, uniqueness, exact-limit, and limit-plus-one controls are executable. |
 | B-12 | Resolve/source/work `source_revision` plus positive monotonic `source_revision_sequence`. | Complete request, inventory, detail, work, acknowledgement, revocation, and revision-conflict fixtures. |
 | B-13 | Source-created/source-updated fields plus acknowledgement synchronization and public-verification times. | Request, source, record, and acknowledgement fixtures. |
 | B-14 | Exact applied source and destination publication revisions. | From-Discourse record and acknowledgement fixtures. |
 | B-15 | Source metadata is normative; native Latest remains platform-owned. | `README.md` Platform-owned behavior; adapter qualification remains downstream. |
-| C-01 | To-Discourse `complete`/`excerpt`, full-source bytes/hash, exact Read More rule. | Complete and excerpt request fixtures; parse5 structural checks plus jsdom CSSOM/computed-style evaluation, CSS token/calc validation, HTML/SVG namespace and default-hidden state, deep bounded nesting, stylesheet/cascade/escape/importance/opacity controls, and mismatch negatives. |
+| C-01 | To-Discourse `complete`/`excerpt`, full-source bytes/hash, exact Read More rule. | Complete and excerpt request fixtures; parse5 enforces the exact trailing first-post-body structure, decoded canonical link, forbidden source-controlled style/script/base elements, 1,024-element and depth-64 limits, exact-limit/limit-plus-one controls, and a targeted source-reversion probe. |
 | C-02 | Inline or revision-pinned base64 chunk transport with per-chunk and whole-content integrity. | Inline detail, chunked detail, chunk fixture, and hash tests. |
 | C-03 | Destination acknowledgement records content disposition; destination owns real limit/excerpt. | Acknowledgement fixture and README From Discourse section. |
 | C-04 | Rich rendering remains platform-owned. | README Platform-owned behavior; no renderer semantics in wire schema. |
@@ -35,9 +35,9 @@ missing approved requirement.
 | D-03 | Destination publication revision, synchronization, deployment, and verification state/time. | Dynamic create, static pending, and static verified acknowledgement fixtures. |
 | D-04 | Hold, unpublish, restore actions and durable binding states. | Work action/state registry and revocation fixture. |
 | E-01 | Opaque snapshot/cursor, policy-bound initial inventory, high-water, 30-day activity retention, expiry, and restart/deduplication rule. | Initial and resumed source-inventory fixtures plus cursor/snapshot mismatch fixture. |
-| E-02 | Revision-pinned source detail and bounded content transport. | Inline/chunked detail fixtures. |
+| E-02 | Revision-pinned source detail and bounded content transport. | Inline/chunked detail fixtures plus raw 256 KiB metadata-envelope exact/over-limit controls. |
 | E-03 | Cursor/high-water revocation index/detail, reasons, retention, restart deduplication, work-owned delivery acknowledgement, and same-identity restore rule. | Revocation index/detail and restart trace plus hold/unpublish/restore work. |
-| E-04 | Bounded claim, lease, renewal, staged acknowledgement, failure, serialized binding work, expiry, retention, and supersession rules. | Independent dynamic and static three-stage traces bind every response to authoritative work, actual stage and terminal semantics; interruption states, failure fixtures, and late-superseded negatives. |
+| E-04 | Bounded claim, lease, renewal, staged acknowledgement, failure, serialized binding work, expiry, retention, and supersession rules. | Independent dynamic and static three-stage traces bind every response to authoritative work, actual stage and terminal semantics; work items have executable raw 128 KiB, 120-taxonomy, identifier/kind and duplicate-source controls; interruption states, failure fixtures, and late-superseded negatives. |
 | E-05 | Receiver-owned retryable/terminal registry, one initial plus three retries, exact backoff/exhaustion, and bounded manual retry. | Complete retry trace plus failure, retry-wait, and exhausted/operator-attention fixtures. |
 | E-06 | Exact immutable `policy_revision` in inventory, work, and acknowledgement. | Inventory/work/ack fixtures. |
 | E-07 | Separate synchronization, deployment, and public verification; static completion rule. | Dynamic acknowledgement; static synchronized → deployed → verified trace; deployment/verification failures. |
@@ -46,7 +46,7 @@ missing approved requirement.
 | F-02 | Exact `catalog_revision` referenced by operator policy. | Atomic update, stale revision, removed mapping, and authority rules/fixtures. |
 | F-03 | Native public pagination remains platform-owned. | README Platform-owned behavior. |
 | G-01 | Bounded source-author schema both directions without shared identity. | Source detail author fixture and authorship rules. |
-| G-02 | Bounded source category/tag identities for operator policy mapping. | Source detail taxonomy fixture and schema. |
+| G-02 | Bounded source category/tag identities for operator policy mapping. | Source detail taxonomy fixture and schema plus exact 20-category/100-tag, 255-byte ID, 200-byte name, and duplicate-source-ID controls. |
 | H-01 | Separate RFC 8785/Ed25519 Operator Service entitlement contract; one provider; protected issuer/key enrollment and rotation. | Real deterministic public-key/message/signature vector and executable cryptographic verification. |
 | H-02 | Scope, forum binding, validity, grace/read-only, replacement, revocation, and audit rules. | Enrollment/revocation audits plus tamper, wrong forum/key, not-yet-valid, expired, grace, revoked, replaced, and scope negatives. |
 | H-03 | Customer approval and provider audit remain separate from adapter credentials. | Operator contract rules and invalid-scope fixture. |
@@ -81,17 +81,18 @@ missing approved requirement.
   negative fixture is rejected with its exact expected protocol code, real
   Ed25519 verification runs locally, and mutation classes cover missing and
   unknown fields, enum, bound, hash, and signature failures.
-- Excerpt validation uses the lockfile-pinned standards parser exercised by CI,
-  a standards-oriented DOM/CSSOM implementation and CSS syntax/calculation
-  tooling. Iterative traversal avoids a recursion ceiling below the wire byte
-  bound; computed styles and explicit static element/SVG state cover valid
-  cascade overrides, stylesheets, default-hidden content and non-HTML traps.
+- Excerpt validation uses only the lockfile-pinned standards HTML parser
+  exercised by CI. Iterative traversal enforces the 1,024-element/depth-64
+  budget and forbidden-element rule; exact parsed first-post-body structure,
+  text and decoded canonical href replace unsound browser/CSS visibility
+  simulation. Installed presentation remains a downstream qualification gate.
 - Claim/acknowledgement traces compose request, authoritative work, response,
   correlation, lease, receipt, stage, terminal destination semantics, and event
   chronology rather than validating shapes in isolation. Dynamic authoritative
   work identity is sourced independently from the response. Targeted in-memory
-  source reversions prove response-work, response-terminal and synchronization
-  chronology regressions exercise their intended individual guards.
+  source reversions prove response-work, response-terminal, synchronization
+  chronology and excerpt-structure regressions exercise their intended
+  individual guards.
 - Protocol JSON parsing preserves `existing_topic_id` numeric source tokens as
   exact integers before JavaScript Number rounding. Adjacent values above
   `2^53` remain distinct, the signed-64 maximum accepts, rounded fractional

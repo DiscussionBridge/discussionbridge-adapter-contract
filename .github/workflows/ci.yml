@@ -15,11 +15,11 @@ concurrency:
 jobs:
   contract:
     name: Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        node: [22.x, 24.x]
+        node: [22.22.2, 24.19.0]
     steps:
       - name: Check out repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -32,6 +32,12 @@ jobs:
 
       - name: Install locked test dependencies
         run: npm ci
+
+      - name: Record exact execution environment
+        run: |
+          node --version
+          npm --version
+          printf 'ImageOS=%s\nImageVersion=%s\nImageArch=%s\n' "$ImageOS" "$ImageVersion" "$ImageArch"
 
       - name: Validate the complete contract
         run: npm test

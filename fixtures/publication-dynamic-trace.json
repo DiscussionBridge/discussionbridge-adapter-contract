@@ -1,5 +1,37 @@
 {
-  "work_id": "dbw_88888888888888888888888888888888",
+  "work": {
+    "work_id": "dbw_88888888888888888888888888888888",
+    "resource_id": "c4965d46-e657-4af4-af47-6439e544eeb7",
+    "connection_id": "dbc_111111111111111111111111",
+    "action": "publish",
+    "source_revision": "post:501:version:2",
+    "source_revision_sequence": 2,
+    "policy_revision": "policy:2026-09-27:1",
+    "destination_policy_id": "destination:ghost:primary:1",
+    "catalog_revision": "catalog:ghost:2026-09-27:1",
+    "presentation_mode": "simple",
+    "resolved_container": {
+      "id": "ghost:collection:posts",
+      "kind": "collection"
+    },
+    "resolved_taxonomy": [],
+    "resolved_author": {
+      "mode": "source_attribution",
+      "destination_id": null
+    },
+    "native_limit_policy": {
+      "maximum_bytes": 2000000,
+      "overflow_behavior": "complete"
+    },
+    "lease_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "stage_token": "1111111111111111111111111111111111111111111111111111111111111111",
+    "lease_expires_at": "2026-09-27T18:35:00Z",
+    "attempt_count": 1,
+    "retry_generation": 0,
+    "correlation_id": "work-create-01"
+  },
+  "claimed_at": "2026-09-27T18:30:00Z",
+  "received_at": "2026-09-27T18:31:00Z",
   "acknowledgement": "publication-acknowledgement-create.json",
   "response_key": "dynamic",
   "terminal_state": "acknowledged"

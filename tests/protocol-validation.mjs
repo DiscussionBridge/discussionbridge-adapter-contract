@@ -1,7 +1,4 @@
 import { createHash, createPublicKey, verify } from "node:crypto";
-import { calc } from "@csstools/css-calc";
-import { generate as generateCss, lexer as cssLexer, parse as parseCss } from "css-tree";
-import { JSDOM } from "jsdom";
 import { parseFragment } from "parse5";
 
 export class ProtocolError extends Error {
@@ -23,12 +20,245 @@ function fail(code, message) {
 
 export function parseProtocolJson(text) {
   if (typeof text !== "string") fail("validation_failed", "protocol JSON must be text");
-  return JSON.parse(text, (key, value, context) => {
-    if (key === "existing_topic_id" && typeof value === "number" && /^-?(?:0|[1-9]\d*)$/.test(context.source)) {
-      return BigInt(context.source);
+  validateJsonText(text);
+  try {
+    return JSON.parse(text, (key, value, context) => {
+      if (key === "existing_topic_id" && typeof value === "number") {
+        const exact = exactJsonInteger(context.source);
+        if (exact === null) fail("validation_failed", "existing_topic_id must be an exact JSON integer");
+        return exact;
+      }
+      return value;
+    });
+  } catch (error) {
+    if (error instanceof ProtocolError) throw error;
+    fail("invalid_json", "protocol JSON is invalid");
+  }
+}
+
+function exactJsonInteger(source) {
+  const match = /^(-?)(0|[1-9]\d*)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(source);
+  if (!match) return null;
+  const fraction = match[3] ?? "";
+  const exponent = Number.parseInt(match[4] ?? "0", 10);
+  if (!Number.isSafeInteger(exponent)) return null;
+  let digits = `${match[2]}${fraction}`;
+  const scale = exponent - fraction.length;
+  if (scale < 0) {
+    const removed = -scale;
+    if (removed > digits.length) return /^0+$/.test(digits) ? 0n : null;
+    if (!/^0*$/.test(digits.slice(digits.length - removed))) return null;
+    digits = digits.slice(0, digits.length - removed) || "0";
+  } else if (!/^0+$/.test(digits) && digits.replace(/^0+/, "").length + scale > 19) {
+    return match[1] ? -9223372036854775808n : 9223372036854775808n;
+  } else {
+    digits += "0".repeat(scale);
+  }
+  const coefficient = BigInt(digits);
+  return match[1] ? -coefficient : coefficient;
+}
+
+function unicodeScalarString(value, code, name) {
+  if (typeof value !== "string") fail(code, `${name} must be a string`);
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) fail(code, `${name} contains an unpaired surrogate`);
+      index += 1;
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) {
+      fail(code, `${name} contains an unpaired surrogate`);
     }
-    return value;
-  });
+  }
+}
+
+function readJsonString(text, start) {
+  let index = start + 1;
+  while (index < text.length) {
+    const code = text.charCodeAt(index);
+    if (code === 0x22) {
+      const raw = text.slice(start, index + 1);
+      let value;
+      try {
+        value = JSON.parse(raw);
+      } catch {
+        fail("invalid_json", "invalid JSON string");
+      }
+      unicodeScalarString(value, "invalid_json", "JSON string");
+      return { value, next: index + 1 };
+    }
+    if (code < 0x20) fail("invalid_json", "unescaped control character in JSON string");
+    if (code === 0x5c) {
+      index += 1;
+      if (index >= text.length || !/["\\/bfnrtu]/.test(text[index])) fail("invalid_json", "invalid JSON escape");
+      if (text[index] === "u") {
+        if (!/^[0-9a-fA-F]{4}$/.test(text.slice(index + 1, index + 5))) fail("invalid_json", "invalid JSON Unicode escape");
+        index += 4;
+      }
+    }
+    index += 1;
+  }
+  fail("invalid_json", "unterminated JSON string");
+}
+
+function validateJsonText(text) {
+  const stack = [{ type: "root", state: "value" }];
+  let index = 0;
+  const skipWhitespace = () => {
+    while (index < text.length && /[\t\n\r ]/.test(text[index])) index += 1;
+  };
+  const valueConsumed = (frame) => {
+    frame.state = frame.type === "root" ? "end" : "commaOrEnd";
+  };
+  const consumeValue = (frame) => {
+    const character = text[index];
+    valueConsumed(frame);
+    if (character === "{") {
+      index += 1;
+      stack.push({ type: "object", state: "keyOrEnd", keys: new Set() });
+      return;
+    }
+    if (character === "[") {
+      index += 1;
+      stack.push({ type: "array", state: "valueOrEnd" });
+      return;
+    }
+    if (character === '"') {
+      index = readJsonString(text, index).next;
+      return;
+    }
+    const literal = /^(?:true|false|null)/.exec(text.slice(index));
+    if (literal) {
+      index += literal[0].length;
+      return;
+    }
+    const number = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(text.slice(index));
+    if (number) {
+      index += number[0].length;
+      return;
+    }
+    fail("invalid_json", "invalid JSON value");
+  };
+  while (true) {
+    skipWhitespace();
+    const frame = stack.at(-1);
+    if (frame.type === "root") {
+      if (frame.state === "value") consumeValue(frame);
+      else if (stack.length === 1) {
+        if (index !== text.length) fail("invalid_json", "trailing JSON data");
+        return;
+      }
+      continue;
+    }
+    if (frame.type === "object") {
+      if (frame.state === "keyOrEnd") {
+        if (text[index] === "}") {
+          index += 1;
+          stack.pop();
+          continue;
+        }
+        if (text[index] !== '"') fail("invalid_json", "object key must be a JSON string");
+        const token = readJsonString(text, index);
+        if (frame.keys.has(token.value)) fail("invalid_json", `duplicate JSON member: ${token.value}`);
+        frame.keys.add(token.value);
+        index = token.next;
+        frame.state = "colon";
+      } else if (frame.state === "colon") {
+        if (text[index] !== ":") fail("invalid_json", "missing object member colon");
+        index += 1;
+        frame.state = "value";
+      } else if (frame.state === "value") {
+        consumeValue(frame);
+      } else if (text[index] === ",") {
+        index += 1;
+        frame.state = "keyOrEnd";
+      } else if (text[index] === "}") {
+        index += 1;
+        stack.pop();
+      } else {
+        fail("invalid_json", "object member separator is invalid");
+      }
+      continue;
+    }
+    if (frame.state === "valueOrEnd") {
+      if (text[index] === "]") {
+        index += 1;
+        stack.pop();
+      } else {
+        consumeValue(frame);
+      }
+    } else if (text[index] === ",") {
+      index += 1;
+      frame.state = "valueOrEnd";
+    } else if (text[index] === "]") {
+      index += 1;
+      stack.pop();
+    } else {
+      fail("invalid_json", "array item separator is invalid");
+    }
+  }
+}
+
+function skipJsonWhitespace(text, index) {
+  while (index < text.length && /[\t\n\r ]/.test(text[index])) index += 1;
+  return index;
+}
+
+function skipRawJsonValue(text, start) {
+  let index = skipJsonWhitespace(text, start);
+  if (text[index] === '"') return readJsonString(text, index).next;
+  if (text[index] !== "{" && text[index] !== "[") {
+    while (index < text.length && !/[\t\n\r ,}\]]/.test(text[index])) index += 1;
+    return index;
+  }
+  const closers = [text[index] === "{" ? "}" : "]"];
+  index += 1;
+  while (closers.length > 0) {
+    if (text[index] === '"') {
+      index = readJsonString(text, index).next;
+      continue;
+    }
+    if (text[index] === "{") closers.push("}");
+    else if (text[index] === "[") closers.push("]");
+    else if (text[index] === closers.at(-1)) closers.pop();
+    index += 1;
+  }
+  return index;
+}
+
+function topLevelArrayElementTexts(text, propertyName) {
+  let index = skipJsonWhitespace(text, 0);
+  if (text[index] !== "{") fail("validation_failed", "JSON envelope must be an object");
+  index += 1;
+  while (true) {
+    index = skipJsonWhitespace(text, index);
+    if (text[index] === "}") return null;
+    const key = readJsonString(text, index);
+    index = skipJsonWhitespace(text, key.next);
+    if (text[index] !== ":") fail("invalid_json", "JSON object member lacks a colon");
+    index = skipJsonWhitespace(text, index + 1);
+    if (key.value === propertyName) {
+      if (text[index] !== "[") fail("validation_failed", `${propertyName} must be an array`);
+      index += 1;
+      const elements = [];
+      while (true) {
+        const segmentStart = index;
+        index = skipJsonWhitespace(text, index);
+        if (text[index] === "]") return elements;
+        index = skipRawJsonValue(text, index);
+        index = skipJsonWhitespace(text, index);
+        elements.push(text.slice(segmentStart, index));
+        if (text[index] === "]") return elements;
+        if (text[index] !== ",") fail("invalid_json", `${propertyName} has an invalid separator`);
+        index += 1;
+      }
+    }
+    index = skipRawJsonValue(text, index);
+    index = skipJsonWhitespace(text, index);
+    if (text[index] === "}") return null;
+    if (text[index] !== ",") fail("invalid_json", "JSON object has an invalid separator");
+    index += 1;
+  }
 }
 
 const stringifyProtocolJson = (value) => JSON.stringify(value, (_key, item) => (
@@ -105,131 +335,46 @@ function validateUtf8Bytes(value, name) {
   }
 }
 
-function analyzeHtml(value, name) {
+function validateExcerptHtml(value, canonicalUrl, readMoreUrl, contract) {
+  const name = "content_html";
   validUnicode(value, name);
   const parseErrors = [];
   const fragment = parseFragment(value, { onParseError: (error) => parseErrors.push(error.code) });
   if (parseErrors.length > 0) fail("validation_failed", `${name} contains malformed HTML: ${parseErrors[0]}`);
-  if (!fragment.childNodes.some((node) => node.tagName)) fail("validation_failed", `${name} must contain HTML markup`);
-  const dom = new JSDOM("<!doctype html><body></body>");
-  dom.window.document.body.innerHTML = value;
-  const decodeCssEscapes = (text) => text
-    .replace(/\\\r\n|\\[\n\r\f]/g, "")
-    .replace(/\\([0-9a-f]{1,6})[\t\n\f\r ]?|\\([^0-9a-f\n\r\f])/gi, (_match, hex, escaped) => {
-      if (hex) {
-        const codePoint = Number.parseInt(hex, 16);
-        return codePoint === 0 || codePoint > 0x10ffff ? "\uFFFD" : String.fromCodePoint(codePoint);
-      }
-      return escaped;
-    });
-  for (const element of dom.window.document.body.querySelectorAll("[style]")) {
-    try {
-      const declarations = parseCss(element.getAttribute("style"), { context: "declarationList" });
-      const normalized = [];
-      declarations.children.forEach((declaration) => {
-        const property = decodeCssEscapes(declaration.property).toLowerCase();
-        if (property.startsWith("--")) {
-          normalized.push(`${property}:${generateCss(declaration.value)}${declaration.important ? "!important" : ""}`);
-          return;
-        }
-        const generatedValue = generateCss(declaration.value);
-        const valueText = ["display", "visibility", "content-visibility", "opacity"].includes(property)
-          ? decodeCssEscapes(generatedValue)
-          : generatedValue;
-        const valueAst = parseCss(valueText, { context: "value" });
-        if (cssLexer.matchProperty(property, valueAst).matched) {
-          normalized.push(`${property}:${valueText}${declaration.important ? "!important" : ""}`);
-        }
-      });
-      element.setAttribute("style", normalized.join(";"));
-    } catch {
-      // Leave the original declaration list for the CSSOM's own error recovery.
-    }
-  }
-  const anchors = [];
-  let visibleText = "";
   const htmlNamespace = "http://www.w3.org/1999/xhtml";
-  const inertElements = new Set(["datalist", "iframe", "noembed", "noframes", "noscript", "script", "style", "template", "textarea", "title", "xmp"]);
-  const opacityIsTransparent = (value) => {
-    let normalized = value.trim().toLowerCase();
-    try {
-      normalized = calc(normalized);
-    } catch {
-      return false;
-    }
-    const match = normalized.match(/^([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?)(%)?$/i);
-    return match !== null && Number(match[1]) <= 0;
-  };
-  const stack = [...dom.window.document.body.childNodes].reverse().map((node) => ({
-    node,
-    parent: { displayed: true, visible: true, opaque: true },
-    activeAnchors: [],
-    detailsVisible: true,
-  }));
+  const complexity = contract.resolve.field_rules.excerpt_html_complexity;
+  const stack = [...fragment.childNodes].reverse().map((node) => ({ node, depth: node.tagName ? 1 : 0 }));
+  let elementCount = 0;
   while (stack.length > 0) {
-    const { node, parent, activeAnchors, detailsVisible } = stack.pop();
-    if (node.nodeType === dom.window.Node.TEXT_NODE) {
-      if (detailsVisible && parent.displayed && parent.visible && parent.opaque) {
-        visibleText += node.nodeValue;
-        for (const anchor of activeAnchors) anchor.text += node.nodeValue;
+    const { node, depth } = stack.pop();
+    if (node.tagName) {
+      elementCount += 1;
+      if (elementCount > complexity.maximum_elements || depth > complexity.maximum_depth) fail("validation_failed", "excerpt HTML exceeds complexity limits");
+      const rel = node.attrs?.find((attribute) => attribute.name === "rel")?.value ?? "";
+      if (["style", "script", "base"].includes(node.tagName) || (node.tagName === "link" && rel.split(/[\t\n\f\r ]+/).some((token) => token.toLowerCase() === "stylesheet"))) {
+        fail("validation_failed", "excerpt HTML contains a forbidden element");
       }
-      continue;
     }
-    if (node.nodeType !== dom.window.Node.ELEMENT_NODE) {
-      const children = [...(node.childNodes ?? [])];
-      for (let index = children.length - 1; index >= 0; index -= 1) stack.push({ node: children[index], parent, activeAnchors, detailsVisible: true });
-      continue;
-    }
-    const tagName = node.localName;
-    let styles;
-    try {
-      styles = dom.window.getComputedStyle(node);
-    } catch {
-      styles = {
-        display: "inline",
-        contentVisibility: "visible",
-        visibility: parent.visible ? "visible" : "hidden",
-        opacity: "1",
-      };
-    }
-    const svgDisplay = node.namespaceURI !== htmlNamespace && node.getAttribute("display")?.trim().toLowerCase() === "none";
-    const svgVisibility = node.namespaceURI !== htmlNamespace ? node.getAttribute("visibility")?.trim().toLowerCase() : undefined;
-    const svgOpacity = node.namespaceURI !== htmlNamespace ? node.getAttribute("opacity")?.trim() : undefined;
-    const structurallyHidden = !detailsVisible
-      || node.hasAttribute("hidden")
-      || node.hasAttribute("inert")
-      || node.getAttribute("aria-hidden")?.toLowerCase() === "true"
-      || inertElements.has(tagName)
-      || (tagName === "dialog" && !node.hasAttribute("open"))
-      || node.hasAttribute("popover");
-    const current = {
-      displayed: parent.displayed && !structurallyHidden && styles.display !== "none" && styles.contentVisibility !== "hidden" && !svgDisplay,
-      visible: styles.visibility === "visible" && svgVisibility !== "hidden" && svgVisibility !== "collapse",
-      opaque: parent.opaque && !opacityIsTransparent(styles.opacity || "1") && !opacityIsTransparent(svgOpacity || "1"),
-    };
-    const nextAnchors = [...activeAnchors];
-    if (tagName === "a" && node.namespaceURI === htmlNamespace && current.displayed && current.opaque) {
-      const anchor = { href: node.getAttribute("href"), text: "" };
-      anchors.push(anchor);
-      nextAnchors.push(anchor);
-    }
-    const children = [...node.childNodes];
-    const closedDetails = tagName === "details" && !node.hasAttribute("open");
-    let visibleSummary = -1;
-    if (closedDetails) {
-      visibleSummary = children.findIndex((child) => child.nodeType === dom.window.Node.ELEMENT_NODE && child.localName === "summary" && child.namespaceURI === htmlNamespace);
-    }
+    const children = [...(node.childNodes ?? []), ...(node.content?.childNodes ?? [])];
     for (let index = children.length - 1; index >= 0; index -= 1) {
-      stack.push({
-        node: children[index],
-        parent: current,
-        activeAnchors: nextAnchors,
-        detailsVisible: !closedDetails || index === visibleSummary,
-      });
+      stack.push({ node: children[index], depth: children[index].tagName ? depth + 1 : depth });
     }
   }
-  dom.window.close();
-  return { anchors, visibleText };
+
+  const topLevelElements = fragment.childNodes.filter((node) => node.tagName);
+  if (topLevelElements.length < 2) fail("validation_failed", "excerpt requires a trailing notice and Read More block");
+  const notice = topLevelElements.at(-2);
+  const linkParagraph = topLevelElements.at(-1);
+  if (notice.namespaceURI !== htmlNamespace || notice.tagName !== "p" || notice.attrs.length !== 0 || notice.childNodes.length === 0 || notice.childNodes.some((node) => node.nodeName !== "#text")) fail("validation_failed", "excerpt notice must be an attribute-free text-only paragraph");
+  const normalizeText = (text) => text.replace(/\s+/gu, " ").trim();
+  if (!/excerpt/i.test(normalizeText(notice.childNodes.map((node) => node.value).join("")))) fail("validation_failed", "excerpt notice must identify the content as an excerpt");
+  if (linkParagraph.namespaceURI !== htmlNamespace || linkParagraph.tagName !== "p" || linkParagraph.attrs.length !== 0) fail("validation_failed", "Read More block must be an attribute-free paragraph");
+  const linkParagraphElements = linkParagraph.childNodes.filter((node) => node.tagName);
+  if (linkParagraphElements.length !== 1 || linkParagraph.childNodes.some((node) => !node.tagName && (node.nodeName !== "#text" || normalizeText(node.value) !== ""))) fail("validation_failed", "Read More paragraph must contain only one link");
+  const link = linkParagraphElements[0];
+  if (link.namespaceURI !== htmlNamespace || link.tagName !== "a" || link.attrs.length !== 1 || link.attrs[0].name !== "href" || link.childNodes.length === 0 || link.childNodes.some((node) => node.nodeName !== "#text")) fail("validation_failed", "Read More link has invalid structure");
+  if (normalizeText(link.childNodes.map((node) => node.value).join("")) !== "Read More") fail("validation_failed", "Read More link has invalid text");
+  if (readMoreUrl !== canonicalUrl || link.attrs[0].value !== canonicalUrl) fail("validation_failed", "Read More link must equal the canonical source URL");
 }
 
 function pattern(value, source, code = "validation_failed", name = "value") {
@@ -258,6 +403,18 @@ function boolean(value, name) {
 
 function requiredString(value, name) {
   if (typeof value !== "string" || value.trim() === "") fail("validation_failed", `${name} must be a nonblank string`);
+}
+
+function boundedJsonObject(value, maximum, name) {
+  if (bytes(stringifyProtocolJson(value)) > maximum) fail("validation_failed", `${name} exceeds maximum_json_bytes`);
+}
+
+function validateBoundedJsonText(text, maximum, name, validator) {
+  if (typeof text !== "string") fail("invalid_json", `${name} must be JSON text`);
+  if (bytes(text) > maximum) fail("validation_failed", `${name} exceeds maximum_json_bytes`);
+  const value = parseProtocolJson(text);
+  validator(value);
+  return value;
 }
 
 function enumValue(value, allowed, name) {
@@ -306,10 +463,22 @@ export function validateCorrelationExchange(value, contract) {
   if (Object.hasOwn(value, "request_body") && value.request_body !== value.request_header) fail("validation_failed");
 }
 
-export function canonicalize(value) {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
-  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalize(value[key])}`).join(",")}}`;
+export function canonicalize(value, code = "validation_failed") {
+  if (value === null) return "null";
+  if (typeof value === "string") {
+    unicodeScalarString(value, code, "canonical JSON string");
+    return JSON.stringify(value);
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) fail(code, "canonical JSON number must be finite");
+    return JSON.stringify(value);
+  }
+  if (typeof value === "boolean") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalize(item, code)).join(",")}]`;
+  if (!value || typeof value !== "object" || Object.getPrototypeOf(value) !== Object.prototype) fail(code, "canonical JSON value is invalid");
+  const keys = Object.keys(value).sort();
+  for (const key of keys) unicodeScalarString(key, code, "canonical JSON member name");
+  return `{${keys.map((key) => `${JSON.stringify(key)}:${canonicalize(value[key], code)}`).join(",")}}`;
 }
 
 export function validatePresentationMode(mode, contract) {
@@ -317,12 +486,15 @@ export function validatePresentationMode(mode, contract) {
 }
 
 export function validateConnectionCapability(value, contract) {
+  boundedJsonObject(value, contract.connection_capability.maximum_json_bytes, "connection capability");
   exactObject(value, [...contract.connection_capability.required_fields, "correlation_id"], ["forum_name"], "connection capability");
   if (value.contract_version !== contract.version) fail("validation_failed", "wrong contract version");
   pattern(value.connection_id, contract.authentication.connection_id_pattern);
   boolean(value.enabled, "enabled");
   uniqueStrings(value.directions, "directions", ["to_discourse", "from_discourse"]);
   uniqueStrings(value.lanes, "lanes");
+  if (value.lanes.length > contract.connection_capability.lanes_maximum_items) fail("validation_failed", "too many capability lanes");
+  for (const lane of value.lanes) nonblank(lane, contract.connection_capability.lane_maximum_bytes, "capability lane");
   if (value.directions.includes("from_discourse")) nonblank(value.forum_name, contract.configuration.forum_name.maximum_bytes, "forum_name");
   if (Object.hasOwn(value, "forum_name") && !value.directions.includes("from_discourse")) nonblank(value.forum_name, contract.configuration.forum_name.maximum_bytes, "forum_name");
   uniqueStrings(value.allowed_presentation_modes, "allowed_presentation_modes", contract.configuration.presentation_modes);
@@ -338,45 +510,55 @@ export function validateConnectionCapability(value, contract) {
     catalog_segment_items: contract.platform_catalog.maximum_items_per_segment,
   };
   for (const [field, expected] of Object.entries(expectedBounds)) if (value.bounds[field] !== expected) fail("validation_failed");
-  if (!Array.isArray(value.destination_policies) || value.destination_policies.length === 0) fail("validation_failed");
+  if (!Array.isArray(value.destination_policies) || value.destination_policies.length === 0 || value.destination_policies.length > contract.connection_capability.destination_policies_maximum_items) fail("validation_failed");
   const policyIds = new Set();
+  const rules = contract.connection_capability.destination_policy_field_rules;
   for (const policy of value.destination_policies) {
     exactObject(policy, contract.connection_capability.destination_policy_required_fields, [], "destination policy");
-    requiredString(policy.destination_policy_id, "destination_policy_id");
+    nonblank(policy.destination_policy_id, contract.common.opaque_identifier_maximum_bytes, "destination_policy_id");
     if (policyIds.has(policy.destination_policy_id)) fail("validation_failed", "duplicate destination_policy_id");
     policyIds.add(policy.destination_policy_id);
     if (!contract.profiles.includes(policy.profile)) fail("validation_failed");
     validatePresentationMode(policy.presentation_mode, contract);
     if (!value.allowed_presentation_modes.includes(policy.presentation_mode)) fail("policy_denied", "destination policy presentation is outside effective connection policy");
-    const rules = contract.connection_capability.destination_policy_field_rules;
     exactObject(policy.container_mapping, rules.container_mapping_required_fields, [], "container mapping");
-    requiredString(policy.container_mapping.source, "container mapping source");
-    requiredString(policy.container_mapping.destination, "container mapping destination");
+    nonblank(policy.container_mapping.source, contract.common.opaque_identifier_maximum_bytes, "container mapping source");
+    nonblank(policy.container_mapping.destination, contract.common.opaque_identifier_maximum_bytes, "container mapping destination");
     exactObject(policy.taxonomy_mapping, rules.taxonomy_mapping_required_fields, rules.taxonomy_mapping_optional_fields, "taxonomy mapping");
     exactObject(policy.author_mapping, rules.author_mapping_required_fields, rules.author_mapping_optional_fields, "author mapping");
     if (!rules.mapping_modes.includes(policy.taxonomy_mapping.mode) || !rules.mapping_modes.includes(policy.author_mapping.mode)) fail("validation_failed");
     if (Object.hasOwn(policy.taxonomy_mapping, "items")) {
-      if (!Array.isArray(policy.taxonomy_mapping.items)) fail("validation_failed", "taxonomy mapping items must be an array");
+      if (!Array.isArray(policy.taxonomy_mapping.items) || policy.taxonomy_mapping.items.length > rules.mapping_items_maximum_items) fail("validation_failed", "taxonomy mapping items must be a bounded array");
+      const sourceIds = new Set();
       for (const item of policy.taxonomy_mapping.items) {
         exactObject(item, ["source", "destination"], [], "taxonomy mapping item");
-        requiredString(item.source, "taxonomy mapping source");
-        requiredString(item.destination, "taxonomy mapping destination");
+        nonblank(item.source, contract.common.opaque_identifier_maximum_bytes, "taxonomy mapping source");
+        nonblank(item.destination, contract.common.opaque_identifier_maximum_bytes, "taxonomy mapping destination");
+        if (sourceIds.has(item.source)) fail("validation_failed", "duplicate taxonomy mapping source");
+        sourceIds.add(item.source);
       }
     }
-    if (Object.hasOwn(policy.author_mapping, "destination_id")) requiredString(policy.author_mapping.destination_id, "author destination_id");
+    if (Object.hasOwn(policy.author_mapping, "destination_id")) nonblank(policy.author_mapping.destination_id, contract.common.opaque_identifier_maximum_bytes, "author destination_id");
     if (Object.hasOwn(policy.author_mapping, "items")) {
-      if (!Array.isArray(policy.author_mapping.items)) fail("validation_failed", "author mapping items must be an array");
+      if (!Array.isArray(policy.author_mapping.items) || policy.author_mapping.items.length > rules.mapping_items_maximum_items) fail("validation_failed", "author mapping items must be a bounded array");
+      const sourceIds = new Set();
       for (const item of policy.author_mapping.items) {
         exactObject(item, ["source", "destination"], [], "author mapping item");
-        requiredString(item.source, "author mapping source");
-        requiredString(item.destination, "author mapping destination");
+        nonblank(item.source, contract.common.opaque_identifier_maximum_bytes, "author mapping source");
+        nonblank(item.destination, contract.common.opaque_identifier_maximum_bytes, "author mapping destination");
+        if (sourceIds.has(item.source)) fail("validation_failed", "duplicate author mapping source");
+        sourceIds.add(item.source);
       }
     }
     exactObject(policy.native_limit_policy, rules.native_limit_policy_required_fields, [], "native limit policy");
     if (!Number.isSafeInteger(policy.native_limit_policy.maximum_bytes) || policy.native_limit_policy.maximum_bytes < 1 || !rules.overflow_behaviors.includes(policy.native_limit_policy.overflow_behavior)) fail("validation_failed");
-    requiredString(policy.catalog_revision, "catalog_revision");
+    nonblank(policy.catalog_revision, contract.common.opaque_identifier_maximum_bytes, "catalog_revision");
   }
   correlation(value.correlation_id, contract);
+}
+
+export function validateConnectionCapabilityText(text, contract) {
+  return validateBoundedJsonText(text, contract.connection_capability.maximum_json_bytes, "connection capability", (value) => validateConnectionCapability(value, contract));
 }
 
 export function validateAuthenticationHeaders(value, contract) {
@@ -408,10 +590,7 @@ export function validateResolveRecord(record, contract) {
     if (Object.hasOwn(record, "read_more_url")) fail("validation_failed");
     if (bytes(record.content_html) !== record.source_content_bytes || sha256(record.content_html) !== record.source_content_sha256) fail("integrity_failed");
   } else if (record.content_disposition === "excerpt") {
-    const html = analyzeHtml(record.content_html, "content_html");
-    if (record.read_more_url !== record.canonical_url) fail("validation_failed");
-    const canonicalLink = html.anchors.some((anchor) => anchor.href === record.canonical_url && /Read\s+More/i.test(anchor.text));
-    if (!/excerpt/i.test(html.visibleText) || !canonicalLink) fail("validation_failed", "excerpt requires a notice and Read More link");
+    validateExcerptHtml(record.content_html, record.canonical_url, record.read_more_url, contract);
     if (record.source_content_bytes <= bytes(record.content_html)) fail("validation_failed");
   } else fail("validation_failed");
   if (Object.hasOwn(record, "lane")) nonblank(record.lane, contract.resolve.field_rules.lane_maximum_bytes, "lane");
@@ -433,6 +612,15 @@ export function validateResolveRecord(record, contract) {
     if (Object.hasOwn(record, "primary_source_author_id") && !ids.has(record.primary_source_author_id)) fail("validation_failed", "primary source author is not present");
   } else if (Object.hasOwn(record, "primary_source_author_id")) fail("validation_failed", "primary source author requires source_authors");
   correlation(record.correlation_id, contract);
+}
+
+export function validateResolveRequestText(text, contract) {
+  if (typeof text !== "string") fail("invalid_json", "resolve request must be JSON text");
+  if (bytes(text) > contract.resolve.maximum_json_bytes) fail("request_too_large", "resolve request exceeds maximum_json_bytes");
+  const envelope = parseProtocolJson(text);
+  exactObject(envelope, ["bridge_record"], [], "resolve request");
+  validateResolveRecord(envelope.bridge_record, contract);
+  return envelope;
 }
 
 export function validateResolveResponse(value, fields, contract) {
@@ -485,7 +673,7 @@ export function validateRecord(record, contract) {
     enumValue(binding.verification_state, contract.records.verification_states, "verification_state");
     const synchronizationCount = synchronizationFields.filter((field) => Object.hasOwn(binding, field)).length;
     if (synchronizationCount !== 0 && synchronizationCount !== synchronizationFields.length) fail("validation_failed", "synchronization fields must occur together");
-    const awaitingFirstAcknowledgement = binding.state === "pending" && synchronizationCount === 0;
+    const awaitingFirstAcknowledgement = synchronizationCount === 0;
     if (!awaitingFirstAcknowledgement && synchronizationCount !== synchronizationFields.length) fail("validation_failed", "synchronization fields are required after synchronization");
     if (synchronizationCount === synchronizationFields.length) {
       nonblank(binding.applied_source_revision, contract.common.source_revision_maximum_bytes, "applied_source_revision");
@@ -563,6 +751,7 @@ function validateTransport(transport, contract) {
 }
 
 export function validateSourceDetail(value, contract) {
+  boundedJsonObject(value, contract.source_publication.detail.maximum_json_bytes, "source detail");
   exactObject(value, contract.source_publication.detail.required_fields, [], "source detail");
   uuid(value.resource_id, contract, "resource_id");
   positiveInteger(value.topic_id, "topic_id");
@@ -582,21 +771,31 @@ export function validateSourceDetail(value, contract) {
     nonblank(author.source_author_name, contract.authorship_and_taxonomy.source_author_name_maximum_bytes, "source_author_name");
     httpUrl(author.source_author_url, contract.authorship_and_taxonomy.source_author_url_maximum_bytes, "source_author_url");
   }
+  const categoryIds = new Set();
   for (const category of value.categories) {
     exactObject(category, contract.authorship_and_taxonomy.category_fields, [], "source category");
-    requiredString(category.source_category_id, "source_category_id");
-    requiredString(category.source_category_name, "source_category_name");
-    optionalNullableString(category.source_parent_category_id, "source_parent_category_id");
+    nonblank(category.source_category_id, contract.common.opaque_identifier_maximum_bytes, "source_category_id");
+    nonblank(category.source_category_name, contract.common.descriptive_name_maximum_bytes, "source_category_name");
+    if (category.source_parent_category_id !== null) nonblank(category.source_parent_category_id, contract.common.opaque_identifier_maximum_bytes, "source_parent_category_id");
+    if (categoryIds.has(category.source_category_id)) fail("validation_failed", "duplicate source category");
+    categoryIds.add(category.source_category_id);
   }
+  const tagIds = new Set();
   for (const tag of value.tags) {
     exactObject(tag, contract.authorship_and_taxonomy.tag_fields, [], "source tag");
-    requiredString(tag.source_tag_id, "source_tag_id");
-    requiredString(tag.source_tag_name, "source_tag_name");
+    nonblank(tag.source_tag_id, contract.common.opaque_identifier_maximum_bytes, "source_tag_id");
+    nonblank(tag.source_tag_name, contract.common.descriptive_name_maximum_bytes, "source_tag_name");
+    if (tagIds.has(tag.source_tag_id)) fail("validation_failed", "duplicate source tag");
+    tagIds.add(tag.source_tag_id);
   }
   validateTransport(value.content_transport, contract);
   enumValue(value.content_disposition, ["complete", "excerpt"], "content_disposition");
   if (value.network_provenance !== null) validateNetwork(value.network_provenance, contract, null);
   correlation(value.correlation_id, contract);
+}
+
+export function validateSourceDetailText(text, contract) {
+  return validateBoundedJsonText(text, contract.source_publication.detail.maximum_json_bytes, "source detail", (value) => validateSourceDetail(value, contract));
 }
 
 export function validateChunk(value, descriptor, contract) {
@@ -631,6 +830,7 @@ export function validateChunkSet(descriptor, chunks, contract) {
 }
 
 export function validateWork(value, contract) {
+  boundedJsonObject(value, contract.publication_work.maximum_json_bytes, "publication work");
   exactObject(value, contract.publication_work.work_required_fields, [], "publication work");
   pattern(value.work_id, contract.publication_work.work_id_pattern);
   uuid(value.resource_id, contract, "resource_id");
@@ -640,22 +840,25 @@ export function validateWork(value, contract) {
   if (!contract.publication_work.actions.includes(value.action)) fail("validation_failed");
   nonblank(value.source_revision, contract.common.source_revision_maximum_bytes, "source_revision");
   nonblank(value.policy_revision, contract.common.policy_revision_maximum_bytes, "policy_revision");
-  requiredString(value.destination_policy_id, "destination_policy_id");
-  requiredString(value.catalog_revision, "catalog_revision");
+  nonblank(value.destination_policy_id, contract.common.opaque_identifier_maximum_bytes, "destination_policy_id");
+  nonblank(value.catalog_revision, contract.common.opaque_identifier_maximum_bytes, "catalog_revision");
   validatePresentationMode(value.presentation_mode, contract);
   const mappingRules = contract.publication_work.resolved_mapping_rules;
   exactObject(value.resolved_container, mappingRules.container_required_fields, [], "resolved container");
-  requiredString(value.resolved_container.id, "resolved container id");
-  requiredString(value.resolved_container.kind, "resolved container kind");
-  if (!Array.isArray(value.resolved_taxonomy)) fail("validation_failed");
+  nonblank(value.resolved_container.id, contract.common.opaque_identifier_maximum_bytes, "resolved container id");
+  nonblank(value.resolved_container.kind, mappingRules.container_kind_maximum_bytes, "resolved container kind");
+  if (!Array.isArray(value.resolved_taxonomy) || value.resolved_taxonomy.length > mappingRules.taxonomy_maximum_items) fail("validation_failed");
+  const taxonomySourceIds = new Set();
   for (const item of value.resolved_taxonomy) {
     exactObject(item, mappingRules.taxonomy_item_required_fields, [], "resolved taxonomy item");
-    requiredString(item.source_id, "taxonomy source_id");
-    requiredString(item.destination_id, "taxonomy destination_id");
+    nonblank(item.source_id, contract.common.opaque_identifier_maximum_bytes, "taxonomy source_id");
+    nonblank(item.destination_id, contract.common.opaque_identifier_maximum_bytes, "taxonomy destination_id");
+    if (taxonomySourceIds.has(item.source_id)) fail("validation_failed", "duplicate taxonomy source_id");
+    taxonomySourceIds.add(item.source_id);
   }
   exactObject(value.resolved_author, mappingRules.author_required_fields, [], "resolved author");
   enumValue(value.resolved_author.mode, contract.connection_capability.destination_policy_field_rules.mapping_modes, "resolved author mode");
-  if (value.resolved_author.destination_id !== null) requiredString(value.resolved_author.destination_id, "resolved author destination_id");
+  if (value.resolved_author.destination_id !== null) nonblank(value.resolved_author.destination_id, contract.common.opaque_identifier_maximum_bytes, "resolved author destination_id");
   exactObject(value.native_limit_policy, mappingRules.native_limit_policy_required_fields, [], "native limit policy");
   if (!Number.isSafeInteger(value.native_limit_policy.maximum_bytes) || value.native_limit_policy.maximum_bytes < 1 || !contract.connection_capability.destination_policy_field_rules.overflow_behaviors.includes(value.native_limit_policy.overflow_behavior)) fail("validation_failed");
   positiveInteger(value.source_revision_sequence, "source_revision_sequence");
@@ -663,6 +866,10 @@ export function validateWork(value, contract) {
   if (!Number.isSafeInteger(value.retry_generation) || value.retry_generation < 0) fail("validation_failed");
   timestamp(value.lease_expires_at, "lease_expires_at");
   correlation(value.correlation_id, contract);
+}
+
+export function validateWorkText(text, contract) {
+  return validateBoundedJsonText(text, contract.publication_work.maximum_json_bytes, "publication work", (value) => validateWork(value, contract));
 }
 
 export function validateClaimRequest(value, contract) {
@@ -693,6 +900,20 @@ export function validateClaimResponse(value, contract, request = null) {
     for (const item of value.publication_work) if (compareTimestamps(item.lease_expires_at, expectedExpiry, "lease_expires_at", "requested lease expiry") > 0) fail("validation_failed", "claim lease exceeds request");
   }
   correlation(value.correlation_id, contract);
+}
+
+export function validateClaimResponseText(text, contract, request = null) {
+  if (typeof text !== "string") fail("invalid_json", "claim response must be JSON text");
+  validateJsonText(text);
+  const rawWorkItems = topLevelArrayElementTexts(text, "publication_work");
+  if (rawWorkItems === null) fail("validation_failed", "claim response.publication_work is required");
+  for (const rawWorkItem of rawWorkItems) {
+    if (bytes(rawWorkItem) > contract.publication_work.maximum_json_bytes) fail("validation_failed", "publication work exceeds maximum_json_bytes");
+  }
+  const value = parseProtocolJson(text);
+  validateClaimResponse(value, contract, request);
+  if (rawWorkItems.length !== value.publication_work.length) fail("validation_failed", "raw publication work count mismatch");
+  return value;
 }
 
 export function validateRenewal(value, contract, context) {
@@ -803,6 +1024,13 @@ export function validateAcknowledgementResponse(value, contract, context = undef
     const expectedTerminal = dynamicTerminal || context.acknowledgement.stage === "verified";
     if (value.terminal !== expectedTerminal) fail("stage_conflict", "acknowledgement response terminal state does not match request");
   }
+}
+
+export function validateAcknowledgementExchange(work, acknowledgement, response, contract, state, acceptanceContext) {
+  validateWork(work, contract);
+  validateAcknowledgement(acknowledgement, contract);
+  validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext);
+  validateAcknowledgementResponse(response, contract, { work, acknowledgement });
 }
 
 export function validateFailure(value, contract) {
@@ -972,6 +1200,8 @@ export function validateNetworkRoute(value, contract) {
 
 export function validateReplay(stored, replay) {
   for (const field of ["origin_forum_id", "operation_id", "source_revision", "content_sha256", "route_forum_ids", "relationship", "managed_scope", "policy_revision"]) {
+    if (!Object.hasOwn(stored, field) && !Object.hasOwn(replay, field)) continue;
+    if (!Object.hasOwn(stored, field) || !Object.hasOwn(replay, field)) fail("operation_replay_mismatch");
     if (canonicalize(stored[field]) !== canonicalize(replay[field])) fail("operation_replay_mismatch");
   }
 }
@@ -1002,7 +1232,7 @@ export function validateOperatorEntitlement(entitlement, operator, trust, contex
   const publicKey = createPublicKey({ key: Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), raw]), format: "der", type: "spki" });
   const unsigned = structuredClone(entitlement);
   delete unsigned.signature;
-  const message = Buffer.from(`${operator.entitlement.signing_domain}${canonicalize(unsigned)}`, "utf8");
+  const message = Buffer.from(`${operator.entitlement.signing_domain}${canonicalize(unsigned, "entitlement_invalid_signature")}`, "utf8");
   if (!verify(null, message, publicKey, signatureBytes)) fail("entitlement_invalid_signature");
   if (entitlement.scopes.length === 0) fail("scope_denied");
   for (const scope of entitlement.scopes) if (!operator.entitlement.allowed_scopes.includes(scope)) fail("scope_denied");

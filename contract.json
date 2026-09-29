@@ -49,6 +49,8 @@
     "error_detail_maximum_bytes": 2048,
     "network_route_maximum_forums": 8,
     "source_content_maximum_bytes": 16777216,
+    "opaque_identifier_maximum_bytes": 255,
+    "descriptive_name_maximum_bytes": 200,
     "correlation_header": "X-DiscussionBridge-Correlation",
     "correlation_rule": "Every request supplies one nonblank correlation identifier in X-DiscussionBridge-Correlation. Every success or error response echoes that exact identifier in both the response header and correlation_id body field. A body correlation_id, when the endpoint has a request body, is required and must exactly equal the header; mismatch fails before mutation.",
     "request_object_rule": "Unknown request fields are rejected unless an endpoint explicitly declares an extensible metadata object.",
@@ -57,6 +59,10 @@
   "connection_capability": {
     "method": "GET",
     "path": "/discussion-bridge/v1/connection.json",
+    "maximum_json_bytes": 65536,
+    "lanes_maximum_items": 100,
+    "lane_maximum_bytes": 64,
+    "destination_policies_maximum_items": 100,
     "required_fields": [
       "contract_version",
       "connection_id",
@@ -83,10 +89,12 @@
       "taxonomy_mapping_optional_fields": ["items"],
       "author_mapping_required_fields": ["mode"],
       "author_mapping_optional_fields": ["destination_id", "items"],
+      "mapping_items_maximum_items": 1000,
       "mapping_modes": ["mapped_only", "source_attribution"],
       "native_limit_policy_required_fields": ["maximum_bytes", "overflow_behavior"],
       "overflow_behaviors": ["complete", "excerpt_with_read_more", "operator_attention"]
     },
+    "bounded_identity_rule": "Destination-policy, catalog, container, taxonomy and author-mapping identifiers use common.opaque_identifier_maximum_bytes. Capability lane names use lane_maximum_bytes.",
     "authority_rule": "The response reports the authenticated connection's effective receiver policy. It never expands the stored connection scope, and the adapter cannot override it with request or catalog data.",
     "cache_control": "private, no-store",
     "etag_rule": "No capability response is reused across authentication, connection, or policy revision boundaries."
@@ -139,7 +147,19 @@
       "source_content_bytes": "nonnegative integer describing the authoritative complete UTF-8 HTML source",
       "source_content_sha256": "SHA-256 of the authoritative complete UTF-8 HTML source",
       "complete_rule": "When content_disposition is complete, content_html is the complete authoritative source and read_more_url is absent.",
-      "excerpt_rule": "When content_disposition is excerpt, content_html is structurally valid bounded HTML with an explicit excerpt notice and prominent Read More link; read_more_url is required and exactly equals canonical_url.",
+      "excerpt_rule": "When content_disposition is excerpt, the complete content_html body is structurally valid bounded HTML whose final two top-level elements are the required excerpt notice and canonical Read More block defined below; read_more_url is required and exactly equals canonical_url. This trailing block is ordinary first-post body content, not a topic, page, theme, or application footer.",
+      "excerpt_trailing_block": {
+        "notice_element": "p",
+        "notice_rule": "The penultimate top-level element is an attribute-free HTML p containing text nodes only; normalized text contains excerpt case-insensitively.",
+        "link_paragraph_element": "p",
+        "link_paragraph_rule": "The final top-level element is an attribute-free HTML p whose only non-whitespace child is one HTML a element.",
+        "link_rule": "The a contains text nodes only, normalized text is exactly Read More, and its only attribute is href whose decoded value exactly equals both read_more_url and canonical_url.",
+        "forbidden_elements": ["style", "stylesheet link", "script", "base"]
+      },
+      "excerpt_html_complexity": {
+        "maximum_elements": 1024,
+        "maximum_depth": 64
+      },
       "lane_maximum_bytes": 64,
       "adapter_id_maximum_bytes": 100,
       "adapter_version_maximum_bytes": 100,
@@ -268,7 +288,7 @@
       "deployed_at",
       "publicly_verified_at"
     ],
-    "destination_binding_field_rule": "A pending migration binding awaiting its first Alpha.22 acknowledgement retains stable binding, connection, role, destination identity, presentation, content disposition, deployment, and verification state while applied_source_revision, publication_revision, and synchronized_at are absent. The three synchronization fields become required together when synchronization occurs. deployed_at and publicly_verified_at remain absent until their matching events and become required when those events occur.",
+    "destination_binding_field_rule": "A migration binding awaiting its first Alpha.22 acknowledgement retains stable binding, connection, role, destination identity, presentation, content disposition, deployment, and verification state while applied_source_revision, publication_revision, and synchronized_at are absent, without restricting that omission to a particular binding, deployment, or verification state. The three synchronization fields become required together when synchronization occurs. deployed_at and publicly_verified_at remain absent until their matching events and become required when those events occur.",
     "deployment_states": ["not_required", "pending", "deployed", "failed"],
     "deployment_transitions": {
       "not_required": [],
@@ -326,6 +346,7 @@
     "detail": {
       "method": "GET",
       "path": "/discussion-bridge/v1/source-topics/{topic_id}.json",
+      "maximum_json_bytes": 262144,
       "query": ["source_revision"],
       "required_fields": [
         "resource_id",
@@ -348,6 +369,7 @@
       "source_authors_maximum_items": 20,
       "categories_maximum_items": 20,
       "tags_maximum_items": 100,
+      "taxonomy_field_rule": "Category/tag source IDs and nullable parent category IDs use common.opaque_identifier_maximum_bytes; category/tag descriptive names use common.descriptive_name_maximum_bytes; category IDs and tag IDs are unique within their respective arrays.",
       "revision_rule": "The receiver returns the requested exact revision while any available, leased, retry_wait, operator_attention, deployment-pending, verification-pending, or recoverable work references it. After every such reference is terminal and retention permits removal, HTTP 410 revision_superseded may replace it; an unknown revision returns HTTP 404 revision_not_found. The receiver never substitutes a different revision silently.",
       "maximum_source_content_bytes": 16777216
     },
@@ -402,6 +424,7 @@
     }
   },
   "publication_work": {
+    "maximum_json_bytes": 131072,
     "claim": {
       "method": "POST",
       "path": "/discussion-bridge/v1/publication-work/claim.json",
@@ -487,7 +510,10 @@
       "container_required_fields": ["id", "kind"],
       "taxonomy_item_required_fields": ["source_id", "destination_id"],
       "author_required_fields": ["mode", "destination_id"],
-      "native_limit_policy_required_fields": ["maximum_bytes", "overflow_behavior"]
+      "native_limit_policy_required_fields": ["maximum_bytes", "overflow_behavior"],
+      "taxonomy_maximum_items": 120,
+      "container_kind_maximum_bytes": 100,
+      "identifier_rule": "Destination-policy, catalog, resolved-container, resolved-taxonomy and resolved-author identifiers use common.opaque_identifier_maximum_bytes; resolved taxonomy source IDs are unique while intentional many-to-one destination mapping remains valid."
     },
     "actions": ["publish", "update", "hold", "unpublish", "restore"],
     "lifecycle_states": ["available", "leased", "awaiting_deployment", "awaiting_verification", "acknowledged", "retry_wait", "operator_attention", "superseded"],
