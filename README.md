@@ -174,9 +174,11 @@ Each publication work item is limited to 128 KiB and at most 120 resolved
 taxonomy entries. Resolved opaque identifiers are limited to 255 UTF-8 bytes,
 container kinds to 100 bytes, and duplicate taxonomy source IDs are rejected.
 Several source IDs may intentionally map to the same destination ID. Claim
-responses locate and byte-screen each raw work item through a bounded lexical
-preflight before strict JSON parsing; oversized malformed items fail at the
-byte barrier rather than entering the parser.
+responses locate and incrementally byte-screen each raw work item through a
+bounded lexical preflight before strict JSON parsing. The preflight counts raw
+UTF-8 bytes from the item's exact start and stops at the first excess byte, so
+oversized malformed items fail at the byte barrier before further nesting,
+whole-item retention, or syntax parsing.
 
 The first `synchronized` acknowledgement is valid only for the exact active
 lease after the native operation succeeds. It preserves destination identity

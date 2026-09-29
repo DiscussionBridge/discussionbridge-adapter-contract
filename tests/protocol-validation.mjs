@@ -105,21 +105,46 @@ function readJsonString(text, start) {
   fail("invalid_json", "unterminated JSON string");
 }
 
-function skipRawJsonString(text, start) {
-  let index = start + 1;
+function rawUtf8Character(text, index) {
+  const first = text.charCodeAt(index);
+  if (first <= 0x7f) return { next: index + 1, bytes: 1 };
+  if (first <= 0x7ff) return { next: index + 1, bytes: 2 };
+  if (first >= 0xd800 && first <= 0xdbff) {
+    const second = text.charCodeAt(index + 1);
+    if (second >= 0xdc00 && second <= 0xdfff) return { next: index + 2, bytes: 4 };
+  }
+  return { next: index + 1, bytes: 3 };
+}
+
+function rawUtf8Budget(text, maximum, name) {
+  let used = 0;
+  return {
+    consume(index) {
+      const character = rawUtf8Character(text, index);
+      used += character.bytes;
+      if (used > maximum) fail("validation_failed", `${name} exceeds maximum_json_bytes`);
+      return character.next;
+    },
+  };
+}
+
+function consumeRawCharacter(text, index, budget = null) {
+  return budget === null ? rawUtf8Character(text, index).next : budget.consume(index);
+}
+
+function skipRawJsonString(text, start, budget = null) {
+  let index = consumeRawCharacter(text, start, budget);
   while (index < text.length) {
     const code = text.charCodeAt(index);
-    if (code === 0x22) return index + 1;
-    if (code < 0x20) fail("invalid_json", "unescaped control character in JSON string");
+    const next = consumeRawCharacter(text, index, budget);
+    if (code === 0x22) return next;
     if (code === 0x5c) {
-      index += 1;
-      if (index >= text.length || !/["\\/bfnrtu]/.test(text[index])) fail("invalid_json", "invalid JSON escape");
-      if (text[index] === "u") {
-        if (!/^[0-9a-fA-F]{4}$/.test(text.slice(index + 1, index + 5))) fail("invalid_json", "invalid JSON Unicode escape");
-        index += 4;
-      }
+      index = next;
+      if (index >= text.length) break;
+      index = consumeRawCharacter(text, index, budget);
+      continue;
     }
-    index += 1;
+    index = next;
   }
   fail("invalid_json", "unterminated JSON string");
 }
@@ -222,30 +247,32 @@ function validateJsonText(text) {
   }
 }
 
-function skipJsonWhitespace(text, index) {
-  while (index < text.length && /[\t\n\r ]/.test(text[index])) index += 1;
+function skipJsonWhitespace(text, index, budget = null) {
+  while (index < text.length && /[\t\n\r ]/.test(text[index])) index = consumeRawCharacter(text, index, budget);
   return index;
 }
 
-function skipRawJsonValue(text, start) {
-  let index = skipJsonWhitespace(text, start);
-  if (text[index] === '"') return skipRawJsonString(text, index);
+function skipRawJsonValue(text, start, budget = null) {
+  let index = skipJsonWhitespace(text, start, budget);
+  if (text[index] === '"') return skipRawJsonString(text, index, budget);
   if (text[index] !== "{" && text[index] !== "[") {
-    while (index < text.length && !/[\t\n\r ,}\]]/.test(text[index])) index += 1;
+    while (index < text.length && !/[\t\n\r ,}\]]/.test(text[index])) index = consumeRawCharacter(text, index, budget);
     return index;
   }
   const closers = [text[index] === "{" ? "}" : "]"];
-  index += 1;
+  index = consumeRawCharacter(text, index, budget);
   while (closers.length > 0) {
     if (index >= text.length) fail("invalid_json", "unterminated JSON value");
     if (text[index] === '"') {
-      index = skipRawJsonString(text, index);
+      index = skipRawJsonString(text, index, budget);
       continue;
     }
-    if (text[index] === "{") closers.push("}");
-    else if (text[index] === "[") closers.push("]");
-    else if (text[index] === closers.at(-1)) closers.pop();
-    index += 1;
+    const character = text[index];
+    const next = consumeRawCharacter(text, index, budget);
+    if (character === "{") closers.push("}");
+    else if (character === "[") closers.push("]");
+    else if (character === closers.at(-1)) closers.pop();
+    index = next;
   }
   return index;
 }
@@ -267,13 +294,13 @@ function topLevelArrayElementTexts(text, propertyName, maximumElementBytes = nul
       const elements = [];
       while (true) {
         const segmentStart = index;
-        index = skipJsonWhitespace(text, index);
+        const budget = maximumElementBytes === null ? null : rawUtf8Budget(text, maximumElementBytes, `${propertyName} item`);
+        index = skipJsonWhitespace(text, index, budget);
         if (text[index] === "]") return elements;
         if (maximumElements !== null && elements.length >= maximumElements) fail("validation_failed", `${propertyName} exceeds maximum items`);
-        index = skipRawJsonValue(text, index);
-        index = skipJsonWhitespace(text, index);
+        index = skipRawJsonValue(text, index, budget);
+        index = skipJsonWhitespace(text, index, budget);
         const elementText = text.slice(segmentStart, index);
-        if (maximumElementBytes !== null && bytes(elementText) > maximumElementBytes) fail("validation_failed", `${propertyName} item exceeds maximum_json_bytes`);
         elements.push(elementText);
         if (text[index] === "]") return elements;
         if (text[index] !== ",") fail("invalid_json", `${propertyName} has an invalid separator`);

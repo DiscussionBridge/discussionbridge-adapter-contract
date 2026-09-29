@@ -598,8 +598,8 @@ function claimResponseWithRawWorkText(rawWork) {
   return JSON.stringify(claim).replace(workText, rawWork);
 }
 
-function claimResponseWithRawWorkSize(targetBytes, placement = "inside") {
-  const workText = JSON.stringify(fixtures.get("publication-work-claim.json").publication_work[0]);
+function claimResponseWithRawWorkSize(targetBytes, placement = "inside", work = fixtures.get("publication-work-claim.json").publication_work[0]) {
+  const workText = JSON.stringify(work);
   const padding = " ".repeat(targetBytes - Buffer.byteLength(workText));
   const rawWork = placement === "leading"
     ? `${padding}${workText}`
@@ -621,6 +621,16 @@ function claimResponseWithItemCount(count) {
 validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes), contract, fixtures.get("publication-work-claim-request.json"));
 validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes, "leading"), contract, fixtures.get("publication-work-claim-request.json"));
 validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes, "trailing"), contract, fixtures.get("publication-work-claim-request.json"));
+const multibyteBoundaryWork = {
+  ...structuredClone(fixtures.get("publication-work-claim.json").publication_work[0]),
+  source_revision: "post:😀:version:4",
+};
+validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes, "inside", multibyteBoundaryWork), contract, fixtures.get("publication-work-claim-request.json"));
+assert.throws(
+  () => validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes + 1, "inside", multibyteBoundaryWork), contract, fixtures.get("publication-work-claim-request.json")),
+  (error) => error instanceof ProtocolError && error.code === "validation_failed",
+  "multibyte work item at maximum_json_bytes plus one must fail at the incremental raw-byte barrier",
+);
 validateClaimResponseText(
   JSON.stringify(fixtures.get("publication-work-claim.json")).replace('"publication_work"', '"publication_\\u0077ork"'),
   contract,
@@ -666,6 +676,65 @@ assertProtocolRejectionBeforeJsonParse(
   "validation_failed",
   1,
   "oversized malformed work item must reject after bounded envelope-key decoding and before item parsing",
+);
+for (const [name, rawWork] of [
+  ["invalid escape", `"\\q"`],
+  ["unescaped control", `"\u0001"`],
+  ["mismatched nesting", "[}"],
+]) {
+  assert.throws(
+    () => validateClaimResponseText(claimResponseWithRawWorkText(rawWork), contract, fixtures.get("publication-work-claim-request.json")),
+    (error) => error instanceof ProtocolError && error.code === "invalid_json",
+    `within-limit ${name} must still reach strict JSON validation after bounded preflight`,
+  );
+}
+const maximumWorkBytes = contract.publication_work.maximum_json_bytes;
+const oversizedMalformedWorkItems = [
+  ["early invalid escape", `"\\q${"x".repeat(maximumWorkBytes)}"`],
+  ["late invalid escape", `"${"x".repeat(maximumWorkBytes - 1)}\\q"`],
+  ["unescaped control", `"${"x".repeat(maximumWorkBytes - 1)}\u0001"`],
+  ["unterminated string", `"${"x".repeat(maximumWorkBytes)}`],
+  ["unterminated object", `{${" ".repeat(maximumWorkBytes)}`],
+  ["unterminated array", `[${" ".repeat(maximumWorkBytes)}`],
+  ["deep nested array", `${"[".repeat(maximumWorkBytes + 1)}${"]".repeat(maximumWorkBytes + 1)}`],
+  ["mismatched nesting", `${"[".repeat(maximumWorkBytes)}}`],
+];
+for (const [name, rawWork] of oversizedMalformedWorkItems) {
+  assertProtocolRejectionBeforeJsonParse(
+    () => validateClaimResponseText(claimResponseWithRawWorkText(rawWork), contract, fixtures.get("publication-work-claim-request.json")),
+    "validation_failed",
+    1,
+    `oversized ${name} work item must reach the incremental byte barrier before syntax parsing`,
+  );
+}
+
+function assertNoOversizedWorkSlice(action, message) {
+  const originalSlice = String.prototype.slice;
+  let largestSlice = 0;
+  String.prototype.slice = function instrumentedSlice(start = 0, end = this.length) {
+    const length = this.length;
+    const normalizedStart = start < 0 ? Math.max(length + start, 0) : Math.min(start, length);
+    const normalizedEnd = end < 0 ? Math.max(length + end, 0) : Math.min(end, length);
+    largestSlice = Math.max(largestSlice, Math.max(0, normalizedEnd - normalizedStart));
+    return originalSlice.call(this, start, end);
+  };
+  try {
+    assert.throws(action, (error) => error instanceof ProtocolError && error.code === "validation_failed", message);
+  } finally {
+    String.prototype.slice = originalSlice;
+  }
+  assert.ok(largestSlice <= maximumWorkBytes, `${message}: observed an oversized retained slice of ${largestSlice} code units`);
+}
+
+assertNoOversizedWorkSlice(
+  () => validateClaimResponseText(claimResponseWithRawWorkText(`${"[".repeat(maximumWorkBytes + 1)}${"]".repeat(maximumWorkBytes + 1)}`), contract),
+  "deep oversized work item must reject before whole-item slicing",
+);
+assertProtocolRejectionBeforeJsonParse(
+  () => validateClaimResponseText(claimResponseWithItemCount(contract.publication_work.claim.maximum_items + 1), contract),
+  "validation_failed",
+  1,
+  "claim item-count guard must reject before parsing a 33rd item",
 );
 
 validateOperatorEntitlement(fixtures.get("operator-entitlement.json"), operator, trust, {
@@ -1228,6 +1297,26 @@ assert.throws(
   "claim work regression must detect parsing before the per-item raw byte preflight",
 );
 
+const claimWorkIncrementalBudgetRemovalMutant = await loadValidatorMutation(
+  "claim-work-incremental-byte-budget-removal",
+  '      if (used > maximum) fail("validation_failed", `${name} exceeds maximum_json_bytes`);',
+  "",
+);
+assert.doesNotThrow(
+  () => claimWorkIncrementalBudgetRemovalMutant.validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes + 1), contract, fixtures.get("publication-work-claim-request.json")),
+  "claim work regression must detect removal of the incremental raw-byte barrier",
+);
+
+const claimWorkIncrementalBudgetBypassMutant = await loadValidatorMutation(
+  "claim-work-incremental-byte-budget-bypass",
+  '        index = skipRawJsonValue(text, index, budget);\n        index = skipJsonWhitespace(text, index, budget);',
+  '        index = skipRawJsonValue(text, index);\n        index = skipJsonWhitespace(text, index);',
+);
+assert.doesNotThrow(
+  () => claimWorkIncrementalBudgetBypassMutant.validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes + 1), contract, fixtures.get("publication-work-claim-request.json")),
+  "claim work regression must detect delaying the byte barrier until after lexical traversal",
+);
+
 const acknowledgementModeAuthorityMutant = await loadValidatorMutation(
   "acknowledgement-authoritative-destination-mode",
   '  validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext);\n  validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: acceptanceContext.destination_mode });',
@@ -1310,4 +1399,4 @@ const activeText = [
 assert.doesNotMatch(activeText, /fullInteractive/);
 assert.doesNotMatch(activeText, /Repeal OBBBA Forum|obbba-/i);
 
-console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 16 targeted source-reversion probes for ${contract.version}.`);
+console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 18 targeted source-reversion probes for ${contract.version}.`);

@@ -37,7 +37,7 @@ missing approved requirement.
 | E-01 | Opaque snapshot/cursor, policy-bound initial inventory, high-water, 30-day activity retention, expiry, and restart/deduplication rule. | Initial and resumed source-inventory fixtures plus cursor/snapshot mismatch fixture. |
 | E-02 | Revision-pinned source detail and bounded content transport. | Inline/chunked detail fixtures plus raw 256 KiB metadata-envelope exact/over-limit controls. |
 | E-03 | Cursor/high-water revocation index/detail, reasons, retention, restart deduplication, work-owned delivery acknowledgement, and same-identity restore rule. | Revocation index/detail and restart trace plus hold/unpublish/restore work. |
-| E-04 | Bounded claim, lease, renewal, staged acknowledgement, failure, serialized binding work, expiry, retention, and supersession rules. | Independent dynamic and static three-stage traces bind every response to authoritative work, receiver-owned destination mode, actual stage and terminal semantics; work items have executable raw 128 KiB, leading/trailing/interior exact-boundary controls, malformed-plus-one pre-parse rejection, 120-taxonomy, identifier/kind and duplicate-source controls; interruption states, failure fixtures, and late-superseded negatives. |
+| E-04 | Bounded claim, lease, renewal, staged acknowledgement, failure, serialized binding work, expiry, retention, and supersession rules. | Independent dynamic and static three-stage traces bind every response to authoritative work, receiver-owned destination mode, actual stage and terminal semantics; work items have incremental raw 128 KiB enforcement with leading/trailing/interior and multibyte exact/plus-one controls, malformed escape/control, unterminated, mismatched and deep-nesting pre-parse rejection, bounded-slice instrumentation, 32/33-item ordering and guard-removal/bypass source reversions; plus 120-taxonomy, identifier/kind and duplicate-source controls, interruption states, failure fixtures, and late-superseded negatives. |
 | E-05 | Receiver-owned retryable/terminal registry, one initial plus three retries, exact backoff/exhaustion, and bounded manual retry. | Complete retry trace plus failure, retry-wait, and exhausted/operator-attention fixtures. |
 | E-06 | Exact immutable `policy_revision` in inventory, work, and acknowledgement. | Inventory/work/ack fixtures. |
 | E-07 | Separate synchronization, deployment, and public verification; static completion rule. | Authoritative dynamic-mode acknowledgement; authoritative static synchronized → deployed → verified trace; static-as-dynamic and dynamic-as-static rejection; missing/malformed mode rejection; deployment/verification failures; destination-mode source reversion. |
@@ -93,8 +93,9 @@ missing approved requirement.
   source reversions prove response-work, response-terminal, synchronization
   chronology, authoritative destination mode, excerpt structure, bounded exact-
   integer parsing, catalog-ID and aggregate bounds, raw endpoint limits and
-  pre-parse ordering, claim-work preflight, successful chunk reassembly, and each
-  I-JSON Unicode branch exercise their intended individual guards.
+  pre-parse ordering, claim-work ordering and incremental in-scanner budget,
+  successful chunk reassembly, and each I-JSON Unicode branch exercise their
+  intended individual guards.
 - Protocol JSON parsing preserves `existing_topic_id` numeric source tokens as
   exact integers before JavaScript Number rounding. Adjacent values above
   `2^53` remain distinct, the signed-64 maximum accepts, rounded fractional
