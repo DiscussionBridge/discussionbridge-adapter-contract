@@ -42,12 +42,12 @@ missing approved requirement.
 | E-06 | Exact immutable `policy_revision` in inventory, work, and acknowledgement. | Inventory/work/ack fixtures. |
 | E-07 | Separate synchronization, deployment, and public verification; static completion rule. | Dynamic acknowledgement; static synchronized → deployed → verified trace; deployment/verification failures. |
 | E-08 | Required header/body correlation across every route and exact error envelope. | Correlated route fixtures plus missing/oversized/secret-exposure negatives. |
-| F-01 | Segmented bounded descriptive catalog with exact item and GET/PUT schemas and no authorization authority. | Positive fixtures for all six segments and update; unknown-field and authority-expansion negatives. |
-| F-02 | Exact `catalog_revision` referenced by operator policy. | Atomic update, stale revision, removed mapping, and authority rules/fixtures. |
+| F-01 | Segmented bounded descriptive catalog with exact item and GET/PUT schemas and no authorization authority. | Positive fixtures for all six segments and update; exact/max-plus-one UTF-8 controls for 255-byte identifiers/references, 200-byte names and 100-byte container kinds; unknown-field and authority-expansion negatives; targeted identifier-bound source reversion. |
+| F-02 | Exact bounded `catalog_revision` referenced by operator policy. | Atomic update, exact/max-plus-one 255-byte response/base revisions, stale revision, removed mapping, and authority rules/fixtures. |
 | F-03 | Native public pagination remains platform-owned. | README Platform-owned behavior. |
 | G-01 | Bounded source-author schema both directions without shared identity. | Source detail author fixture and authorship rules. |
 | G-02 | Bounded source category/tag identities for operator policy mapping. | Source detail taxonomy fixture and schema plus exact 20-category/100-tag, 255-byte ID, 200-byte name, and duplicate-source-ID controls. |
-| H-01 | Separate RFC 8785/Ed25519 Operator Service entitlement contract; one provider; protected issuer/key enrollment and rotation. | Real deterministic public-key/message/signature vector and executable cryptographic verification. |
+| H-01 | Separate strict I-JSON/RFC 8785/Ed25519 Operator Service entitlement contract; one provider; protected issuer/key enrollment and rotation. | Real deterministic public-key/message/signature vector, executable cryptographic verification, correctly signed Unicode-noncharacter negatives, and targeted Unicode-guard source reversion. |
 | H-02 | Scope, forum binding, validity, grace/read-only, replacement, revocation, and audit rules. | Enrollment/revocation audits plus tamper, wrong forum/key, not-yet-valid, expired, grace, revoked, replaced, and scope negatives. |
 | H-03 | Customer approval and provider audit remain separate from adapter credentials. | Operator contract rules and invalid-scope fixture. |
 | I-01 | Stable origin/content-authority forum provenance. | Network source detail fixture. |
@@ -91,12 +91,14 @@ missing approved requirement.
   chronology rather than validating shapes in isolation. Dynamic authoritative
   work identity is sourced independently from the response. Targeted in-memory
   source reversions prove response-work, response-terminal, synchronization
-  chronology and excerpt-structure regressions exercise their intended
-  individual guards.
+  chronology, excerpt structure, bounded exact-integer parsing, catalog-ID
+  bounds and I-JSON Unicode regressions exercise their intended individual
+  guards.
 - Protocol JSON parsing preserves `existing_topic_id` numeric source tokens as
   exact integers before JavaScript Number rounding. Adjacent values above
   `2^53` remain distinct, the signed-64 maximum accepts, rounded fractional
-  tokens reject, and maximum plus one rejects.
+  tokens reject, maximum plus one rejects, and all-zero coefficients return
+  without exponent-sized string construction.
 
 ## Current audit result
 

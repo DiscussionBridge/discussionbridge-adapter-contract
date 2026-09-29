@@ -204,10 +204,13 @@ authors, supported presentation modes, and actual native limits in segments of
 at most 100 items. Operator-approved mapping policy references an exact catalog
 revision.
 
-Each segment has an exact item schema and stable opaque native IDs. Updates
-atomically replace complete named segments only when the base catalog revision
-matches. Removed referenced items remain identifiable as unavailable and put
-dependent policy into operator attention rather than silently remapping it.
+Each segment has an exact item schema. Stable opaque native IDs, taxonomy and
+parent references, and catalog revisions are limited to 255 UTF-8 bytes;
+descriptive names are limited to 200 bytes and container kinds to 100 bytes.
+Updates atomically replace complete named segments only when the bounded base
+catalog revision matches. Removed referenced items remain identifiable as
+unavailable and put dependent policy into operator attention rather than
+silently remapping it.
 
 Catalog data is descriptive only. It never authorizes a destination, expands a
 connection, selects presentation by itself, creates work, or silently remaps an
@@ -253,6 +256,9 @@ Entitlements sign the RFC 8785 canonical JSON object with `signature` omitted,
 prefixed by the exact `DiscussionBridge-Operator-Service-Entitlement-v1\n`
 domain. The unpadded base64url signature must decode to 64 bytes and verifies
 against the protected 32-byte Ed25519 key bound to the exact issuer/key pair.
+The complete parsed and programmatic signing domain is strict I-JSON: duplicate
+members, unpaired surrogates, and Unicode noncharacters fail before signature
+acceptance.
 
 Operator entitlements and credentials never appear in adapter requests and
 never grant, replace, reveal, or expand Content Connection authorization.

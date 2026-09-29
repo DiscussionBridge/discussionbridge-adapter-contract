@@ -43,10 +43,11 @@ function exactJsonInteger(source) {
   const exponent = Number.parseInt(match[4] ?? "0", 10);
   if (!Number.isSafeInteger(exponent)) return null;
   let digits = `${match[2]}${fraction}`;
+  if (/^0+$/.test(digits)) return 0n;
   const scale = exponent - fraction.length;
   if (scale < 0) {
     const removed = -scale;
-    if (removed > digits.length) return /^0+$/.test(digits) ? 0n : null;
+    if (removed > digits.length) return null;
     if (!/^0*$/.test(digits.slice(digits.length - removed))) return null;
     digits = digits.slice(0, digits.length - removed) || "0";
   } else if (!/^0+$/.test(digits) && digits.replace(/^0+/, "").length + scale > 19) {
@@ -62,13 +63,16 @@ function unicodeScalarString(value, code, name) {
   if (typeof value !== "string") fail(code, `${name} must be a string`);
   for (let index = 0; index < value.length; index += 1) {
     const unit = value.charCodeAt(index);
+    let codePoint = unit;
     if (unit >= 0xd800 && unit <= 0xdbff) {
       const next = value.charCodeAt(index + 1);
       if (!(next >= 0xdc00 && next <= 0xdfff)) fail(code, `${name} contains an unpaired surrogate`);
+      codePoint = value.codePointAt(index);
       index += 1;
     } else if (unit >= 0xdc00 && unit <= 0xdfff) {
       fail(code, `${name} contains an unpaired surrogate`);
     }
+    if ((codePoint >= 0xfdd0 && codePoint <= 0xfdef) || (codePoint & 0xfffe) === 0xfffe) fail(code, `${name} contains a Unicode noncharacter`);
   }
 }
 
@@ -448,6 +452,14 @@ function uuid(value, contract, name) {
 
 function optionalNullableString(value, name) {
   if (value !== null) requiredString(value, name);
+}
+
+function catalogIdentifier(value, contract, name) {
+  nonblank(value, contract.common.opaque_identifier_maximum_bytes, name);
+}
+
+function catalogName(value, contract, name) {
+  nonblank(value, contract.common.descriptive_name_maximum_bytes, name);
 }
 
 function correlation(value, contract) {
@@ -1050,16 +1062,16 @@ function validateCatalogItems(segmentType, items, contract) {
   const ids = new Set();
   for (const item of items) {
     exactObject(item, fields, [], `${segmentType} item`);
-    requiredString(item.id, "catalog item id");
+    catalogIdentifier(item.id, contract, "catalog item id");
     if (ids.has(item.id)) fail("validation_failed");
     ids.add(item.id);
-    requiredString(item.name, "catalog item name");
+    catalogName(item.name, contract, "catalog item name");
     if (typeof item.available !== "boolean") fail("validation_failed");
-    if (segmentType === "containers") requiredString(item.kind, "container kind");
+    if (segmentType === "containers") nonblank(item.kind, contract.platform_catalog.container_kind_maximum_bytes, "container kind");
     if (segmentType === "taxonomies") boolean(item.hierarchical, "taxonomy hierarchical");
     if (segmentType === "terms") {
-      requiredString(item.taxonomy_id, "taxonomy_id");
-      optionalNullableString(item.parent_id, "parent_id");
+      catalogIdentifier(item.taxonomy_id, contract, "taxonomy_id");
+      if (item.parent_id !== null) catalogIdentifier(item.parent_id, contract, "parent_id");
     }
     if (segmentType === "presentation_modes") validatePresentationMode(item.id, contract);
     if (segmentType === "native_limits" && (!Number.isSafeInteger(item.maximum_bytes) || item.maximum_bytes < 1 || !["complete", "excerpt_with_read_more", "operator_attention"].includes(item.overflow_behavior))) fail("validation_failed");
@@ -1069,7 +1081,7 @@ function validateCatalogItems(segmentType, items, contract) {
 export function validateCatalogSegment(value, contract) {
   exactObject(value, contract.platform_catalog.get_required_response_fields, [], "catalog segment");
   if (bytes(JSON.stringify(value)) > contract.platform_catalog.maximum_json_bytes) fail("validation_failed", "catalog response exceeds maximum_json_bytes");
-  requiredString(value.catalog_revision, "catalog_revision");
+  catalogIdentifier(value.catalog_revision, contract, "catalog_revision");
   enumValue(value.platform_profile, contract.profiles, "platform_profile");
   validateCatalogItems(value.segment_type, value.items, contract);
   optionalNullableString(value.next_cursor, "next_cursor");
@@ -1085,8 +1097,8 @@ export function validateCatalogUpdate(value, contract, currentRevision = null) {
   enumValue(value.request.platform_profile, contract.profiles, "request platform_profile");
   enumValue(value.response.platform_profile, contract.profiles, "response platform_profile");
   if (value.request.platform_profile !== value.response.platform_profile) fail("validation_failed");
-  requiredString(value.request.base_catalog_revision, "base_catalog_revision");
-  requiredString(value.response.catalog_revision, "catalog_revision");
+  catalogIdentifier(value.request.base_catalog_revision, contract, "base_catalog_revision");
+  catalogIdentifier(value.response.catalog_revision, contract, "catalog_revision");
   if (!Array.isArray(value.request.segments) || value.request.segments.length === 0) fail("validation_failed");
   uniqueStrings(value.response.accepted_segments, "accepted_segments", contract.platform_catalog.segment_types);
   if (value.request.correlation_id !== value.response.correlation_id) fail("validation_failed");

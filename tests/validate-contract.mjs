@@ -117,6 +117,20 @@ const resignApprovalEntitlement = (value) => {
   signed.signature = sign(null, Buffer.from(`${operator.entitlement.signing_domain}${canonicalize(signed)}`, "utf8"), approvalKeyPair.privateKey).toString("base64url");
   return signed;
 };
+const signEntitlementWithUncheckedProviderName = (value) => {
+  const unsigned = structuredClone(value);
+  delete unsigned.signature;
+  const placeholder = "DiscussionBridge Unicode placeholder";
+  const safe = { ...unsigned, provider_name: placeholder };
+  const encodedPlaceholder = JSON.stringify(placeholder);
+  const safeCanonical = canonicalize(safe);
+  assert.equal(safeCanonical.split(encodedPlaceholder).length, 2, "unchecked provider-name signing placeholder must occur exactly once");
+  const uncheckedCanonical = safeCanonical.replace(encodedPlaceholder, JSON.stringify(unsigned.provider_name));
+  return {
+    ...unsigned,
+    signature: sign(null, Buffer.from(`${operator.entitlement.signing_domain}${uncheckedCanonical}`, "utf8"), approvalKeyPair.privateKey).toString("base64url"),
+  };
+};
 const claimedWorkFixture = fixtures.get("publication-work-claim.json");
 const renewalContext = {
   work: claimedWorkFixture.publication_work[0],
@@ -364,6 +378,15 @@ for (const record of [
   resolveWithExistingTopicToken("9223372036854775807"),
   resolveWithExistingTopicToken("9223372036854775807e0"),
 ]) validateResolveRecord(record, contract);
+const originalStringRepeat = String.prototype.repeat;
+try {
+  String.prototype.repeat = function forbiddenIntegerExpansion(count) {
+    throw new Error(`exact integer parser attempted ${count}-character expansion`);
+  };
+  assert.equal(parseProtocolJson('{"existing_topic_id":0e1000000}').existing_topic_id, 0n, "zero coefficient must not allocate exponent-sized text");
+} finally {
+  String.prototype.repeat = originalStringRepeat;
+}
 
 const fractionalRenewal = structuredClone(fixtures.get("publication-lease-renewal.json"));
 fractionalRenewal.response.lease_expires_at = "2026-09-27T18:50:00.0001Z";
@@ -477,6 +500,22 @@ const maximumWork = structuredClone(fixtures.get("publication-work-claim.json").
 maximumWork.resolved_taxonomy = Array.from({ length: contract.publication_work.resolved_mapping_rules.taxonomy_maximum_items }, (_, index) => ({ source_id: `s${index}`, destination_id: "d" }));
 validateWork(maximumWork, contract);
 validateWorkText(jsonTextAtSize(fixtures.get("publication-work-claim.json").publication_work[0], contract.publication_work.maximum_json_bytes), contract);
+const maximumCatalogAuthor = structuredClone(fixtures.get("platform-catalog-authors.json"));
+maximumCatalogAuthor.catalog_revision = "r".repeat(contract.common.opaque_identifier_maximum_bytes);
+maximumCatalogAuthor.items[0].id = "i".repeat(contract.common.opaque_identifier_maximum_bytes);
+maximumCatalogAuthor.items[0].name = "n".repeat(contract.common.descriptive_name_maximum_bytes);
+validateCatalogSegment(maximumCatalogAuthor, contract);
+const maximumCatalogContainer = structuredClone(fixtures.get("platform-catalog-containers.json"));
+maximumCatalogContainer.items[0].kind = "k".repeat(contract.platform_catalog.container_kind_maximum_bytes);
+validateCatalogSegment(maximumCatalogContainer, contract);
+const maximumCatalogTerm = structuredClone(fixtures.get("platform-catalog-terms.json"));
+maximumCatalogTerm.items[0].taxonomy_id = "t".repeat(contract.common.opaque_identifier_maximum_bytes);
+maximumCatalogTerm.items[0].parent_id = "p".repeat(contract.common.opaque_identifier_maximum_bytes);
+validateCatalogSegment(maximumCatalogTerm, contract);
+const maximumCatalogUpdate = structuredClone(fixtures.get("platform-catalog-update.json"));
+maximumCatalogUpdate.request.base_catalog_revision = "b".repeat(contract.common.opaque_identifier_maximum_bytes);
+maximumCatalogUpdate.response.catalog_revision = "r".repeat(contract.common.opaque_identifier_maximum_bytes);
+validateCatalogUpdate(maximumCatalogUpdate, contract);
 function claimResponseWithRawWorkSize(targetBytes) {
   const claim = structuredClone(fixtures.get("publication-work-claim.json"));
   const workText = JSON.stringify(claim.publication_work[0]);
@@ -644,6 +683,14 @@ const mutationCases = [
   ["renewal negative total", () => { const value = structuredClone(fixtures.get("publication-lease-renewal.json")); value.response.total_lease_seconds = -1; validateRenewal(value, contract, renewalContext); }, "validation_failed"],
   ["renewal nonnumeric total", () => { const value = structuredClone(fixtures.get("publication-lease-renewal.json")); value.response.total_lease_seconds = "1200"; validateRenewal(value, contract, renewalContext); }, "validation_failed"],
   ["catalog request byte ceiling", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.request.segments[0].items[0].name = "x".repeat(contract.platform_catalog.maximum_json_bytes); validateCatalogUpdate(value, contract); }, "validation_failed"],
+  ["catalog item id over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-authors.json")); value.items[0].id = "x".repeat(contract.common.opaque_identifier_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
+  ["catalog item name over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-authors.json")); value.items[0].name = "x".repeat(contract.common.descriptive_name_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
+  ["catalog container kind over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-containers.json")); value.items[0].kind = "x".repeat(contract.platform_catalog.container_kind_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
+  ["catalog taxonomy id over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-terms.json")); value.items[0].taxonomy_id = "x".repeat(contract.common.opaque_identifier_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
+  ["catalog parent id over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-terms.json")); value.items[0].parent_id = "x".repeat(contract.common.opaque_identifier_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
+  ["catalog response revision over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-authors.json")); value.catalog_revision = "x".repeat(contract.common.opaque_identifier_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
+  ["catalog update base revision over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.request.base_catalog_revision = "x".repeat(contract.common.opaque_identifier_maximum_bytes + 1); validateCatalogUpdate(value, contract); }, "validation_failed"],
+  ["catalog update response revision over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.response.catalog_revision = "x".repeat(contract.common.opaque_identifier_maximum_bytes + 1); validateCatalogUpdate(value, contract); }, "validation_failed"],
   ["record index page ceiling", () => { const value = structuredClone(fixtures.get("bridge-record-index.json")); value.page = contract.records.maximum_page + 1; value.total_pages = value.page; validateRecordIndex(value, contract); }, "validation_failed"],
   ["operator audit malformed forum", () => validateOperatorAudit({ ...structuredClone(fixtures.get("operator-enrollment-audit.json")), forum_id: "invalid" }, operator), "validation_failed"],
   ["cutover null receiver schema", () => validateCutoverManifest({ ...structuredClone(fixtures.get("cutover-manifest.json")), receiver_schema: null }, contract), "validation_failed"],
@@ -802,6 +849,20 @@ const mutationCases = [
   ["existing topic exceeds signed 64-bit range", () => validateResolveRecord(resolveWithExistingTopicToken("9223372036854775808"), contract), "validation_failed"],
   ["protocol JSON duplicate member", () => parseProtocolJson('{"provider_name":"first","provider_name":"second"}'), "invalid_json"],
   ["operator unpaired surrogate", () => validateOperatorEntitlement({ ...structuredClone(validEntitlement), provider_name: "\ud800" }, operator, trust), "entitlement_invalid_signature"],
+  ...[0xfdd0, 0xffff, 0x1fffe, 0x10ffff].map((codePoint) => [
+    `protocol JSON Unicode noncharacter U+${codePoint.toString(16).toUpperCase()}`,
+    () => parseProtocolJson(JSON.stringify({ provider_name: `Provider ${String.fromCodePoint(codePoint)}` })),
+    "invalid_json",
+  ]),
+  ["protocol JSON Unicode noncharacter member name", () => parseProtocolJson(JSON.stringify({ [String.fromCodePoint(0xfdd0)]: "value" })), "invalid_json"],
+  ...[0xfdd0, 0xffff, 0x1fffe, 0x10ffff].map((codePoint) => [
+    `operator signed Unicode noncharacter U+${codePoint.toString(16).toUpperCase()}`,
+    () => {
+      const value = { ...structuredClone(approvalEntitlement), provider_name: `Provider ${String.fromCodePoint(codePoint)}` };
+      validateOperatorEntitlement(signEntitlementWithUncheckedProviderName(value), operator, approvalTrust);
+    },
+    "entitlement_invalid_signature",
+  ]),
   ...[null, false, 0, 123, {}].map((signature) => [
     `operator malformed signature type ${JSON.stringify(signature)}`,
     () => validateOperatorEntitlement({ ...structuredClone(validEntitlement), signature }, operator, trust),
@@ -894,6 +955,51 @@ assert.doesNotThrow(
   "excerpt structural regression must detect removal of the exact Read More text guard",
 );
 
+const zeroExpansionMutant = await loadValidatorMutation(
+  "exact-integer-zero-short-circuit",
+  "  if (/^0+$/.test(digits)) return 0n;",
+  "",
+);
+const repeatBeforeZeroMutation = String.prototype.repeat;
+try {
+  String.prototype.repeat = function detectedIntegerExpansion(count) {
+    throw new Error(`source reversion attempted ${count}-character integer expansion`);
+  };
+  assert.throws(
+    () => zeroExpansionMutant.parseProtocolJson('{"existing_topic_id":0e1000000}'),
+    (error) => error instanceof zeroExpansionMutant.ProtocolError && error.code === "invalid_json",
+    "integer regression must detect removal of the all-zero coefficient short circuit",
+  );
+} finally {
+  String.prototype.repeat = repeatBeforeZeroMutation;
+}
+
+const catalogIdentifierMutant = await loadValidatorMutation(
+  "catalog-identifier-byte-bound",
+  "  nonblank(value, contract.common.opaque_identifier_maximum_bytes, name);",
+  "  requiredString(value, name);",
+);
+const overlongCatalogIdentifier = structuredClone(fixtures.get("platform-catalog-authors.json"));
+overlongCatalogIdentifier.items[0].id = "x".repeat(contract.common.opaque_identifier_maximum_bytes + 1);
+assert.doesNotThrow(
+  () => catalogIdentifierMutant.validateCatalogSegment(overlongCatalogIdentifier, contract),
+  "catalog regression must detect removal of the common opaque-identifier byte bound",
+);
+
+const unicodeNoncharacterMutant = await loadValidatorMutation(
+  "I-JSON-Unicode-noncharacter-guard",
+  '    if ((codePoint >= 0xfdd0 && codePoint <= 0xfdef) || (codePoint & 0xfffe) === 0xfffe) fail(code, `${name} contains a Unicode noncharacter`);',
+  "",
+);
+const signedNoncharacterEntitlement = signEntitlementWithUncheckedProviderName({
+  ...structuredClone(approvalEntitlement),
+  provider_name: `Provider ${String.fromCodePoint(0xfdd0)}`,
+});
+assert.doesNotThrow(
+  () => unicodeNoncharacterMutant.validateOperatorEntitlement(signedNoncharacterEntitlement, operator, approvalTrust),
+  "Unicode regression must detect removal of the I-JSON noncharacter guard with a matching signature",
+);
+
 const activeText = [
   JSON.stringify(contract),
   JSON.stringify(operator),
@@ -904,4 +1010,4 @@ const activeText = [
 assert.doesNotMatch(activeText, /fullInteractive/);
 assert.doesNotMatch(activeText, /Repeal OBBBA Forum|obbba-/i);
 
-console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 5 targeted source-reversion probes for ${contract.version}.`);
+console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 8 targeted source-reversion probes for ${contract.version}.`);
