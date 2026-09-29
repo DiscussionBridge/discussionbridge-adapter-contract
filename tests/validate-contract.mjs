@@ -13,8 +13,10 @@ import {
   validateAcknowledgementIdentity,
   validateAuthenticationHeaders,
   validateCatalogSegment,
+  validateCatalogSegmentText,
   validateCatalogCursor,
   validateCatalogUpdate,
+  validateCatalogUpdateText,
   validateClaimRequest,
   validateClaimResponse,
   validateClaimResponseText,
@@ -31,6 +33,7 @@ import {
   validateDirection,
   validateEntitlementTime,
   validateErrorResponse,
+  validateErrorResponseText,
   validateFailure,
   validateForumClone,
   validateIdentity,
@@ -167,7 +170,7 @@ const positiveHandlers = {
   "created-response.json": (value) => validateResolveResponse(value, contract.resolve.success_response_required_fields, contract),
   "resolved-response.json": (value) => validateResolveResponse(value, contract.resolve.success_response_required_fields, contract),
   "reconciliation-required-response.json": (value) => validateResolveResponse(value, contract.resolve.reconciliation_response_required_fields, contract),
-  "rejected-response.json": (value) => validateErrorResponse(value, contract),
+  "rejected-response.json": (_value, text) => validateErrorResponseText(text, contract),
   "to-discourse-request.json": (value) => validateResolveRecord(value.bridge_record, contract),
   "to-discourse-excerpt-request.json": (value) => validateResolveRecord(value.bridge_record, contract),
   "to-discourse-wiki-update-request.json": (value) => {
@@ -281,13 +284,13 @@ const positiveHandlers = {
     assert.equal(value.after_active_expiry.new_state, "available");
     assert.equal(value.destination_identity_unchanged, true);
   },
-  "platform-catalog-segment.json": (value) => validateCatalogSegment(value, contract),
-  "platform-catalog-containers.json": (value) => validateCatalogSegment(value, contract),
-  "platform-catalog-taxonomies.json": (value) => validateCatalogSegment(value, contract),
-  "platform-catalog-terms.json": (value) => validateCatalogSegment(value, contract),
-  "platform-catalog-authors.json": (value) => validateCatalogSegment(value, contract),
-  "platform-catalog-native-limits.json": (value) => validateCatalogSegment(value, contract),
-  "platform-catalog-update.json": (value) => validateCatalogUpdate(value, contract),
+  "platform-catalog-segment.json": (_value, text) => validateCatalogSegmentText(text, contract),
+  "platform-catalog-containers.json": (_value, text) => validateCatalogSegmentText(text, contract),
+  "platform-catalog-taxonomies.json": (_value, text) => validateCatalogSegmentText(text, contract),
+  "platform-catalog-terms.json": (_value, text) => validateCatalogSegmentText(text, contract),
+  "platform-catalog-authors.json": (_value, text) => validateCatalogSegmentText(text, contract),
+  "platform-catalog-native-limits.json": (_value, text) => validateCatalogSegmentText(text, contract),
+  "platform-catalog-update.json": (_value, text) => validateCatalogUpdateText(text, contract),
   "operator-entitlement.json": (value) => validateOperatorEntitlement(value, operator, trust),
   "operator-entitlement-test-vector.json": (value) => {
     assert.equal(value.signing_domain, operator.entitlement.signing_domain);
@@ -467,6 +470,41 @@ function jsonTextAtSize(value, targetBytes) {
   return `${text}${" ".repeat(targetBytes - Buffer.byteLength(text))}`;
 }
 
+function catalogUpdateWithRawRequestSize(targetBytes) {
+  const exchange = structuredClone(fixtures.get("platform-catalog-update.json"));
+  const requestText = JSON.stringify(exchange.request);
+  assert.ok(Buffer.byteLength(requestText) <= targetBytes, "catalog request fixture must fit its raw JSON ceiling");
+  const paddedRequest = `${requestText.slice(0, -1)}${" ".repeat(targetBytes - Buffer.byteLength(requestText))}}`;
+  return JSON.stringify(exchange).replace(requestText, paddedRequest);
+}
+
+function fullyPopulatedCatalogUpdate() {
+  const value = structuredClone(fixtures.get("platform-catalog-update.json"));
+  const identifier = (prefix, index) => `${prefix}:${index}:`.padEnd(contract.common.opaque_identifier_maximum_bytes, prefix[0]);
+  value.request.segments = [
+    {
+      segment_type: "authors",
+      items: Array.from({ length: contract.platform_catalog.maximum_items_per_segment }, (_, index) => ({
+        id: identifier("author", index),
+        name: `Author ${index}`.padEnd(contract.common.descriptive_name_maximum_bytes, "a"),
+        available: true,
+      })),
+    },
+    {
+      segment_type: "containers",
+      items: Array.from({ length: contract.platform_catalog.maximum_items_per_segment }, (_, index) => ({
+        id: identifier("container", index),
+        name: `Container ${index}`.padEnd(contract.common.descriptive_name_maximum_bytes, "c"),
+        kind: `kind-${index}`.padEnd(contract.platform_catalog.container_kind_maximum_bytes, "k"),
+        available: true,
+      })),
+    },
+  ];
+  value.response.accepted_segments = ["authors", "containers"];
+  assert.ok(Buffer.byteLength(JSON.stringify(value.request)) > contract.platform_catalog.maximum_json_bytes, "catalog aggregate control must exceed maximum_json_bytes with individually valid fields");
+  return value;
+}
+
 const maximumLaneCapability = structuredClone(fixtures.get("connection-capability.json"));
 maximumLaneCapability.lanes = Array.from({ length: contract.connection_capability.lanes_maximum_items }, (_, index) => `lane-${index}`);
 validateConnectionCapability(maximumLaneCapability, contract);
@@ -516,6 +554,33 @@ const maximumCatalogUpdate = structuredClone(fixtures.get("platform-catalog-upda
 maximumCatalogUpdate.request.base_catalog_revision = "b".repeat(contract.common.opaque_identifier_maximum_bytes);
 maximumCatalogUpdate.response.catalog_revision = "r".repeat(contract.common.opaque_identifier_maximum_bytes);
 validateCatalogUpdate(maximumCatalogUpdate, contract);
+validateCatalogSegmentText(jsonTextAtSize(fixtures.get("platform-catalog-authors.json"), contract.platform_catalog.maximum_json_bytes), contract);
+validateCatalogUpdateText(catalogUpdateWithRawRequestSize(contract.platform_catalog.maximum_json_bytes), contract);
+validateErrorResponseText(jsonTextAtSize(fixtures.get("rejected-response.json"), contract.error_responses.maximum_json_bytes), contract);
+const validSplitUtf8Content = Buffer.from("A😀B", "utf8");
+const validSplitUtf8Parts = [validSplitUtf8Content.subarray(0, 3), validSplitUtf8Content.subarray(3)];
+const validSplitUtf8Descriptor = {
+  source_revision: "revision:valid-split-utf8",
+  byte_length: validSplitUtf8Content.length,
+  sha256: createHash("sha256").update(validSplitUtf8Content).digest("hex"),
+  chunk_count: validSplitUtf8Parts.length,
+};
+const validSplitUtf8Chunks = validSplitUtf8Parts.map((content, index) => ({
+  source_revision: validSplitUtf8Descriptor.source_revision,
+  chunk: index + 1,
+  chunk_count: validSplitUtf8Descriptor.chunk_count,
+  decoded_bytes: content.length,
+  chunk_sha256: createHash("sha256").update(content).digest("hex"),
+  content_base64: content.toString("base64"),
+  correlation_id: `valid-split-utf8-${index + 1}`,
+})).reverse();
+validateChunkSet(validSplitUtf8Descriptor, validSplitUtf8Chunks, contract);
+const validSupplementaryEntitlement = resignApprovalEntitlement({
+  ...structuredClone(approvalEntitlement),
+  provider_name: "Provider 😀",
+});
+validateOperatorEntitlement(validSupplementaryEntitlement, operator, approvalTrust);
+assert.equal(parseProtocolJson(JSON.stringify({ provider_name: "Provider 😀" })).provider_name, "Provider 😀");
 function claimResponseWithRawWorkSize(targetBytes) {
   const claim = structuredClone(fixtures.get("publication-work-claim.json"));
   const workText = JSON.stringify(claim.publication_work[0]);
@@ -682,7 +747,9 @@ const mutationCases = [
   ["hour 24 timestamp", () => validateResolveRecord({ ...structuredClone(baseComplete), source_updated_at: "2026-09-27T24:00:00Z" }, contract), "malformed_value"],
   ["renewal negative total", () => { const value = structuredClone(fixtures.get("publication-lease-renewal.json")); value.response.total_lease_seconds = -1; validateRenewal(value, contract, renewalContext); }, "validation_failed"],
   ["renewal nonnumeric total", () => { const value = structuredClone(fixtures.get("publication-lease-renewal.json")); value.response.total_lease_seconds = "1200"; validateRenewal(value, contract, renewalContext); }, "validation_failed"],
-  ["catalog request byte ceiling", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.request.segments[0].items[0].name = "x".repeat(contract.platform_catalog.maximum_json_bytes); validateCatalogUpdate(value, contract); }, "validation_failed"],
+  ["catalog compact aggregate byte ceiling", () => validateCatalogUpdate(fullyPopulatedCatalogUpdate(), contract), "validation_failed"],
+  ["catalog response raw byte ceiling", () => validateCatalogSegmentText(jsonTextAtSize(fixtures.get("platform-catalog-authors.json"), contract.platform_catalog.maximum_json_bytes + 1), contract), "validation_failed"],
+  ["catalog request raw byte ceiling", () => validateCatalogUpdateText(catalogUpdateWithRawRequestSize(contract.platform_catalog.maximum_json_bytes + 1), contract), "validation_failed"],
   ["catalog item id over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-authors.json")); value.items[0].id = "x".repeat(contract.common.opaque_identifier_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
   ["catalog item name over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-authors.json")); value.items[0].name = "x".repeat(contract.common.descriptive_name_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
   ["catalog container kind over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-containers.json")); value.items[0].kind = "x".repeat(contract.platform_catalog.container_kind_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
@@ -697,6 +764,12 @@ const mutationCases = [
   ["cutover rehearsal manifest mismatch", () => validateCutoverRehearsal({ ...structuredClone(fixtures.get("cutover-rehearsal.json")), manifest_id: "dbm_22222222222222222222222222222222" }, fixtures.get("cutover-manifest.json"), contract), "reconciliation_required"],
   ["cutover rehearsal artifact mismatch", () => { const manifest = structuredClone(fixtures.get("cutover-manifest.json")); manifest.adapter_protocol.sha256 = "f".repeat(64); validateCutoverRehearsal(fixtures.get("cutover-rehearsal.json"), manifest, contract); }, "reconciliation_required"],
   ["oversized error response", () => { const value = structuredClone(fixtures.get("rejected-response.json")); value.message = "x".repeat(contract.error_responses.maximum_json_bytes); validateErrorResponse(value, contract); }, "validation_failed"],
+  ["error response raw byte ceiling", () => validateErrorResponseText(jsonTextAtSize(fixtures.get("rejected-response.json"), contract.error_responses.maximum_json_bytes + 1), contract), "validation_failed"],
+  ...[null, 1, true, [], {}].map((message) => [
+    `error response malformed message ${JSON.stringify(message)}`,
+    () => validateErrorResponse({ ...structuredClone(fixtures.get("rejected-response.json")), message }, contract),
+    "validation_failed",
+  ]),
   ["capability invented direction", () => { const value = structuredClone(fixtures.get("connection-capability.json")); value.directions = ["delete_everything"]; validateConnectionCapability(value, contract); }, "validation_failed"],
   ["capability invalid authority metadata", () => { const value = structuredClone(fixtures.get("connection-capability.json")); value.lanes = [""]; value.catalog_required = "yes"; value.policy_revision = ""; value.supported_operations = ["resolve", "resolve"]; validateConnectionCapability(value, contract); }, "validation_failed"],
   ["capability malformed nested mapping", () => { const value = structuredClone(fixtures.get("connection-capability.json")); value.destination_policies[0].author_mapping.items = [null]; validateConnectionCapability(value, contract); }, "validation_failed"],
@@ -848,7 +921,26 @@ const mutationCases = [
   ]),
   ["existing topic exceeds signed 64-bit range", () => validateResolveRecord(resolveWithExistingTopicToken("9223372036854775808"), contract), "validation_failed"],
   ["protocol JSON duplicate member", () => parseProtocolJson('{"provider_name":"first","provider_name":"second"}'), "invalid_json"],
-  ["operator unpaired surrogate", () => validateOperatorEntitlement({ ...structuredClone(validEntitlement), provider_name: "\ud800" }, operator, trust), "entitlement_invalid_signature"],
+  ...["\ud800", "\udc00"].map((surrogate) => [
+    `operator signed unpaired surrogate ${surrogate.charCodeAt(0).toString(16)}`,
+    () => {
+      const value = { ...structuredClone(approvalEntitlement), provider_name: `Provider ${surrogate}` };
+      validateOperatorEntitlement(signEntitlementWithUncheckedProviderName(value), operator, approvalTrust);
+    },
+    "entitlement_invalid_signature",
+  ]),
+  ...["\ud800", "\udc00"].flatMap((surrogate) => [
+    [
+      `protocol JSON unpaired surrogate value ${surrogate.charCodeAt(0).toString(16)}`,
+      () => parseProtocolJson(JSON.stringify({ provider_name: `Provider ${surrogate}` })),
+      "invalid_json",
+    ],
+    [
+      `protocol JSON unpaired surrogate member ${surrogate.charCodeAt(0).toString(16)}`,
+      () => parseProtocolJson(JSON.stringify({ [surrogate]: "value" })),
+      "invalid_json",
+    ],
+  ]),
   ...[0xfdd0, 0xffff, 0x1fffe, 0x10ffff].map((codePoint) => [
     `protocol JSON Unicode noncharacter U+${codePoint.toString(16).toUpperCase()}`,
     () => parseProtocolJson(JSON.stringify({ provider_name: `Provider ${String.fromCodePoint(codePoint)}` })),
@@ -1000,6 +1092,73 @@ assert.doesNotThrow(
   "Unicode regression must detect removal of the I-JSON noncharacter guard with a matching signature",
 );
 
+const rawJsonByteGuardMutant = await loadValidatorMutation(
+  "raw-endpoint-JSON-byte-guard",
+  '  if (bytes(text) > maximum) fail("validation_failed", `${name} exceeds maximum_json_bytes`);',
+  "",
+);
+assert.doesNotThrow(
+  () => rawJsonByteGuardMutant.validateCatalogSegmentText(jsonTextAtSize(fixtures.get("platform-catalog-authors.json"), contract.platform_catalog.maximum_json_bytes + 1), contract),
+  "catalog GET regression must detect removal of the shared raw JSON byte guard",
+);
+assert.doesNotThrow(
+  () => rawJsonByteGuardMutant.validateCatalogUpdateText(catalogUpdateWithRawRequestSize(contract.platform_catalog.maximum_json_bytes + 1), contract),
+  "catalog PUT regression must detect removal of the shared raw JSON byte guard",
+);
+assert.doesNotThrow(
+  () => rawJsonByteGuardMutant.validateErrorResponseText(jsonTextAtSize(fixtures.get("rejected-response.json"), contract.error_responses.maximum_json_bytes + 1), contract),
+  "error-response regression must detect removal of the shared raw JSON byte guard",
+);
+
+const catalogAggregateMutant = await loadValidatorMutation(
+  "catalog-compact-aggregate-byte-guard",
+  '  if (bytes(JSON.stringify(value.request)) > contract.platform_catalog.maximum_json_bytes) fail("validation_failed", "catalog request exceeds maximum_json_bytes");',
+  "",
+);
+assert.doesNotThrow(
+  () => catalogAggregateMutant.validateCatalogUpdate(fullyPopulatedCatalogUpdate(), contract),
+  "catalog aggregate regression must detect removal of the compact-object byte guard with individually valid fields",
+);
+
+const highSurrogateMutant = await loadValidatorMutation(
+  "I-JSON-high-surrogate-guard",
+  '      if (!(next >= 0xdc00 && next <= 0xdfff)) fail(code, `${name} contains an unpaired surrogate`);',
+  "",
+);
+const signedHighSurrogateEntitlement = signEntitlementWithUncheckedProviderName({
+  ...structuredClone(approvalEntitlement),
+  provider_name: "Provider \ud800",
+});
+assert.doesNotThrow(
+  () => highSurrogateMutant.validateOperatorEntitlement(signedHighSurrogateEntitlement, operator, approvalTrust),
+  "Unicode regression must detect removal of the high-surrogate guard with a matching signature",
+);
+
+const lowSurrogateMutant = await loadValidatorMutation(
+  "I-JSON-low-surrogate-guard",
+  '    } else if (unit >= 0xdc00 && unit <= 0xdfff) {\n      fail(code, `${name} contains an unpaired surrogate`);\n    }',
+  "    }",
+);
+const signedLowSurrogateEntitlement = signEntitlementWithUncheckedProviderName({
+  ...structuredClone(approvalEntitlement),
+  provider_name: "Provider \udc00",
+});
+assert.doesNotThrow(
+  () => lowSurrogateMutant.validateOperatorEntitlement(signedLowSurrogateEntitlement, operator, approvalTrust),
+  "Unicode regression must detect removal of the low-surrogate guard with a matching signature",
+);
+
+const chunkSetAlwaysRejectsMutant = await loadValidatorMutation(
+  "chunk-set-positive-reassembly",
+  "export function validateChunkSet(descriptor, chunks, contract) {",
+  'export function validateChunkSet(descriptor, chunks, contract) {\n  fail("integrity_failed");',
+);
+assert.throws(
+  () => chunkSetAlwaysRejectsMutant.validateChunkSet(validSplitUtf8Descriptor, validSplitUtf8Chunks, contract),
+  (error) => error instanceof chunkSetAlwaysRejectsMutant.ProtocolError && error.code === "integrity_failed",
+  "chunk-set regression must require successful complete reassembly",
+);
+
 const activeText = [
   JSON.stringify(contract),
   JSON.stringify(operator),
@@ -1010,4 +1169,4 @@ const activeText = [
 assert.doesNotMatch(activeText, /fullInteractive/);
 assert.doesNotMatch(activeText, /Repeal OBBBA Forum|obbba-/i);
 
-console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 8 targeted source-reversion probes for ${contract.version}.`);
+console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 13 targeted source-reversion probes for ${contract.version}.`);

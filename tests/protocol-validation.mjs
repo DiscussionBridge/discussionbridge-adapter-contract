@@ -265,6 +265,26 @@ function topLevelArrayElementTexts(text, propertyName) {
   }
 }
 
+function topLevelPropertyText(text, propertyName) {
+  let index = skipJsonWhitespace(text, 0);
+  if (text[index] !== "{") fail("validation_failed", "JSON envelope must be an object");
+  index += 1;
+  while (true) {
+    index = skipJsonWhitespace(text, index);
+    if (text[index] === "}") return null;
+    const key = readJsonString(text, index);
+    index = skipJsonWhitespace(text, key.next);
+    if (text[index] !== ":") fail("invalid_json", "JSON object member lacks a colon");
+    const valueStart = skipJsonWhitespace(text, index + 1);
+    const valueEnd = skipRawJsonValue(text, valueStart);
+    if (key.value === propertyName) return text.slice(valueStart, valueEnd);
+    index = skipJsonWhitespace(text, valueEnd);
+    if (text[index] === "}") return null;
+    if (text[index] !== ",") fail("invalid_json", "JSON object has an invalid separator");
+    index += 1;
+  }
+}
+
 const stringifyProtocolJson = (value) => JSON.stringify(value, (_key, item) => (
   typeof item === "bigint" ? JSON.rawJSON(item.toString()) : item
 ));
@@ -1089,6 +1109,10 @@ export function validateCatalogSegment(value, contract) {
   correlation(value.correlation_id, contract);
 }
 
+export function validateCatalogSegmentText(text, contract) {
+  return validateBoundedJsonText(text, contract.platform_catalog.maximum_json_bytes, "catalog response", (value) => validateCatalogSegment(value, contract));
+}
+
 export function validateCatalogUpdate(value, contract, currentRevision = null) {
   exactObject(value, ["request", "response"], [], "catalog update exchange");
   if (bytes(JSON.stringify(value.request)) > contract.platform_catalog.maximum_json_bytes) fail("validation_failed", "catalog request exceeds maximum_json_bytes");
@@ -1113,6 +1137,17 @@ export function validateCatalogUpdate(value, contract, currentRevision = null) {
     validateCatalogItems(segment.segment_type, segment.items, contract);
   }
   if (canonicalize([...segmentTypes].sort()) !== canonicalize([...value.response.accepted_segments].sort())) fail("validation_failed", "accepted_segments mismatch");
+}
+
+export function validateCatalogUpdateText(text, contract, currentRevision = null) {
+  if (typeof text !== "string") fail("invalid_json", "catalog update exchange must be JSON text");
+  validateJsonText(text);
+  const requestText = topLevelPropertyText(text, "request");
+  if (requestText === null) fail("validation_failed", "catalog update request is required");
+  validateBoundedJsonText(requestText, contract.platform_catalog.maximum_json_bytes, "catalog request", () => {});
+  const value = parseProtocolJson(text);
+  validateCatalogUpdate(value, contract, currentRevision);
+  return value;
 }
 
 export function validateCatalogCursor(request, binding) {
@@ -1174,9 +1209,14 @@ export function validateErrorResponse(value, contract, protectedValues = []) {
   exactObject(value, contract.error_responses.required_fields, [], "error response");
   if (bytes(JSON.stringify(value)) > contract.error_responses.maximum_json_bytes) fail("validation_failed", "error response exceeds maximum_json_bytes");
   correlation(value.correlation_id, contract);
+  requiredString(value.message, "message");
   if (bytes(value.message) > contract.common.error_detail_maximum_bytes) fail("validation_failed");
   for (const protectedValue of protectedValues) if (protectedValue && value.message.includes(protectedValue)) fail("secret_exposure");
   if (!Object.values(contract.error_responses.statuses).flat().includes(value.error_code)) fail("validation_failed");
+}
+
+export function validateErrorResponseText(text, contract, protectedValues = []) {
+  return validateBoundedJsonText(text, contract.error_responses.maximum_json_bytes, "error response", (value) => validateErrorResponse(value, contract, protectedValues));
 }
 
 export function validateNetwork(value, contract, localForumId) {

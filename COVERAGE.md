@@ -27,7 +27,7 @@ missing approved requirement.
 | B-14 | Exact applied source and destination publication revisions. | From-Discourse record and acknowledgement fixtures. |
 | B-15 | Source metadata is normative; native Latest remains platform-owned. | `README.md` Platform-owned behavior; adapter qualification remains downstream. |
 | C-01 | To-Discourse `complete`/`excerpt`, full-source bytes/hash, exact Read More rule. | Complete and excerpt request fixtures; parse5 enforces the exact trailing first-post-body structure, decoded canonical link, forbidden source-controlled style/script/base elements, 1,024-element and depth-64 limits, exact-limit/limit-plus-one controls, and a targeted source-reversion probe. |
-| C-02 | Inline or revision-pinned base64 chunk transport with per-chunk and whole-content integrity. | Inline detail, chunked detail, chunk fixture, and hash tests. |
+| C-02 | Inline or revision-pinned base64 chunk transport with per-chunk and whole-content integrity. | Inline detail, chunked detail, chunk fixture, successful reverse-ordered complete-set reassembly across a split UTF-8 sequence, integrity/UTF-8 negatives, and an always-reject source mutation. |
 | C-03 | Destination acknowledgement records content disposition; destination owns real limit/excerpt. | Acknowledgement fixture and README From Discourse section. |
 | C-04 | Rich rendering remains platform-owned. | README Platform-owned behavior; no renderer semantics in wire schema. |
 | D-01 | Verified source-URL ancestry, redirects, retired binding, fail-closed conflict. | `source_url_migration_attestation` and URL-proof fixture. |
@@ -41,13 +41,13 @@ missing approved requirement.
 | E-05 | Receiver-owned retryable/terminal registry, one initial plus three retries, exact backoff/exhaustion, and bounded manual retry. | Complete retry trace plus failure, retry-wait, and exhausted/operator-attention fixtures. |
 | E-06 | Exact immutable `policy_revision` in inventory, work, and acknowledgement. | Inventory/work/ack fixtures. |
 | E-07 | Separate synchronization, deployment, and public verification; static completion rule. | Dynamic acknowledgement; static synchronized → deployed → verified trace; deployment/verification failures. |
-| E-08 | Required header/body correlation across every route and exact error envelope. | Correlated route fixtures plus missing/oversized/secret-exposure negatives. |
-| F-01 | Segmented bounded descriptive catalog with exact item and GET/PUT schemas and no authorization authority. | Positive fixtures for all six segments and update; exact/max-plus-one UTF-8 controls for 255-byte identifiers/references, 200-byte names and 100-byte container kinds; unknown-field and authority-expansion negatives; targeted identifier-bound source reversion. |
+| E-08 | Required header/body correlation across every route and exact error envelope. | Correlated route fixtures plus raw 4,096/4,097-byte response controls, malformed-message-type exact errors, oversized/secret-exposure negatives, and shared raw-byte-guard source reversion. |
+| F-01 | Segmented bounded descriptive catalog with exact item and GET/PUT schemas and no authorization authority. | Positive fixtures for all six segments and update; raw 65,536/65,537-byte GET-response and PUT-request controls; exact/max-plus-one UTF-8 controls for 255-byte identifiers/references, 200-byte names and 100-byte container kinds; independently valid aggregate overflow; unknown-field/authority negatives; raw, aggregate and identifier source reversions. |
 | F-02 | Exact bounded `catalog_revision` referenced by operator policy. | Atomic update, exact/max-plus-one 255-byte response/base revisions, stale revision, removed mapping, and authority rules/fixtures. |
 | F-03 | Native public pagination remains platform-owned. | README Platform-owned behavior. |
 | G-01 | Bounded source-author schema both directions without shared identity. | Source detail author fixture and authorship rules. |
 | G-02 | Bounded source category/tag identities for operator policy mapping. | Source detail taxonomy fixture and schema plus exact 20-category/100-tag, 255-byte ID, 200-byte name, and duplicate-source-ID controls. |
-| H-01 | Separate strict I-JSON/RFC 8785/Ed25519 Operator Service entitlement contract; one provider; protected issuer/key enrollment and rotation. | Real deterministic public-key/message/signature vector, executable cryptographic verification, correctly signed Unicode-noncharacter negatives, and targeted Unicode-guard source reversion. |
+| H-01 | Separate strict I-JSON/RFC 8785/Ed25519 Operator Service entitlement contract; one provider; protected issuer/key enrollment and rotation. | Real deterministic public-key/message/signature vector, executable cryptographic verification, direct raw and correctly signed lone-surrogate/noncharacter negatives, valid supplementary controls, and targeted high-surrogate, low-surrogate and noncharacter source reversions. |
 | H-02 | Scope, forum binding, validity, grace/read-only, replacement, revocation, and audit rules. | Enrollment/revocation audits plus tamper, wrong forum/key, not-yet-valid, expired, grace, revoked, replaced, and scope negatives. |
 | H-03 | Customer approval and provider audit remain separate from adapter credentials. | Operator contract rules and invalid-scope fixture. |
 | I-01 | Stable origin/content-authority forum provenance. | Network source detail fixture. |
@@ -91,9 +91,9 @@ missing approved requirement.
   chronology rather than validating shapes in isolation. Dynamic authoritative
   work identity is sourced independently from the response. Targeted in-memory
   source reversions prove response-work, response-terminal, synchronization
-  chronology, excerpt structure, bounded exact-integer parsing, catalog-ID
-  bounds and I-JSON Unicode regressions exercise their intended individual
-  guards.
+  chronology, excerpt structure, bounded exact-integer parsing, catalog-ID and
+  aggregate bounds, raw endpoint limits, successful chunk reassembly, and each
+  I-JSON Unicode branch exercise their intended individual guards.
 - Protocol JSON parsing preserves `existing_topic_id` numeric source tokens as
   exact integers before JavaScript Number rounding. Adjacent values above
   `2^53` remain distinct, the signed-64 maximum accepts, rounded fractional

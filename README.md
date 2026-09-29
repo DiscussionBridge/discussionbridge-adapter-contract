@@ -202,7 +202,8 @@ failures, and require no routine babysitting.
 The bounded platform catalog reports native containers, taxonomies, terms,
 authors, supported presentation modes, and actual native limits in segments of
 at most 100 items. Operator-approved mapping policy references an exact catalog
-revision.
+revision. The complete raw UTF-8 GET response and PUT request bodies are each
+limited to 65,536 bytes before parsing or normalization.
 
 Each segment has an exact item schema. Stable opaque native IDs, taxonomy and
 parent references, and catalog revisions are limited to 255 UTF-8 bytes;
@@ -269,7 +270,9 @@ Every request supplies `X-DiscussionBridge-Correlation`. Every success and
 error response echoes the same bounded identifier in both that header and its
 `correlation_id` body field. Body/header mismatch fails before mutation. All
 errors use the exact `{error_code, message, correlation_id}` envelope and
-sanitize protected values.
+sanitize protected values. The complete raw UTF-8 error response is limited to
+4,096 bytes before parsing or normalization; malformed message types produce a
+controlled protocol validation error rather than a native runtime exception.
 
 ## Platform-owned behavior
 

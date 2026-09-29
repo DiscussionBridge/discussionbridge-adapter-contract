@@ -591,6 +591,7 @@
     "update_method": "PUT",
     "update_path": "/discussion-bridge/v1/platform-catalog.json",
     "maximum_json_bytes": 65536,
+    "maximum_json_bytes_rule": "The limit applies to the actual raw UTF-8 JSON body before parsing or normalization: the complete GET response body and the complete PUT request body.",
     "maximum_items_per_segment": 100,
     "container_kind_maximum_bytes": 100,
     "get_query": ["platform_profile", "segment_type", "cursor", "limit", "catalog_revision"],
@@ -673,6 +674,7 @@
   "error_responses": {
     "content_type": "application/json",
     "maximum_json_bytes": 4096,
+    "maximum_json_bytes_rule": "The limit applies to the complete actual raw UTF-8 JSON response body before parsing or normalization.",
     "required_fields": ["error_code", "message", "correlation_id"],
     "correlation_rule": "The response header and body correlation_id both exactly echo the accepted request correlation identifier, including authentication, validation, conflict, and internal-error responses. If no safe request identifier can be parsed, the server generates one and uses it consistently in both places.",
     "message_rule": "Human-readable message is sanitized and bounded; it never contains Content Connection secrets, Operator Service credentials, lease tokens, signing material, or protected response bodies.",
