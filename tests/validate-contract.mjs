@@ -618,6 +618,12 @@ function claimResponseWithItemCount(count) {
   return JSON.stringify(claim);
 }
 
+function claimResponseWithEmptyArrayWhitespace(whitespaceBytes) {
+  const claim = structuredClone(fixtures.get("publication-work-claim.json"));
+  claim.publication_work = [];
+  return JSON.stringify(claim).replace('"publication_work":[]', `"publication_work":[${" ".repeat(whitespaceBytes)}]`);
+}
+
 validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes), contract, fixtures.get("publication-work-claim-request.json"));
 validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes, "leading"), contract, fixtures.get("publication-work-claim-request.json"));
 validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes, "trailing"), contract, fixtures.get("publication-work-claim-request.json"));
@@ -637,6 +643,9 @@ validateClaimResponseText(
   fixtures.get("publication-work-claim-request.json"),
 );
 validateClaimResponseText(claimResponseWithItemCount(contract.publication_work.claim.maximum_items), contract);
+validateClaimResponseText(claimResponseWithEmptyArrayWhitespace(0), contract);
+validateClaimResponseText(claimResponseWithEmptyArrayWhitespace(contract.publication_work.maximum_json_bytes), contract);
+validateClaimResponseText(claimResponseWithEmptyArrayWhitespace(contract.publication_work.maximum_json_bytes + 1), contract);
 
 function assertProtocolRejectionBeforeJsonParse(action, expectedCode, maximumParseCalls, message) {
   const originalJsonParse = JSON.parse;
@@ -710,7 +719,9 @@ for (const [name, rawWork] of oversizedMalformedWorkItems) {
 
 function assertNoOversizedWorkSlice(action, message) {
   const originalSlice = String.prototype.slice;
+  const originalPush = Array.prototype.push;
   let largestSlice = 0;
+  let largestArray = 0;
   String.prototype.slice = function instrumentedSlice(start = 0, end = this.length) {
     const length = this.length;
     const normalizedStart = start < 0 ? Math.max(length + start, 0) : Math.min(start, length);
@@ -718,12 +729,19 @@ function assertNoOversizedWorkSlice(action, message) {
     largestSlice = Math.max(largestSlice, Math.max(0, normalizedEnd - normalizedStart));
     return originalSlice.call(this, start, end);
   };
+  Array.prototype.push = function instrumentedPush(...items) {
+    const result = originalPush.apply(this, items);
+    largestArray = Math.max(largestArray, this.length);
+    return result;
+  };
   try {
     assert.throws(action, (error) => error instanceof ProtocolError && error.code === "validation_failed", message);
   } finally {
     String.prototype.slice = originalSlice;
+    Array.prototype.push = originalPush;
   }
   assert.ok(largestSlice <= maximumWorkBytes, `${message}: observed an oversized retained slice of ${largestSlice} code units`);
+  assert.ok(largestArray <= maximumWorkBytes, `${message}: observed lexical nesting beyond the byte budget at ${largestArray} entries`);
 }
 
 assertNoOversizedWorkSlice(
@@ -1143,6 +1161,15 @@ async function loadValidatorMutation(label, search, replacement) {
   return import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#${encodeURIComponent(label)}`);
 }
 
+async function loadValidatorMutations(label, mutations) {
+  let source = validatorSource.replace('from "parse5";', `from "${parse5Url}";`);
+  for (const [search, replacement] of mutations) {
+    assert.equal(source.split(search).length, 2, `${label} mutation target must occur exactly once`);
+    source = source.replace(search, replacement);
+  }
+  return import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#${encodeURIComponent(label)}`);
+}
+
 const chronologyMutant = await loadValidatorMutation(
   "synchronization-before-claim-guard",
   ' || compareTimestamps(acknowledgement.synchronized_at, context.claimed_at, "synchronized_at", "claimed_at") < 0',
@@ -1317,6 +1344,44 @@ assert.doesNotThrow(
   "claim work regression must detect delaying the byte barrier until after lexical traversal",
 );
 
+const claimWorkDeferredBudgetMutant = await loadValidatorMutations(
+  "claim-work-incremental-byte-budget-deferred",
+  [
+    [
+      '      if (used > maximum) fail("validation_failed", `${name} exceeds maximum_json_bytes`);\n      return character.next;',
+      '      return character.next;',
+    ],
+    [
+      '    },\n  };\n}\n\nfunction consumeRawCharacter',
+      '    },\n    enforce() {\n      if (used > maximum) fail("validation_failed", `${name} exceeds maximum_json_bytes`);\n    },\n  };\n}\n\nfunction consumeRawCharacter',
+    ],
+    [
+      '        index = skipRawJsonValue(text, index, budget);\n        index = skipJsonWhitespace(text, index, budget);',
+      '        try {\n          index = skipRawJsonValue(text, index, budget);\n          index = skipJsonWhitespace(text, index, budget);\n        } finally {\n          budget?.enforce();\n        }',
+    ],
+  ],
+);
+let deferredLargestArray = 0;
+const originalDeferredPush = Array.prototype.push;
+Array.prototype.push = function deferredBudgetPush(...items) {
+  const result = originalDeferredPush.apply(this, items);
+  deferredLargestArray = Math.max(deferredLargestArray, this.length);
+  return result;
+};
+try {
+  assert.throws(
+    () => claimWorkDeferredBudgetMutant.validateClaimResponseText(claimResponseWithRawWorkText(`${"[".repeat(maximumWorkBytes + 1)}${"]".repeat(maximumWorkBytes + 1)}`), contract),
+    (error) => error instanceof claimWorkDeferredBudgetMutant.ProtocolError && error.code === "validation_failed",
+    "deferred claim work byte barrier must eventually reject the oversized item",
+  );
+} finally {
+  Array.prototype.push = originalDeferredPush;
+}
+assert.ok(
+  deferredLargestArray > maximumWorkBytes,
+  "deferred claim work byte-barrier mutant must demonstrate traversal beyond the approved nesting budget",
+);
+
 const acknowledgementModeAuthorityMutant = await loadValidatorMutation(
   "acknowledgement-authoritative-destination-mode",
   '  validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext);\n  validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: acceptanceContext.destination_mode });',
@@ -1399,4 +1464,4 @@ const activeText = [
 assert.doesNotMatch(activeText, /fullInteractive/);
 assert.doesNotMatch(activeText, /Repeal OBBBA Forum|obbba-/i);
 
-console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 18 targeted source-reversion probes for ${contract.version}.`);
+console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 19 targeted source-reversion probes for ${contract.version}.`);

@@ -116,8 +116,9 @@ function rawUtf8Character(text, index) {
   return { next: index + 1, bytes: 3 };
 }
 
-function rawUtf8Budget(text, maximum, name) {
-  let used = 0;
+function rawUtf8Budget(text, maximum, name, initialBytes = 0) {
+  let used = initialBytes;
+  if (used > maximum) fail("validation_failed", `${name} exceeds maximum_json_bytes`);
   return {
     consume(index) {
       const character = rawUtf8Character(text, index);
@@ -252,6 +253,16 @@ function skipJsonWhitespace(text, index, budget = null) {
   return index;
 }
 
+function locateJsonWhitespaceEnd(text, index) {
+  let bytes = 0;
+  while (index < text.length && /[\t\n\r ]/.test(text[index])) {
+    const character = rawUtf8Character(text, index);
+    bytes += character.bytes;
+    index = character.next;
+  }
+  return { index, bytes };
+}
+
 function skipRawJsonValue(text, start, budget = null) {
   let index = skipJsonWhitespace(text, start, budget);
   if (text[index] === '"') return skipRawJsonString(text, index, budget);
@@ -294,10 +305,11 @@ function topLevelArrayElementTexts(text, propertyName, maximumElementBytes = nul
       const elements = [];
       while (true) {
         const segmentStart = index;
-        const budget = maximumElementBytes === null ? null : rawUtf8Budget(text, maximumElementBytes, `${propertyName} item`);
-        index = skipJsonWhitespace(text, index, budget);
+        const leadingWhitespace = locateJsonWhitespaceEnd(text, index);
+        index = leadingWhitespace.index;
         if (text[index] === "]") return elements;
         if (maximumElements !== null && elements.length >= maximumElements) fail("validation_failed", `${propertyName} exceeds maximum items`);
+        const budget = maximumElementBytes === null ? null : rawUtf8Budget(text, maximumElementBytes, `${propertyName} item`, leadingWhitespace.bytes);
         index = skipRawJsonValue(text, index, budget);
         index = skipJsonWhitespace(text, index, budget);
         const elementText = text.slice(segmentStart, index);

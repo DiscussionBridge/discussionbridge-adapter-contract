@@ -179,6 +179,9 @@ bounded lexical preflight before strict JSON parsing. The preflight counts raw
 UTF-8 bytes from the item's exact start and stops at the first excess byte, so
 oversized malformed items fail at the byte barrier before further nesting,
 whole-item retention, or syntax parsing.
+Whitespace inside an empty `publication_work` array does not create a work item
+and therefore does not consume the per-item budget. When an item exists, its
+leading and trailing whitespace remain part of that item's raw-byte accounting.
 
 The first `synchronized` acknowledgement is valid only for the exact active
 lease after the native operation succeeds. It preserves destination identity
