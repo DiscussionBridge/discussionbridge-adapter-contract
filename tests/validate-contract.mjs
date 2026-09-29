@@ -96,6 +96,12 @@ approvalEntitlement.scopes = ["apply_customer_approved_upgrade"];
 delete approvalEntitlement.signature;
 approvalEntitlement.signature = sign(null, Buffer.from(`${operator.entitlement.signing_domain}${canonicalize(approvalEntitlement)}`, "utf8"), approvalKeyPair.privateKey).toString("base64url");
 const approvalTrust = { [`${approvalEntitlement.issuer_id}:${approvalEntitlement.key_id}`]: approvalKeyPair.publicKey.export({ format: "jwk" }).x };
+const resignApprovalEntitlement = (value) => {
+  const signed = structuredClone(value);
+  delete signed.signature;
+  signed.signature = sign(null, Buffer.from(`${operator.entitlement.signing_domain}${canonicalize(signed)}`, "utf8"), approvalKeyPair.privateKey).toString("base64url");
+  return signed;
+};
 const claimedWorkFixture = fixtures.get("publication-work-claim.json");
 const renewalContext = {
   work: claimedWorkFixture.publication_work[0],
@@ -104,7 +110,7 @@ const renewalContext = {
   request_received_at: "2026-09-27T18:34:00Z",
   current_total_lease_seconds: 300,
 };
-const acknowledgementContext = { received_at: "2026-09-27T18:31:00Z" };
+const acknowledgementContext = { received_at: "2026-09-27T18:31:00Z", claimed_at: claimedWorkFixture.claimed_at };
 const approvedOperationContext = {
   forumId: approvalEntitlement.forum_id,
   at: "2026-09-28T00:00:00Z",
@@ -163,7 +169,7 @@ const positiveHandlers = {
   },
   "source-url-proof.json": (value) => validateUrlProofResponse(value, contract),
   "publication-work-claim-request.json": (value) => validateClaimRequest(value, contract),
-  "publication-work-claim.json": (value) => validateClaimResponse(value, contract),
+  "publication-work-claim.json": (value) => validateClaimResponse(value, contract, fixtures.get("publication-work-claim-request.json")),
   "publication-work-restore.json": (value) => validateClaimResponse(value, contract),
   "publication-work-withdrawal.json": (value) => validateClaimResponse(value, contract),
   "publication-lease-renewal.json": (value) => validateRenewal(value, contract, renewalContext),
@@ -204,14 +210,17 @@ const positiveHandlers = {
     validateAcknowledgement(synchronized, contract);
     validateAcknowledgementIdentity(claimedWork, synchronized, "leased", acknowledgementContext);
     validateAcknowledgementResponse(responses.synchronized, contract);
+    validateCorrelationExchange({ request_header: synchronized.correlation_id, request_body: synchronized.correlation_id, response_header: responses.synchronized.correlation_id, response_body: responses.synchronized.correlation_id }, contract);
     validateStageTransition(synchronized, deployed, responses.synchronized);
     validateAcknowledgement(deployed, contract);
     validateAcknowledgementIdentity({ ...claimedWork, stage_token: responses.synchronized.next_stage_token }, deployed, "awaiting_deployment", { received_at: "2026-09-27T18:36:00Z" });
     validateAcknowledgementResponse(responses.deployed, contract);
+    validateCorrelationExchange({ request_header: deployed.correlation_id, request_body: deployed.correlation_id, response_header: responses.deployed.correlation_id, response_body: responses.deployed.correlation_id }, contract);
     validateStageTransition(deployed, verified, responses.deployed);
     validateAcknowledgement(verified, contract);
     validateAcknowledgementIdentity({ ...claimedWork, stage_token: responses.deployed.next_stage_token }, verified, "awaiting_verification", { received_at: "2026-09-27T18:37:00Z" });
     validateAcknowledgementResponse(responses.verified, contract);
+    validateCorrelationExchange({ request_header: verified.correlation_id, request_body: verified.correlation_id, response_header: responses.verified.correlation_id, response_body: responses.verified.correlation_id }, contract);
     assert.deepEqual(value.interruption_recovery_states, ["awaiting_deployment", "awaiting_verification"]);
     assert.equal(value.terminal_state, "acknowledged");
   },
@@ -303,6 +312,12 @@ entityExcerpt.canonical_url = "https://publisher.example/article/?first=1&second
 entityExcerpt.read_more_url = entityExcerpt.canonical_url;
 entityExcerpt.content_html = '<p>This is a bounded excerpt.</p><p><a href="https://publisher.example/article/?first=1&amp;second=2">Read&#32;More</a></p>';
 validateResolveRecord(entityExcerpt, contract);
+const namedEntityExcerpt = structuredClone(formattedExcerpt);
+namedEntityExcerpt.content_html = `<p>This is a bounded excerpt.</p><p><a href="${namedEntityExcerpt.canonical_url.replace(":", "&colon;")}">Read&ensp;More</a></p>`;
+validateResolveRecord(namedEntityExcerpt, contract);
+const optionalEndTagExcerpt = structuredClone(formattedExcerpt);
+optionalEndTagExcerpt.content_html = `<p>This is a bounded excerpt.<p><a href="${optionalEndTagExcerpt.canonical_url}">Read More</a>`;
+validateResolveRecord(optionalEndTagExcerpt, contract);
 
 const fractionalRenewal = structuredClone(fixtures.get("publication-lease-renewal.json"));
 fractionalRenewal.response.lease_expires_at = "2026-09-27T18:50:00.0001Z";
@@ -311,6 +326,18 @@ validateRenewal(fractionalRenewal, contract, {
   work: { ...renewalContext.work, lease_expires_at: "2026-09-27T18:35:00.0001Z" },
   claimed_at: "2026-09-27T18:30:00.0001Z",
 });
+const maximumInitialClaimRequest = { ...fixtures.get("publication-work-claim-request.json"), requested_lease_seconds: contract.publication_work.claim.maximum_requested_lease_seconds, correlation_id: "claim-boundary-01" };
+const maximumInitialClaimResponse = structuredClone(fixtures.get("publication-work-claim.json"));
+maximumInitialClaimResponse.claimed_at = "2026-09-27T18:30:00.0001Z";
+maximumInitialClaimResponse.correlation_id = maximumInitialClaimRequest.correlation_id;
+for (const work of maximumInitialClaimResponse.publication_work) {
+  work.lease_expires_at = "2026-09-27T19:30:00.0001Z";
+  work.correlation_id = maximumInitialClaimRequest.correlation_id;
+}
+validateClaimResponse(maximumInitialClaimResponse, contract, maximumInitialClaimRequest);
+const defaultInitialClaimRequest = structuredClone(fixtures.get("publication-work-claim-request.json"));
+delete defaultInitialClaimRequest.requested_lease_seconds;
+validateClaimResponse(fixtures.get("publication-work-claim.json"), contract, defaultInitialClaimRequest);
 const maximumTerminalTrace = structuredClone(fixtures.get("publication-retry-trace.json"));
 maximumTerminalTrace.terminal_failure.attempt_count = contract.publication_work.maximum_total_attempts;
 validateRetryTrace(maximumTerminalTrace, contract);
@@ -503,18 +530,26 @@ const mutationCases = [
   ["wrong acknowledgement resource", () => { const work = fixtures.get("publication-work-claim.json").publication_work[0]; const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.resource_id = "b4965d46-e657-4af4-af47-6439e544eeb8"; validateAcknowledgementIdentity(work, ack, "leased", acknowledgementContext); }, "identity_conflict"],
   ["wrong acknowledgement destination policy", () => { const work = fixtures.get("publication-work-claim.json").publication_work[0]; const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.destination_policy_id = "destination:other:1"; validateAcknowledgementIdentity(work, ack, "leased", acknowledgementContext); }, "identity_conflict"],
   ["wrong acknowledgement action", () => { const work = fixtures.get("publication-work-claim.json").publication_work[0]; const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.action = "publish"; validateAcknowledgementIdentity(work, ack, "leased", acknowledgementContext); }, "identity_conflict"],
-  ["expired first acknowledgement", () => validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], fixtures.get("publication-acknowledgement-static-pending.json"), "leased", { received_at: "2026-09-27T18:36:00Z" }), "work_expired"],
+  ["expired first acknowledgement", () => validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], fixtures.get("publication-acknowledgement-static-pending.json"), "leased", { ...acknowledgementContext, received_at: "2026-09-27T18:36:00Z" }), "work_expired"],
   ["synchronization after receipt", () => { const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.synchronized_at = "2026-09-27T18:31:01Z"; validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], ack, "leased", acknowledgementContext); }, "validation_failed"],
+  ["synchronization before claim", () => { const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.synchronized_at = "2026-09-27T18:29:00Z"; validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], ack, "leased", { received_at: "2026-09-27T18:29:30Z", claimed_at: claimedWorkFixture.claimed_at }); }, "validation_failed"],
   ["unissued next stage token", () => { const previous = fixtures.get("publication-acknowledgement-static-pending.json"); const next = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); next.stage_token = "a".repeat(64); validateStageTransition(previous, next, fixtures.get("publication-acknowledgement-responses.json").synchronized); }, "stage_conflict"],
   ["terminal dynamic acknowledgement advancement", () => validateStageTransition(fixtures.get("publication-acknowledgement-create.json"), fixtures.get("publication-acknowledgement-static-deployed.json"), { ...fixtures.get("publication-acknowledgement-responses.json").dynamic, terminal: false, next_stage_token: "3".repeat(64) }), "stage_conflict"],
   ["stage transition changed synchronized time", () => { const next = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); next.synchronized_at = "2026-09-27T18:31:01Z"; validateStageTransition(fixtures.get("publication-acknowledgement-static-pending.json"), next, fixtures.get("publication-acknowledgement-responses.json").synchronized); }, "identity_conflict"],
   ["stage transition changed deployed time", () => { const next = structuredClone(fixtures.get("publication-acknowledgement.json")); next.deployed_at = "2026-09-27T18:31:40Z"; validateStageTransition(fixtures.get("publication-acknowledgement-static-deployed.json"), next, fixtures.get("publication-acknowledgement-responses.json").deployed); }, "identity_conflict"],
+  ["deployment before synchronization", () => { const value = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); value.deployed_at = "2026-09-27T18:30:59Z"; validateAcknowledgement(value, contract); }, "validation_failed"],
+  ["verification before deployment", () => { const value = structuredClone(fixtures.get("publication-acknowledgement.json")); value.publicly_verified_at = "2026-09-27T18:31:29Z"; validateAcknowledgement(value, contract); }, "validation_failed"],
+  ["deployment after receipt", () => validateAcknowledgementIdentity({ ...fixtures.get("publication-work-claim.json").publication_work[0], stage_token: fixtures.get("publication-acknowledgement-static-deployed.json").stage_token }, { ...fixtures.get("publication-acknowledgement-static-deployed.json"), deployed_at: "2026-09-27T18:36:30Z" }, "awaiting_deployment", { received_at: "2026-09-27T18:36:00Z" }), "validation_failed"],
+  ["verification after receipt", () => validateAcknowledgementIdentity({ ...fixtures.get("publication-work-claim.json").publication_work[0], stage_token: fixtures.get("publication-acknowledgement.json").stage_token }, { ...fixtures.get("publication-acknowledgement.json"), publicly_verified_at: "2026-09-27T18:38:00Z" }, "awaiting_verification", { received_at: "2026-09-27T18:37:00Z" }), "validation_failed"],
   ["same revision reused at higher sequence", () => { const stored = { source_revision: "revision:1", source_revision_sequence: 1, source_content_sha256: "a".repeat(64) }; const incoming = { source_revision: "revision:1", source_revision_sequence: 2, source_content_sha256: "b".repeat(64) }; validateRevisionTransition(stored, incoming); }, "reconciliation_required"],
   ["cursor connection mismatch", () => validateCursorSnapshot({ snapshot: "snap:1", connection_id: "dbc_222222222222222222222222", policy_revision: "policy:1" }, { snapshot: "snap:1", connection_id: "dbc_111111111111111111111111", policy_revision: "policy:1" }), "cursor_snapshot_mismatch"],
   ["cursor policy mismatch", () => validateCursorSnapshot({ snapshot: "snap:1", connection_id: "dbc_111111111111111111111111", policy_revision: "policy:2" }, { snapshot: "snap:1", connection_id: "dbc_111111111111111111111111", policy_revision: "policy:1" }), "cursor_snapshot_mismatch"],
   ["removed direct author mapping", () => validateResolvedPolicy({ container_mapping: {}, taxonomy_mapping: { items: [] }, author_mapping: { destination_id: "author:removed", items: [] } }, [{ id: "author:removed", available: false }]), "policy_denied"],
   ["same forum clone after claimed rotation", () => validateForumClone("dbf_11111111111111111111111111111111", "dbf_11111111111111111111111111111111", true), "identity_conflict"],
   ["claim expired before issuance", () => { const value = structuredClone(fixtures.get("publication-work-claim.json")); value.publication_work[0].lease_expires_at = "2026-09-27T18:29:59Z"; validateClaimResponse(value, contract); }, "work_expired"],
+  ["claim exceeds initial lease ceiling", () => { const value = structuredClone(fixtures.get("publication-work-claim.json")); value.publication_work[0].lease_expires_at = "2026-09-27T23:30:00Z"; validateClaimResponse(value, contract); }, "lease_limit_exceeded"],
+  ["claim exceeds requested lease fractionally", () => { const value = structuredClone(fixtures.get("publication-work-claim.json")); value.publication_work[0].lease_expires_at = "2026-09-27T18:40:00.0001Z"; validateClaimResponse(value, contract, fixtures.get("publication-work-claim-request.json")); }, "validation_failed"],
+  ["claim correlation mismatch", () => { const request = { ...fixtures.get("publication-work-claim-request.json"), correlation_id: "different-claim" }; validateClaimResponse(fixtures.get("publication-work-claim.json"), contract, request); }, "validation_failed"],
   ["renewal valid-shaped foreign lease", () => { const value = structuredClone(fixtures.get("publication-lease-renewal.json")); value.request.lease_token = "d".repeat(64); validateRenewal(value, contract, renewalContext); }, "lease_conflict"],
   ["renewal inactive work", () => validateRenewal(fixtures.get("publication-lease-renewal.json"), contract, { ...renewalContext, state: "retry_wait" }), "lease_conflict"],
   ["renewal inconsistent total", () => { const value = structuredClone(fixtures.get("publication-lease-renewal.json")); value.response.total_lease_seconds = 1; validateRenewal(value, contract, renewalContext); }, "validation_failed"],
@@ -540,6 +575,9 @@ const mutationCases = [
   ["operator string execution context", () => validateOperatorEntitlement(approvalEntitlement, operator, approvalTrust, ""), "validation_failed"],
   ["operator array execution context", () => validateOperatorEntitlement(approvalEntitlement, operator, approvalTrust, []), "validation_failed"],
   ["operator null execution context", () => validateOperatorEntitlement(approvalEntitlement, operator, approvalTrust, null), "validation_failed"],
+  ["operator lifetime fractional overage", () => { const value = resignApprovalEntitlement({ ...approvalEntitlement, expires_at: "2027-09-27T18:00:00.0001Z", grace_until: "2027-10-04T18:00:00.0001Z" }); validateOperatorEntitlement(value, operator, approvalTrust, approvedOperationContext); }, "validation_failed"],
+  ["operator grace fractional overage", () => { const value = resignApprovalEntitlement({ ...approvalEntitlement, grace_until: "2027-10-04T18:00:00.0001Z" }); validateOperatorEntitlement(value, operator, approvalTrust, approvedOperationContext); }, "validation_failed"],
+  ["static trace correlation mismatch", () => validateCorrelationExchange({ request_header: "request-correlation", request_body: "request-correlation", response_header: "response-correlation", response_body: "response-correlation" }, contract), "validation_failed"],
   ["failure leaks lease token", () => { const value = structuredClone(fixtures.get("publication-failure.json")); value.error_detail = `failure ${value.lease_token}`; validateFailure(value, contract); }, "secret_exposure"],
   ["excerpt plain text read more", () => { const value = structuredClone(baseExcerpt); value.content_html = `Excerpt Read More ${value.canonical_url}`; validateResolveRecord(value, contract); }, "validation_failed"],
   ["excerpt comment-only anchor", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><!-- <a href="${value.canonical_url}">Read More</a> -->`; validateResolveRecord(value, contract); }, "validation_failed"],
@@ -550,6 +588,14 @@ const mutationCases = [
   ["excerpt script-comment anchor", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><script>/* <a href="${value.canonical_url}">Read More</a> */</script>`; validateResolveRecord(value, contract); }, "validation_failed"],
   ["excerpt hidden link", () => { const value = structuredClone(baseExcerpt); value.content_html = `<div hidden><p>Excerpt only.</p><a href="${value.canonical_url}">Read More</a></div>`; validateResolveRecord(value, contract); }, "validation_failed"],
   ["excerpt duplicate href", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><a href="https://wrong.example/" href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt self-closing template trap", () => { const value = structuredClone(baseExcerpt); value.content_html = `<template/><p>Excerpt only.</p><a href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt self-closing hidden div trap", () => { const value = structuredClone(baseExcerpt); value.content_html = `<div hidden/><p>Excerpt only.</p><a href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt self-closing textarea trap", () => { const value = structuredClone(baseExcerpt); value.content_html = `<textarea/><p>Excerpt only.</p><a href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt spaced tag trap", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p>< a href="${value.canonical_url}">Read More</ a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt commented display none", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><a style="display:/**/none" href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt commented visibility hidden", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><a style="visibility:/**/hidden" href="${value.canonical_url}">Read More</a>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt iframe anchor text", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><iframe><a href="${value.canonical_url}">Read More</a></iframe>`; validateResolveRecord(value, contract); }, "validation_failed"],
+  ["excerpt xmp anchor text", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><xmp><a href="${value.canonical_url}">Read More</a></xmp>`; validateResolveRecord(value, contract); }, "validation_failed"],
   ["chunk set invalid UTF-8", () => { const content = Buffer.from([0xff]); const digest = createHash("sha256").update(content).digest("hex"); const descriptor = { source_revision: "revision:invalid-utf8", byte_length: 1, sha256: digest, chunk_count: 1 }; const chunks = [{ source_revision: descriptor.source_revision, chunk: 1, chunk_count: 1, decoded_bytes: 1, chunk_sha256: digest, content_base64: content.toString("base64"), correlation_id: "invalid-utf8-01" }]; validateChunkSet(descriptor, chunks, contract); }, "integrity_failed"],
   ["package version mismatch", () => validateRepositoryIdentity({ ...packageMetadata, version: "0.2.0-alpha.20" }, contract, operator), "contract_version_mismatch"],
   ["operator contract version mismatch", () => validateRepositoryIdentity(packageMetadata, contract, { ...operator, version: "0.2.0-alpha.20" }), "contract_version_mismatch"],

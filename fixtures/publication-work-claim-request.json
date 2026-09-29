@@ -1,1 +1,1 @@
-{"maximum_items":8,"requested_lease_seconds":600,"worker_id":"ghost-worker-1","correlation_id":"claim-request-01"}
+{"maximum_items":8,"requested_lease_seconds":600,"worker_id":"ghost-worker-1","correlation_id":"work-01"}

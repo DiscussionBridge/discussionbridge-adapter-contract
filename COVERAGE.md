@@ -81,6 +81,10 @@ missing approved requirement.
   negative fixture is rejected with its exact expected protocol code, real
   Ed25519 verification runs locally, and mutation classes cover missing and
   unknown fields, enum, bound, hash, and signature failures.
+- Excerpt validation uses the lockfile-pinned standards parser exercised by CI,
+  and claim/acknowledgement traces compose request, response, correlation,
+  lease, receipt, stage, and event chronology rather than validating shapes in
+  isolation.
 
 ## Current audit result
 

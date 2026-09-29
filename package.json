@@ -5,5 +5,8 @@
   "scripts": {
     "test": "node tests/validate-contract.mjs"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "parse5": "8.0.1"
+  }
 }
