@@ -173,7 +173,10 @@ maximum total lease for bounded static build/deploy/verification work.
 Each publication work item is limited to 128 KiB and at most 120 resolved
 taxonomy entries. Resolved opaque identifiers are limited to 255 UTF-8 bytes,
 container kinds to 100 bytes, and duplicate taxonomy source IDs are rejected.
-Several source IDs may intentionally map to the same destination ID.
+Several source IDs may intentionally map to the same destination ID. Claim
+responses locate and byte-screen each raw work item through a bounded lexical
+preflight before strict JSON parsing; oversized malformed items fail at the
+byte barrier rather than entering the parser.
 
 The first `synchronized` acknowledgement is valid only for the exact active
 lease after the native operation succeeds. It preserves destination identity
@@ -183,7 +186,10 @@ Dynamic destinations finish at `synchronized` with deployment and verification
 `not_required`. Static work persists at `awaiting_deployment`, then
 `awaiting_verification`, with new bounded stage tokens; only the exact ordered
 `synchronized` → `deployed` → `verified` trace becomes terminal. An
-interruption never repeats the native mutation or discards the binding.
+interruption never repeats the native mutation or discards the binding. The
+receiver supplies the authoritative dynamic/static destination mode to its
+acceptance decision; acknowledgement-controlled state labels cannot select or
+downgrade that lifecycle.
 
 The initial attempt is attempt 1. Registered transient failures after attempts
 1, 2, and 3 retry at 60, 300, and 900 seconds; a failure on attempt 4 enters
@@ -203,7 +209,10 @@ The bounded platform catalog reports native containers, taxonomies, terms,
 authors, supported presentation modes, and actual native limits in segments of
 at most 100 items. Operator-approved mapping policy references an exact catalog
 revision. The complete raw UTF-8 GET response and PUT request bodies are each
-limited to 65,536 bytes before parsing or normalization.
+limited to 65,536 bytes before parsing or normalization. The PUT ingress
+validator accepts the actual standalone request body; response schema,
+accepted-segment and correlation checks compose separately after that request
+has passed its raw boundary.
 
 Each segment has an exact item schema. Stable opaque native IDs, taxonomy and
 parent references, and catalog revisions are limited to 255 UTF-8 bytes;

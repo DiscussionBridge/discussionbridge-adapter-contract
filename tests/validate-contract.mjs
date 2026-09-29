@@ -16,6 +16,7 @@ import {
   validateCatalogSegmentText,
   validateCatalogCursor,
   validateCatalogUpdate,
+  validateCatalogUpdateResponse,
   validateCatalogUpdateText,
   validateClaimRequest,
   validateClaimResponse,
@@ -142,7 +143,7 @@ const renewalContext = {
   request_received_at: "2026-09-27T18:34:00Z",
   current_total_lease_seconds: 300,
 };
-const acknowledgementContext = { received_at: "2026-09-27T18:31:00Z", claimed_at: claimedWorkFixture.claimed_at };
+const acknowledgementContext = { received_at: "2026-09-27T18:31:00Z", claimed_at: claimedWorkFixture.claimed_at, destination_mode: "static" };
 const approvedOperationContext = {
   forumId: approvalEntitlement.forum_id,
   at: "2026-09-28T00:00:00Z",
@@ -225,6 +226,7 @@ const positiveHandlers = {
     validateAcknowledgementExchange(value.work, acknowledgement, response, contract, "leased", {
       claimed_at: value.claimed_at,
       received_at: value.received_at,
+      destination_mode: "dynamic",
     });
     validateCorrelationExchange({ request_header: acknowledgement.correlation_id, request_body: acknowledgement.correlation_id, response_header: response.correlation_id, response_body: response.correlation_id }, contract);
     assert.equal(response.resulting_state, value.terminal_state);
@@ -251,17 +253,17 @@ const positiveHandlers = {
     const claimedWork = fixtures.get("publication-work-claim.json").publication_work[0];
     validateAcknowledgement(synchronized, contract);
     validateAcknowledgementIdentity(claimedWork, synchronized, "leased", acknowledgementContext);
-    validateAcknowledgementResponse(responses.synchronized, contract, { work: claimedWork, acknowledgement: synchronized });
+    validateAcknowledgementResponse(responses.synchronized, contract, { work: claimedWork, acknowledgement: synchronized, destination_mode: "static" });
     validateCorrelationExchange({ request_header: synchronized.correlation_id, request_body: synchronized.correlation_id, response_header: responses.synchronized.correlation_id, response_body: responses.synchronized.correlation_id }, contract);
     validateStageTransition(synchronized, deployed, responses.synchronized);
     validateAcknowledgement(deployed, contract);
-    validateAcknowledgementIdentity({ ...claimedWork, stage_token: responses.synchronized.next_stage_token }, deployed, "awaiting_deployment", { received_at: "2026-09-27T18:36:00Z" });
-    validateAcknowledgementResponse(responses.deployed, contract, { work: claimedWork, acknowledgement: deployed });
+    validateAcknowledgementIdentity({ ...claimedWork, stage_token: responses.synchronized.next_stage_token }, deployed, "awaiting_deployment", { received_at: "2026-09-27T18:36:00Z", destination_mode: "static" });
+    validateAcknowledgementResponse(responses.deployed, contract, { work: claimedWork, acknowledgement: deployed, destination_mode: "static" });
     validateCorrelationExchange({ request_header: deployed.correlation_id, request_body: deployed.correlation_id, response_header: responses.deployed.correlation_id, response_body: responses.deployed.correlation_id }, contract);
     validateStageTransition(deployed, verified, responses.deployed);
     validateAcknowledgement(verified, contract);
-    validateAcknowledgementIdentity({ ...claimedWork, stage_token: responses.deployed.next_stage_token }, verified, "awaiting_verification", { received_at: "2026-09-27T18:37:00Z" });
-    validateAcknowledgementResponse(responses.verified, contract, { work: claimedWork, acknowledgement: verified });
+    validateAcknowledgementIdentity({ ...claimedWork, stage_token: responses.deployed.next_stage_token }, verified, "awaiting_verification", { received_at: "2026-09-27T18:37:00Z", destination_mode: "static" });
+    validateAcknowledgementResponse(responses.verified, contract, { work: claimedWork, acknowledgement: verified, destination_mode: "static" });
     validateCorrelationExchange({ request_header: verified.correlation_id, request_body: verified.correlation_id, response_header: responses.verified.correlation_id, response_body: responses.verified.correlation_id }, contract);
     assert.deepEqual(value.interruption_recovery_states, ["awaiting_deployment", "awaiting_verification"]);
     assert.equal(value.terminal_state, "acknowledged");
@@ -290,7 +292,11 @@ const positiveHandlers = {
   "platform-catalog-terms.json": (_value, text) => validateCatalogSegmentText(text, contract),
   "platform-catalog-authors.json": (_value, text) => validateCatalogSegmentText(text, contract),
   "platform-catalog-native-limits.json": (_value, text) => validateCatalogSegmentText(text, contract),
-  "platform-catalog-update.json": (_value, text) => validateCatalogUpdateText(text, contract),
+  "platform-catalog-update.json": (value) => {
+    const request = validateCatalogUpdateText(JSON.stringify(value.request), contract);
+    validateCatalogUpdateResponse(value.response, request, contract);
+    validateCatalogUpdate(value, contract);
+  },
   "operator-entitlement.json": (value) => validateOperatorEntitlement(value, operator, trust),
   "operator-entitlement-test-vector.json": (value) => {
     assert.equal(value.signing_domain, operator.entitlement.signing_domain);
@@ -470,12 +476,13 @@ function jsonTextAtSize(value, targetBytes) {
   return `${text}${" ".repeat(targetBytes - Buffer.byteLength(text))}`;
 }
 
-function catalogUpdateWithRawRequestSize(targetBytes) {
-  const exchange = structuredClone(fixtures.get("platform-catalog-update.json"));
-  const requestText = JSON.stringify(exchange.request);
+function catalogRequestTextAtSize(targetBytes, placement = "inside") {
+  const requestText = JSON.stringify(fixtures.get("platform-catalog-update.json").request);
   assert.ok(Buffer.byteLength(requestText) <= targetBytes, "catalog request fixture must fit its raw JSON ceiling");
-  const paddedRequest = `${requestText.slice(0, -1)}${" ".repeat(targetBytes - Buffer.byteLength(requestText))}}`;
-  return JSON.stringify(exchange).replace(requestText, paddedRequest);
+  const padding = " ".repeat(targetBytes - Buffer.byteLength(requestText));
+  if (placement === "leading") return `${padding}${requestText}`;
+  if (placement === "trailing") return `${requestText}${padding}`;
+  return `${requestText.slice(0, -1)}${padding}}`;
 }
 
 function fullyPopulatedCatalogUpdate() {
@@ -555,7 +562,9 @@ maximumCatalogUpdate.request.base_catalog_revision = "b".repeat(contract.common.
 maximumCatalogUpdate.response.catalog_revision = "r".repeat(contract.common.opaque_identifier_maximum_bytes);
 validateCatalogUpdate(maximumCatalogUpdate, contract);
 validateCatalogSegmentText(jsonTextAtSize(fixtures.get("platform-catalog-authors.json"), contract.platform_catalog.maximum_json_bytes), contract);
-validateCatalogUpdateText(catalogUpdateWithRawRequestSize(contract.platform_catalog.maximum_json_bytes), contract);
+validateCatalogUpdateText(catalogRequestTextAtSize(contract.platform_catalog.maximum_json_bytes), contract);
+validateCatalogUpdateText(catalogRequestTextAtSize(contract.platform_catalog.maximum_json_bytes, "leading"), contract);
+validateCatalogUpdateText(catalogRequestTextAtSize(contract.platform_catalog.maximum_json_bytes, "trailing"), contract);
 validateErrorResponseText(jsonTextAtSize(fixtures.get("rejected-response.json"), contract.error_responses.maximum_json_bytes), contract);
 const validSplitUtf8Content = Buffer.from("A😀B", "utf8");
 const validSplitUtf8Parts = [validSplitUtf8Content.subarray(0, 3), validSplitUtf8Content.subarray(3)];
@@ -581,14 +590,83 @@ const validSupplementaryEntitlement = resignApprovalEntitlement({
 });
 validateOperatorEntitlement(validSupplementaryEntitlement, operator, approvalTrust);
 assert.equal(parseProtocolJson(JSON.stringify({ provider_name: "Provider 😀" })).provider_name, "Provider 😀");
-function claimResponseWithRawWorkSize(targetBytes) {
+const escapedProtocolJson = String.raw`{"value":"quote:\" slash:\/ backslash:\\ controls:\b\f\n\r\t letter:\u0041"}`;
+assert.deepEqual(parseProtocolJson(escapedProtocolJson), JSON.parse(escapedProtocolJson), "strict scanner and JSON parser must agree on every JSON string escape");
+function claimResponseWithRawWorkText(rawWork) {
   const claim = structuredClone(fixtures.get("publication-work-claim.json"));
   const workText = JSON.stringify(claim.publication_work[0]);
-  const rawWork = `${workText.slice(0, -1)}${" ".repeat(targetBytes - Buffer.byteLength(workText))}}`;
-  const text = JSON.stringify(claim);
-  return text.replace(workText, rawWork);
+  return JSON.stringify(claim).replace(workText, rawWork);
 }
+
+function claimResponseWithRawWorkSize(targetBytes, placement = "inside") {
+  const workText = JSON.stringify(fixtures.get("publication-work-claim.json").publication_work[0]);
+  const padding = " ".repeat(targetBytes - Buffer.byteLength(workText));
+  const rawWork = placement === "leading"
+    ? `${padding}${workText}`
+    : placement === "trailing"
+      ? `${workText}${padding}`
+      : `${workText.slice(0, -1)}${padding}}`;
+  return claimResponseWithRawWorkText(rawWork);
+}
+
+function claimResponseWithItemCount(count) {
+  const claim = structuredClone(fixtures.get("publication-work-claim.json"));
+  claim.publication_work = Array.from({ length: count }, (_, index) => ({
+    ...structuredClone(claim.publication_work[0]),
+    work_id: `dbw_${index.toString(16).padStart(32, "0")}`,
+  }));
+  return JSON.stringify(claim);
+}
+
 validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes), contract, fixtures.get("publication-work-claim-request.json"));
+validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes, "leading"), contract, fixtures.get("publication-work-claim-request.json"));
+validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes, "trailing"), contract, fixtures.get("publication-work-claim-request.json"));
+validateClaimResponseText(
+  JSON.stringify(fixtures.get("publication-work-claim.json")).replace('"publication_work"', '"publication_\\u0077ork"'),
+  contract,
+  fixtures.get("publication-work-claim-request.json"),
+);
+validateClaimResponseText(claimResponseWithItemCount(contract.publication_work.claim.maximum_items), contract);
+
+function assertProtocolRejectionBeforeJsonParse(action, expectedCode, maximumParseCalls, message) {
+  const originalJsonParse = JSON.parse;
+  let parseCalls = 0;
+  JSON.parse = (...args) => {
+    parseCalls += 1;
+    return originalJsonParse(...args);
+  };
+  try {
+    assert.throws(action, (error) => error instanceof ProtocolError && error.code === expectedCode, message);
+  } finally {
+    JSON.parse = originalJsonParse;
+  }
+  assert.ok(parseCalls <= maximumParseCalls, `${message}: expected at most ${maximumParseCalls} JSON.parse calls, observed ${parseCalls}`);
+}
+
+assertProtocolRejectionBeforeJsonParse(
+  () => validateCatalogSegmentText(`[${" ".repeat(contract.platform_catalog.maximum_json_bytes)}`, contract),
+  "validation_failed",
+  0,
+  "oversized malformed catalog response must reject before parsing",
+);
+assertProtocolRejectionBeforeJsonParse(
+  () => validateCatalogUpdateText(`[${" ".repeat(contract.platform_catalog.maximum_json_bytes)}`, contract),
+  "validation_failed",
+  0,
+  "oversized malformed catalog request must reject before parsing",
+);
+assertProtocolRejectionBeforeJsonParse(
+  () => validateErrorResponseText(`[${" ".repeat(contract.error_responses.maximum_json_bytes)}`, contract),
+  "validation_failed",
+  0,
+  "oversized malformed error response must reject before parsing",
+);
+assertProtocolRejectionBeforeJsonParse(
+  () => validateClaimResponseText(claimResponseWithRawWorkText("x".repeat(contract.publication_work.maximum_json_bytes + 1)), contract, fixtures.get("publication-work-claim-request.json")),
+  "validation_failed",
+  1,
+  "oversized malformed work item must reject after bounded envelope-key decoding and before item parsing",
+);
 
 validateOperatorEntitlement(fixtures.get("operator-entitlement.json"), operator, trust, {
   forumId: fixtures.get("operator-entitlement.json").forum_id,
@@ -715,6 +793,10 @@ const mutationCases = [
   ["claim request unknown field", () => validateClaimRequest({ ...structuredClone(fixtures.get("publication-work-claim-request.json")), unexpected: true }, contract), "unknown_field"],
   ["claim response unknown field", () => validateClaimResponse({ ...structuredClone(fixtures.get("publication-work-claim.json")), unexpected: true }, contract), "unknown_field"],
   ["work raw aggregate over limit", () => validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes + 1), contract, fixtures.get("publication-work-claim-request.json")), "validation_failed"],
+  ["work raw leading whitespace over limit", () => validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes + 1, "leading"), contract, fixtures.get("publication-work-claim-request.json")), "validation_failed"],
+  ["work raw trailing whitespace over limit", () => validateClaimResponseText(claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes + 1, "trailing"), contract, fixtures.get("publication-work-claim-request.json")), "validation_failed"],
+  ["work malformed raw item over limit before parse", () => validateClaimResponseText(claimResponseWithRawWorkText("x".repeat(contract.publication_work.maximum_json_bytes + 1)), contract, fixtures.get("publication-work-claim-request.json")), "validation_failed"],
+  ["claim response raw item count over limit", () => validateClaimResponseText(claimResponseWithItemCount(contract.publication_work.claim.maximum_items + 1), contract), "validation_failed"],
   ["work taxonomy count over limit", () => { const value = structuredClone(maximumWork); value.resolved_taxonomy.push({ source_id: "over", destination_id: "d" }); validateWork(value, contract); }, "validation_failed"],
   ["work duplicate taxonomy source", () => { const value = structuredClone(fixtures.get("publication-work-claim.json").publication_work[0]); value.resolved_taxonomy = [{ source_id: "same", destination_id: "a" }, { source_id: "same", destination_id: "b" }]; validateWork(value, contract); }, "validation_failed"],
   ["work destination policy id over limit", () => { const value = structuredClone(fixtures.get("publication-work-claim.json").publication_work[0]); value.destination_policy_id = "x".repeat(contract.common.opaque_identifier_maximum_bytes + 1); validateWork(value, contract); }, "validation_failed"],
@@ -749,7 +831,11 @@ const mutationCases = [
   ["renewal nonnumeric total", () => { const value = structuredClone(fixtures.get("publication-lease-renewal.json")); value.response.total_lease_seconds = "1200"; validateRenewal(value, contract, renewalContext); }, "validation_failed"],
   ["catalog compact aggregate byte ceiling", () => validateCatalogUpdate(fullyPopulatedCatalogUpdate(), contract), "validation_failed"],
   ["catalog response raw byte ceiling", () => validateCatalogSegmentText(jsonTextAtSize(fixtures.get("platform-catalog-authors.json"), contract.platform_catalog.maximum_json_bytes + 1), contract), "validation_failed"],
-  ["catalog request raw byte ceiling", () => validateCatalogUpdateText(catalogUpdateWithRawRequestSize(contract.platform_catalog.maximum_json_bytes + 1), contract), "validation_failed"],
+  ["catalog response malformed over limit before parse", () => validateCatalogSegmentText(`[${" ".repeat(contract.platform_catalog.maximum_json_bytes)}`, contract), "validation_failed"],
+  ["catalog request raw byte ceiling", () => validateCatalogUpdateText(catalogRequestTextAtSize(contract.platform_catalog.maximum_json_bytes + 1), contract), "validation_failed"],
+  ["catalog request leading whitespace byte ceiling", () => validateCatalogUpdateText(catalogRequestTextAtSize(contract.platform_catalog.maximum_json_bytes + 1, "leading"), contract), "validation_failed"],
+  ["catalog request trailing whitespace byte ceiling", () => validateCatalogUpdateText(catalogRequestTextAtSize(contract.platform_catalog.maximum_json_bytes + 1, "trailing"), contract), "validation_failed"],
+  ["catalog request malformed over limit before parse", () => validateCatalogUpdateText(`[${" ".repeat(contract.platform_catalog.maximum_json_bytes)}`, contract), "validation_failed"],
   ["catalog item id over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-authors.json")); value.items[0].id = "x".repeat(contract.common.opaque_identifier_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
   ["catalog item name over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-authors.json")); value.items[0].name = "x".repeat(contract.common.descriptive_name_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
   ["catalog container kind over limit", () => { const value = structuredClone(fixtures.get("platform-catalog-containers.json")); value.items[0].kind = "x".repeat(contract.platform_catalog.container_kind_maximum_bytes + 1); validateCatalogSegment(value, contract); }, "validation_failed"],
@@ -765,6 +851,7 @@ const mutationCases = [
   ["cutover rehearsal artifact mismatch", () => { const manifest = structuredClone(fixtures.get("cutover-manifest.json")); manifest.adapter_protocol.sha256 = "f".repeat(64); validateCutoverRehearsal(fixtures.get("cutover-rehearsal.json"), manifest, contract); }, "reconciliation_required"],
   ["oversized error response", () => { const value = structuredClone(fixtures.get("rejected-response.json")); value.message = "x".repeat(contract.error_responses.maximum_json_bytes); validateErrorResponse(value, contract); }, "validation_failed"],
   ["error response raw byte ceiling", () => validateErrorResponseText(jsonTextAtSize(fixtures.get("rejected-response.json"), contract.error_responses.maximum_json_bytes + 1), contract), "validation_failed"],
+  ["error response malformed over limit before parse", () => validateErrorResponseText(`[${" ".repeat(contract.error_responses.maximum_json_bytes)}`, contract), "validation_failed"],
   ...[null, 1, true, [], {}].map((message) => [
     `error response malformed message ${JSON.stringify(message)}`,
     () => validateErrorResponse({ ...structuredClone(fixtures.get("rejected-response.json")), message }, contract),
@@ -775,6 +862,7 @@ const mutationCases = [
   ["capability malformed nested mapping", () => { const value = structuredClone(fixtures.get("connection-capability.json")); value.destination_policies[0].author_mapping.items = [null]; validateConnectionCapability(value, contract); }, "validation_failed"],
   ["catalog malformed nested item", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.request.segments[0].items = [{ id: "", name: 123, available: "yes", unexpected: true }]; validateCatalogUpdate(value, contract); }, "unknown_field"],
   ["catalog response scope mismatch", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.response.platform_profile = "wordpress"; validateCatalogUpdate(value, contract); }, "validation_failed"],
+  ["catalog response correlation mismatch direct", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.response.correlation_id = "catalog-update-other"; validateCatalogUpdateResponse(value.response, value.request, contract); }, "validation_failed"],
   ["catalog accepted segments mismatch", () => { const value = structuredClone(fixtures.get("platform-catalog-update.json")); value.response.accepted_segments = ["native_limits"]; validateCatalogUpdate(value, contract); }, "validation_failed"],
   ["network malformed provenance", () => { const value = structuredClone(fixtures.get("network-source-detail.json")); value.network_provenance.origin_forum_id = "invalid"; value.network_provenance.operation_id = "reuse-me"; value.network_provenance.origin_topic_url = "javascript:alert(1)"; validateSourceDetail(value, contract); }, "validation_failed"],
   ["pending binding premature deployed timestamp", () => { const value = structuredClone(pendingRecord); value.bindings[0].deployed_at = "2026-09-27T18:31:30Z"; validateRecordShow({ bridge_record: value, correlation_id: "pending-binding-02" }, contract); }, "validation_failed"],
@@ -788,15 +876,15 @@ const mutationCases = [
   ["wrong acknowledgement action", () => { const work = fixtures.get("publication-work-claim.json").publication_work[0]; const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.action = "publish"; validateAcknowledgementIdentity(work, ack, "leased", acknowledgementContext); }, "identity_conflict"],
   ["expired first acknowledgement", () => validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], fixtures.get("publication-acknowledgement-static-pending.json"), "leased", { ...acknowledgementContext, received_at: "2026-09-27T18:36:00Z" }), "work_expired"],
   ["synchronization after receipt", () => { const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.synchronized_at = "2026-09-27T18:31:01Z"; validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], ack, "leased", acknowledgementContext); }, "validation_failed"],
-  ["synchronization before claim", () => { const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.synchronized_at = "2026-09-27T18:29:00Z"; validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], ack, "leased", { received_at: "2026-09-27T18:31:00Z", claimed_at: claimedWorkFixture.claimed_at }); }, "validation_failed"],
+  ["synchronization before claim", () => { const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.synchronized_at = "2026-09-27T18:29:00Z"; validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], ack, "leased", { received_at: "2026-09-27T18:31:00Z", claimed_at: claimedWorkFixture.claimed_at, destination_mode: "static" }); }, "validation_failed"],
   ["unissued next stage token", () => { const previous = fixtures.get("publication-acknowledgement-static-pending.json"); const next = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); next.stage_token = "a".repeat(64); validateStageTransition(previous, next, fixtures.get("publication-acknowledgement-responses.json").synchronized); }, "stage_conflict"],
   ["terminal dynamic acknowledgement advancement", () => validateStageTransition(fixtures.get("publication-acknowledgement-create.json"), fixtures.get("publication-acknowledgement-static-deployed.json"), { ...fixtures.get("publication-acknowledgement-responses.json").dynamic, terminal: false, next_stage_token: "3".repeat(64) }), "stage_conflict"],
   ["stage transition changed synchronized time", () => { const next = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); next.synchronized_at = "2026-09-27T18:31:01Z"; validateStageTransition(fixtures.get("publication-acknowledgement-static-pending.json"), next, fixtures.get("publication-acknowledgement-responses.json").synchronized); }, "identity_conflict"],
   ["stage transition changed deployed time", () => { const next = structuredClone(fixtures.get("publication-acknowledgement.json")); next.deployed_at = "2026-09-27T18:31:40Z"; validateStageTransition(fixtures.get("publication-acknowledgement-static-deployed.json"), next, fixtures.get("publication-acknowledgement-responses.json").deployed); }, "identity_conflict"],
   ["deployment before synchronization", () => { const value = structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")); value.deployed_at = "2026-09-27T18:30:59Z"; validateAcknowledgement(value, contract); }, "validation_failed"],
   ["verification before deployment", () => { const value = structuredClone(fixtures.get("publication-acknowledgement.json")); value.publicly_verified_at = "2026-09-27T18:31:29Z"; validateAcknowledgement(value, contract); }, "validation_failed"],
-  ["deployment after receipt", () => validateAcknowledgementIdentity({ ...fixtures.get("publication-work-claim.json").publication_work[0], stage_token: fixtures.get("publication-acknowledgement-static-deployed.json").stage_token }, { ...fixtures.get("publication-acknowledgement-static-deployed.json"), deployed_at: "2026-09-27T18:36:30Z" }, "awaiting_deployment", { received_at: "2026-09-27T18:36:00Z" }), "validation_failed"],
-  ["verification after receipt", () => validateAcknowledgementIdentity({ ...fixtures.get("publication-work-claim.json").publication_work[0], stage_token: fixtures.get("publication-acknowledgement.json").stage_token }, { ...fixtures.get("publication-acknowledgement.json"), publicly_verified_at: "2026-09-27T18:38:00Z" }, "awaiting_verification", { received_at: "2026-09-27T18:37:00Z" }), "validation_failed"],
+  ["deployment after receipt", () => validateAcknowledgementIdentity({ ...fixtures.get("publication-work-claim.json").publication_work[0], stage_token: fixtures.get("publication-acknowledgement-static-deployed.json").stage_token }, { ...fixtures.get("publication-acknowledgement-static-deployed.json"), deployed_at: "2026-09-27T18:36:30Z" }, "awaiting_deployment", { received_at: "2026-09-27T18:36:00Z", destination_mode: "static" }), "validation_failed"],
+  ["verification after receipt", () => validateAcknowledgementIdentity({ ...fixtures.get("publication-work-claim.json").publication_work[0], stage_token: fixtures.get("publication-acknowledgement.json").stage_token }, { ...fixtures.get("publication-acknowledgement.json"), publicly_verified_at: "2026-09-27T18:38:00Z" }, "awaiting_verification", { received_at: "2026-09-27T18:37:00Z", destination_mode: "static" }), "validation_failed"],
   ["same revision reused at higher sequence", () => { const stored = { source_revision: "revision:1", source_revision_sequence: 1, source_content_sha256: "a".repeat(64) }; const incoming = { source_revision: "revision:1", source_revision_sequence: 2, source_content_sha256: "b".repeat(64) }; validateRevisionTransition(stored, incoming); }, "reconciliation_required"],
   ["cursor connection mismatch", () => validateCursorSnapshot({ snapshot: "snap:1", connection_id: "dbc_222222222222222222222222", policy_revision: "policy:1" }, { snapshot: "snap:1", connection_id: "dbc_111111111111111111111111", policy_revision: "policy:1" }), "cursor_snapshot_mismatch"],
   ["cursor policy mismatch", () => validateCursorSnapshot({ snapshot: "snap:1", connection_id: "dbc_111111111111111111111111", policy_revision: "policy:2" }, { snapshot: "snap:1", connection_id: "dbc_111111111111111111111111", policy_revision: "policy:1" }), "cursor_snapshot_mismatch"],
@@ -883,11 +971,11 @@ const mutationCases = [
   ["excerpt MathML anchor", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><math><a href="${value.canonical_url}">Read More</a></math>`; validateResolveRecord(value, contract); }, "validation_failed"],
   ["excerpt iframe anchor text", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><iframe><a href="${value.canonical_url}">Read More</a></iframe>`; validateResolveRecord(value, contract); }, "validation_failed"],
   ["excerpt xmp anchor text", () => { const value = structuredClone(baseExcerpt); value.content_html = `<p>Excerpt only.</p><xmp><a href="${value.canonical_url}">Read More</a></xmp>`; validateResolveRecord(value, contract); }, "validation_failed"],
-  ["acknowledgement response foreign synchronized work", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").synchronized); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement-static-pending.json") }); }, "identity_conflict"],
-  ["acknowledgement response foreign deployed work", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").deployed); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement-static-deployed.json") }); }, "identity_conflict"],
-  ["acknowledgement response foreign verified work", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").verified); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement.json") }); }, "identity_conflict"],
-  ["acknowledgement response wrong terminal stage", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").verified); response.accepted_stage = "synchronized"; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement.json") }); }, "stage_conflict"],
-  ["acknowledgement dynamic response foreign work", () => { const trace = fixtures.get("publication-dynamic-trace.json"); const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").dynamic); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: trace.work, acknowledgement: fixtures.get(trace.acknowledgement) }); }, "identity_conflict"],
+  ["acknowledgement response foreign synchronized work", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").synchronized); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement-static-pending.json"), destination_mode: "static" }); }, "identity_conflict"],
+  ["acknowledgement response foreign deployed work", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").deployed); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement-static-deployed.json"), destination_mode: "static" }); }, "identity_conflict"],
+  ["acknowledgement response foreign verified work", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").verified); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement.json"), destination_mode: "static" }); }, "identity_conflict"],
+  ["acknowledgement response wrong terminal stage", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").verified); response.accepted_stage = "synchronized"; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement.json"), destination_mode: "static" }); }, "stage_conflict"],
+  ["acknowledgement dynamic response foreign work", () => { const trace = fixtures.get("publication-dynamic-trace.json"); const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").dynamic); response.work_id = `dbw_${"9".repeat(32)}`; validateAcknowledgementResponse(response, contract, { work: trace.work, acknowledgement: fixtures.get(trace.acknowledgement), destination_mode: "dynamic" }); }, "identity_conflict"],
   ...["resource_id", "destination_policy_id", "action", "source_revision", "source_revision_sequence", "policy_revision", "lease_token", "stage_token"].map((field) => [
     `dynamic acknowledgement foreign ${field}`,
     () => {
@@ -907,12 +995,17 @@ const mutationCases = [
       validateAcknowledgementExchange(trace.work, acknowledgement, fixtures.get("publication-acknowledgement-responses.json")[trace.response_key], contract, "leased", {
         claimed_at: trace.claimed_at,
         received_at: trace.received_at,
+        destination_mode: "dynamic",
       });
     },
     ["lease_token"].includes(field) ? "reconciliation_required" : field === "stage_token" ? "stage_conflict" : ["source_revision", "source_revision_sequence", "policy_revision"].includes(field) ? "revision_conflict" : "identity_conflict",
   ]),
-  ["acknowledgement premature static terminal response", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").dynamic); response.work_id = claimedWorkFixture.publication_work[0].work_id; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement-static-pending.json") }); }, "stage_conflict"],
-  ["acknowledgement inappropriate dynamic nonterminal response", () => { const trace = fixtures.get("publication-dynamic-trace.json"); const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").synchronized); response.work_id = trace.work.work_id; response.correlation_id = fixtures.get(trace.acknowledgement).correlation_id; validateAcknowledgementResponse(response, contract, { work: trace.work, acknowledgement: fixtures.get(trace.acknowledgement) }); }, "stage_conflict"],
+  ["acknowledgement premature static terminal response", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").dynamic); response.work_id = claimedWorkFixture.publication_work[0].work_id; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement-static-pending.json"), destination_mode: "static" }); }, "stage_conflict"],
+  ["acknowledgement inappropriate dynamic nonterminal response", () => { const trace = fixtures.get("publication-dynamic-trace.json"); const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").synchronized); response.work_id = trace.work.work_id; response.correlation_id = fixtures.get(trace.acknowledgement).correlation_id; validateAcknowledgementResponse(response, contract, { work: trace.work, acknowledgement: fixtures.get(trace.acknowledgement), destination_mode: "dynamic" }); }, "stage_conflict"],
+  ["static destination cannot claim dynamic terminal state", () => { const acknowledgement = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); acknowledgement.deployment_state = "not_required"; acknowledgement.verification_state = "not_required"; const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").dynamic); response.work_id = claimedWorkFixture.publication_work[0].work_id; response.correlation_id = acknowledgement.correlation_id; validateAcknowledgementExchange(claimedWorkFixture.publication_work[0], acknowledgement, response, contract, "leased", { ...acknowledgementContext, destination_mode: "static" }); }, "stage_conflict"],
+  ["dynamic destination cannot claim static pending state", () => { const trace = fixtures.get("publication-dynamic-trace.json"); const acknowledgement = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); acknowledgement.resource_id = trace.work.resource_id; acknowledgement.destination_policy_id = trace.work.destination_policy_id; acknowledgement.action = trace.work.action; acknowledgement.source_revision = trace.work.source_revision; acknowledgement.source_revision_sequence = trace.work.source_revision_sequence; acknowledgement.policy_revision = trace.work.policy_revision; acknowledgement.lease_token = trace.work.lease_token; acknowledgement.stage_token = trace.work.stage_token; acknowledgement.correlation_id = fixtures.get(trace.acknowledgement).correlation_id; const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").synchronized); response.work_id = trace.work.work_id; response.correlation_id = acknowledgement.correlation_id; validateAcknowledgementExchange(trace.work, acknowledgement, response, contract, "leased", { claimed_at: trace.claimed_at, received_at: trace.received_at, destination_mode: "dynamic" }); }, "stage_conflict"],
+  ["acknowledgement exchange missing authoritative destination mode", () => { const trace = fixtures.get("publication-dynamic-trace.json"); validateAcknowledgementExchange(trace.work, fixtures.get(trace.acknowledgement), fixtures.get("publication-acknowledgement-responses.json")[trace.response_key], contract, "leased", { claimed_at: trace.claimed_at, received_at: trace.received_at }); }, "validation_failed"],
+  ["acknowledgement exchange malformed authoritative destination mode", () => { const trace = fixtures.get("publication-dynamic-trace.json"); validateAcknowledgementExchange(trace.work, fixtures.get(trace.acknowledgement), fixtures.get("publication-acknowledgement-responses.json")[trace.response_key], contract, "leased", { claimed_at: trace.claimed_at, received_at: trace.received_at, destination_mode: "unknown" }); }, "validation_failed"],
   ["existing topic rounded fractional token", () => validateResolveRecord(resolveWithExistingTopicToken("9007199254740992.5"), contract), "validation_failed"],
   ...["1.0000000000000001", "0.99999999999999999", "1.0000000000000001e0"].map((token) => [
     `existing topic nonintegral token ${token}`,
@@ -921,6 +1014,7 @@ const mutationCases = [
   ]),
   ["existing topic exceeds signed 64-bit range", () => validateResolveRecord(resolveWithExistingTopicToken("9223372036854775808"), contract), "validation_failed"],
   ["protocol JSON duplicate member", () => parseProtocolJson('{"provider_name":"first","provider_name":"second"}'), "invalid_json"],
+  ["protocol JSON duplicate decoded member", () => parseProtocolJson('{"provider_name":"first","provider_\\u006eame":"second"}'), "invalid_json"],
   ...["\ud800", "\udc00"].map((surrogate) => [
     `operator signed unpaired surrogate ${surrogate.charCodeAt(0).toString(16)}`,
     () => {
@@ -991,7 +1085,7 @@ assert.doesNotThrow(() => chronologyMutant.validateAcknowledgementIdentity(
   claimedWorkFixture.publication_work[0],
   isolatedPreClaimAcknowledgement,
   "leased",
-  { received_at: "2026-09-27T18:31:00Z", claimed_at: claimedWorkFixture.claimed_at },
+  { received_at: "2026-09-27T18:31:00Z", claimed_at: claimedWorkFixture.claimed_at, destination_mode: "static" },
 ), "isolated chronology regression must detect removal of only the synchronization-before-claim guard");
 
 const responseBindingMutant = await loadValidatorMutation(
@@ -1004,6 +1098,7 @@ foreignVerifiedResponse.work_id = `dbw_${"9".repeat(32)}`;
 assert.doesNotThrow(() => responseBindingMutant.validateAcknowledgementResponse(foreignVerifiedResponse, contract, {
   work: claimedWorkFixture.publication_work[0],
   acknowledgement: fixtures.get("publication-acknowledgement.json"),
+  destination_mode: "static",
 }), "foreign-work regression must detect removal of the response work binding");
 
 const responseTerminalMutant = await loadValidatorMutation(
@@ -1016,6 +1111,7 @@ prematureStaticTerminal.work_id = claimedWorkFixture.publication_work[0].work_id
 assert.doesNotThrow(() => responseTerminalMutant.validateAcknowledgementResponse(prematureStaticTerminal, contract, {
   work: claimedWorkFixture.publication_work[0],
   acknowledgement: fixtures.get("publication-acknowledgement-static-pending.json"),
+  destination_mode: "static",
 }), "premature-static-terminal regression must detect removal of the response terminal binding");
 
 const dynamicAuthorityMutant = await loadValidatorMutation(
@@ -1032,7 +1128,7 @@ assert.doesNotThrow(() => dynamicAuthorityMutant.validateAcknowledgementExchange
   fixtures.get("publication-acknowledgement-responses.json")[dynamicTrace.response_key],
   contract,
   "leased",
-  { claimed_at: dynamicTrace.claimed_at, received_at: dynamicTrace.received_at },
+  { claimed_at: dynamicTrace.claimed_at, received_at: dynamicTrace.received_at, destination_mode: "dynamic" },
 ), "dynamic authority regression must detect removal of the full acknowledgement/work binding");
 
 const excerptStructureMutant = await loadValidatorMutation(
@@ -1102,7 +1198,7 @@ assert.doesNotThrow(
   "catalog GET regression must detect removal of the shared raw JSON byte guard",
 );
 assert.doesNotThrow(
-  () => rawJsonByteGuardMutant.validateCatalogUpdateText(catalogUpdateWithRawRequestSize(contract.platform_catalog.maximum_json_bytes + 1), contract),
+  () => rawJsonByteGuardMutant.validateCatalogUpdateText(catalogRequestTextAtSize(contract.platform_catalog.maximum_json_bytes + 1), contract),
   "catalog PUT regression must detect removal of the shared raw JSON byte guard",
 );
 assert.doesNotThrow(
@@ -1110,9 +1206,54 @@ assert.doesNotThrow(
   "error-response regression must detect removal of the shared raw JSON byte guard",
 );
 
+const rawJsonByteGuardOrderMutant = await loadValidatorMutation(
+  "raw-endpoint-JSON-byte-guard-order",
+  '  if (bytes(text) > maximum) fail("validation_failed", `${name} exceeds maximum_json_bytes`);\n  const value = parseProtocolJson(text);',
+  '  const value = parseProtocolJson(text);\n  if (bytes(text) > maximum) fail("validation_failed", `${name} exceeds maximum_json_bytes`);',
+);
+assert.throws(
+  () => rawJsonByteGuardOrderMutant.validateCatalogSegmentText(`[${" ".repeat(contract.platform_catalog.maximum_json_bytes)}`, contract),
+  (error) => error instanceof rawJsonByteGuardOrderMutant.ProtocolError && error.code === "invalid_json",
+  "raw endpoint regression must detect moving the size guard after parsing",
+);
+
+const claimWorkPreflightOrderMutant = await loadValidatorMutation(
+  "claim-work-preparse-byte-guard-order",
+  '  const rawWorkItems = topLevelArrayElementTexts(text, "publication_work", contract.publication_work.maximum_json_bytes, contract.publication_work.claim.maximum_items);\n  if (rawWorkItems === null) fail("validation_failed", "claim response.publication_work is required");\n  validateJsonText(text);',
+  '  validateJsonText(text);\n  const rawWorkItems = topLevelArrayElementTexts(text, "publication_work", contract.publication_work.maximum_json_bytes, contract.publication_work.claim.maximum_items);\n  if (rawWorkItems === null) fail("validation_failed", "claim response.publication_work is required");',
+);
+assert.throws(
+  () => claimWorkPreflightOrderMutant.validateClaimResponseText(claimResponseWithRawWorkText("x".repeat(contract.publication_work.maximum_json_bytes + 1)), contract, fixtures.get("publication-work-claim-request.json")),
+  (error) => error instanceof claimWorkPreflightOrderMutant.ProtocolError && error.code === "invalid_json",
+  "claim work regression must detect parsing before the per-item raw byte preflight",
+);
+
+const acknowledgementModeAuthorityMutant = await loadValidatorMutation(
+  "acknowledgement-authoritative-destination-mode",
+  '  validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext);\n  validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: acceptanceContext.destination_mode });',
+  '  const claimantControlledContext = { ...acceptanceContext, destination_mode: "dynamic" };\n  validateAcknowledgementIdentity(work, acknowledgement, state, claimantControlledContext);\n  validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: claimantControlledContext.destination_mode });',
+);
+const downgradedStaticAcknowledgement = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json"));
+downgradedStaticAcknowledgement.deployment_state = "not_required";
+downgradedStaticAcknowledgement.verification_state = "not_required";
+const downgradedStaticResponse = structuredClone(fixtures.get("publication-acknowledgement-responses.json").dynamic);
+downgradedStaticResponse.work_id = claimedWorkFixture.publication_work[0].work_id;
+downgradedStaticResponse.correlation_id = downgradedStaticAcknowledgement.correlation_id;
+assert.doesNotThrow(
+  () => acknowledgementModeAuthorityMutant.validateAcknowledgementExchange(
+    claimedWorkFixture.publication_work[0],
+    downgradedStaticAcknowledgement,
+    downgradedStaticResponse,
+    contract,
+    "leased",
+    acknowledgementContext,
+  ),
+  "acknowledgement regression must detect replacement of authoritative static mode with claimant-controlled dynamic mode",
+);
+
 const catalogAggregateMutant = await loadValidatorMutation(
   "catalog-compact-aggregate-byte-guard",
-  '  if (bytes(JSON.stringify(value.request)) > contract.platform_catalog.maximum_json_bytes) fail("validation_failed", "catalog request exceeds maximum_json_bytes");',
+  '  if (bytes(JSON.stringify(value)) > contract.platform_catalog.maximum_json_bytes) fail("validation_failed", "catalog request exceeds maximum_json_bytes");',
   "",
 );
 assert.doesNotThrow(
@@ -1169,4 +1310,4 @@ const activeText = [
 assert.doesNotMatch(activeText, /fullInteractive/);
 assert.doesNotMatch(activeText, /Repeal OBBBA Forum|obbba-/i);
 
-console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 13 targeted source-reversion probes for ${contract.version}.`);
+console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 16 targeted source-reversion probes for ${contract.version}.`);

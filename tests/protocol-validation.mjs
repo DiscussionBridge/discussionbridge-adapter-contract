@@ -105,6 +105,25 @@ function readJsonString(text, start) {
   fail("invalid_json", "unterminated JSON string");
 }
 
+function skipRawJsonString(text, start) {
+  let index = start + 1;
+  while (index < text.length) {
+    const code = text.charCodeAt(index);
+    if (code === 0x22) return index + 1;
+    if (code < 0x20) fail("invalid_json", "unescaped control character in JSON string");
+    if (code === 0x5c) {
+      index += 1;
+      if (index >= text.length || !/["\\/bfnrtu]/.test(text[index])) fail("invalid_json", "invalid JSON escape");
+      if (text[index] === "u") {
+        if (!/^[0-9a-fA-F]{4}$/.test(text.slice(index + 1, index + 5))) fail("invalid_json", "invalid JSON Unicode escape");
+        index += 4;
+      }
+    }
+    index += 1;
+  }
+  fail("invalid_json", "unterminated JSON string");
+}
+
 function validateJsonText(text) {
   const stack = [{ type: "root", state: "value" }];
   let index = 0;
@@ -210,7 +229,7 @@ function skipJsonWhitespace(text, index) {
 
 function skipRawJsonValue(text, start) {
   let index = skipJsonWhitespace(text, start);
-  if (text[index] === '"') return readJsonString(text, index).next;
+  if (text[index] === '"') return skipRawJsonString(text, index);
   if (text[index] !== "{" && text[index] !== "[") {
     while (index < text.length && !/[\t\n\r ,}\]]/.test(text[index])) index += 1;
     return index;
@@ -218,8 +237,9 @@ function skipRawJsonValue(text, start) {
   const closers = [text[index] === "{" ? "}" : "]"];
   index += 1;
   while (closers.length > 0) {
+    if (index >= text.length) fail("invalid_json", "unterminated JSON value");
     if (text[index] === '"') {
-      index = readJsonString(text, index).next;
+      index = skipRawJsonString(text, index);
       continue;
     }
     if (text[index] === "{") closers.push("}");
@@ -230,7 +250,7 @@ function skipRawJsonValue(text, start) {
   return index;
 }
 
-function topLevelArrayElementTexts(text, propertyName) {
+function topLevelArrayElementTexts(text, propertyName, maximumElementBytes = null, maximumElements = null) {
   let index = skipJsonWhitespace(text, 0);
   if (text[index] !== "{") fail("validation_failed", "JSON envelope must be an object");
   index += 1;
@@ -249,9 +269,12 @@ function topLevelArrayElementTexts(text, propertyName) {
         const segmentStart = index;
         index = skipJsonWhitespace(text, index);
         if (text[index] === "]") return elements;
+        if (maximumElements !== null && elements.length >= maximumElements) fail("validation_failed", `${propertyName} exceeds maximum items`);
         index = skipRawJsonValue(text, index);
         index = skipJsonWhitespace(text, index);
-        elements.push(text.slice(segmentStart, index));
+        const elementText = text.slice(segmentStart, index);
+        if (maximumElementBytes !== null && bytes(elementText) > maximumElementBytes) fail("validation_failed", `${propertyName} item exceeds maximum_json_bytes`);
+        elements.push(elementText);
         if (text[index] === "]") return elements;
         if (text[index] !== ",") fail("invalid_json", `${propertyName} has an invalid separator`);
         index += 1;
@@ -259,26 +282,6 @@ function topLevelArrayElementTexts(text, propertyName) {
     }
     index = skipRawJsonValue(text, index);
     index = skipJsonWhitespace(text, index);
-    if (text[index] === "}") return null;
-    if (text[index] !== ",") fail("invalid_json", "JSON object has an invalid separator");
-    index += 1;
-  }
-}
-
-function topLevelPropertyText(text, propertyName) {
-  let index = skipJsonWhitespace(text, 0);
-  if (text[index] !== "{") fail("validation_failed", "JSON envelope must be an object");
-  index += 1;
-  while (true) {
-    index = skipJsonWhitespace(text, index);
-    if (text[index] === "}") return null;
-    const key = readJsonString(text, index);
-    index = skipJsonWhitespace(text, key.next);
-    if (text[index] !== ":") fail("invalid_json", "JSON object member lacks a colon");
-    const valueStart = skipJsonWhitespace(text, index + 1);
-    const valueEnd = skipRawJsonValue(text, valueStart);
-    if (key.value === propertyName) return text.slice(valueStart, valueEnd);
-    index = skipJsonWhitespace(text, valueEnd);
     if (text[index] === "}") return null;
     if (text[index] !== ",") fail("invalid_json", "JSON object has an invalid separator");
     index += 1;
@@ -936,12 +939,9 @@ export function validateClaimResponse(value, contract, request = null) {
 
 export function validateClaimResponseText(text, contract, request = null) {
   if (typeof text !== "string") fail("invalid_json", "claim response must be JSON text");
-  validateJsonText(text);
-  const rawWorkItems = topLevelArrayElementTexts(text, "publication_work");
+  const rawWorkItems = topLevelArrayElementTexts(text, "publication_work", contract.publication_work.maximum_json_bytes, contract.publication_work.claim.maximum_items);
   if (rawWorkItems === null) fail("validation_failed", "claim response.publication_work is required");
-  for (const rawWorkItem of rawWorkItems) {
-    if (bytes(rawWorkItem) > contract.publication_work.maximum_json_bytes) fail("validation_failed", "publication work exceeds maximum_json_bytes");
-  }
+  validateJsonText(text);
   const value = parseProtocolJson(text);
   validateClaimResponse(value, contract, request);
   if (rawWorkItems.length !== value.publication_work.length) fail("validation_failed", "raw publication work count mismatch");
@@ -1045,15 +1045,18 @@ export function validateAcknowledgementResponse(value, contract, context = undef
   }
   correlation(value.correlation_id, contract);
   if (context !== undefined) {
-    exactObject(context, ["work", "acknowledgement"], [], "acknowledgement response context");
+    exactObject(context, ["work", "acknowledgement", "destination_mode"], [], "acknowledgement response context");
     object(context.work, "acknowledgement response work");
     object(context.acknowledgement, "acknowledgement response request");
+    enumValue(context.destination_mode, ["dynamic", "static"], "destination_mode");
     if (value.work_id !== context.work.work_id) fail("identity_conflict", "acknowledgement response names another work item");
     if (value.accepted_stage !== context.acknowledgement.stage) fail("stage_conflict", "acknowledgement response accepted stage does not match request");
-    const dynamicTerminal = context.acknowledgement.stage === "synchronized"
+    const acknowledgementClaimsDynamic = context.acknowledgement.stage === "synchronized"
       && context.acknowledgement.deployment_state === "not_required"
       && context.acknowledgement.verification_state === "not_required";
-    const expectedTerminal = dynamicTerminal || context.acknowledgement.stage === "verified";
+    if (context.destination_mode === "dynamic" && !acknowledgementClaimsDynamic) fail("stage_conflict", "dynamic destination requires terminal synchronized acknowledgement");
+    if (context.destination_mode === "static" && acknowledgementClaimsDynamic) fail("stage_conflict", "static destination requires deployment and verification");
+    const expectedTerminal = context.destination_mode === "dynamic" || context.acknowledgement.stage === "verified";
     if (value.terminal !== expectedTerminal) fail("stage_conflict", "acknowledgement response terminal state does not match request");
   }
 }
@@ -1062,7 +1065,7 @@ export function validateAcknowledgementExchange(work, acknowledgement, response,
   validateWork(work, contract);
   validateAcknowledgement(acknowledgement, contract);
   validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext);
-  validateAcknowledgementResponse(response, contract, { work, acknowledgement });
+  validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: acceptanceContext.destination_mode });
 }
 
 export function validateFailure(value, contract) {
@@ -1113,41 +1116,44 @@ export function validateCatalogSegmentText(text, contract) {
   return validateBoundedJsonText(text, contract.platform_catalog.maximum_json_bytes, "catalog response", (value) => validateCatalogSegment(value, contract));
 }
 
-export function validateCatalogUpdate(value, contract, currentRevision = null) {
-  exactObject(value, ["request", "response"], [], "catalog update exchange");
-  if (bytes(JSON.stringify(value.request)) > contract.platform_catalog.maximum_json_bytes) fail("validation_failed", "catalog request exceeds maximum_json_bytes");
-  exactObject(value.request, contract.platform_catalog.put_required_request_fields, [], "catalog update request");
-  exactObject(value.response, contract.platform_catalog.put_required_response_fields, [], "catalog update response");
-  enumValue(value.request.platform_profile, contract.profiles, "request platform_profile");
-  enumValue(value.response.platform_profile, contract.profiles, "response platform_profile");
-  if (value.request.platform_profile !== value.response.platform_profile) fail("validation_failed");
-  catalogIdentifier(value.request.base_catalog_revision, contract, "base_catalog_revision");
-  catalogIdentifier(value.response.catalog_revision, contract, "catalog_revision");
-  if (!Array.isArray(value.request.segments) || value.request.segments.length === 0) fail("validation_failed");
-  uniqueStrings(value.response.accepted_segments, "accepted_segments", contract.platform_catalog.segment_types);
-  if (value.request.correlation_id !== value.response.correlation_id) fail("validation_failed");
-  correlation(value.request.correlation_id, contract);
-  if (currentRevision !== null && value.request.base_catalog_revision !== currentRevision) fail("catalog_revision_conflict");
+export function validateCatalogUpdateRequest(value, contract, currentRevision = null) {
+  exactObject(value, contract.platform_catalog.put_required_request_fields, [], "catalog update request");
+  if (bytes(JSON.stringify(value)) > contract.platform_catalog.maximum_json_bytes) fail("validation_failed", "catalog request exceeds maximum_json_bytes");
+  enumValue(value.platform_profile, contract.profiles, "request platform_profile");
+  catalogIdentifier(value.base_catalog_revision, contract, "base_catalog_revision");
+  if (!Array.isArray(value.segments) || value.segments.length === 0) fail("validation_failed");
+  correlation(value.correlation_id, contract);
+  if (currentRevision !== null && value.base_catalog_revision !== currentRevision) fail("catalog_revision_conflict");
   const segmentTypes = new Set();
-  for (const segment of value.request.segments) {
+  for (const segment of value.segments) {
     exactObject(segment, contract.platform_catalog.segment_required_fields, [], "catalog update segment");
     if (!contract.platform_catalog.segment_types.includes(segment.segment_type)) fail("validation_failed");
     if (segmentTypes.has(segment.segment_type)) fail("validation_failed", "duplicate catalog segment");
     segmentTypes.add(segment.segment_type);
     validateCatalogItems(segment.segment_type, segment.items, contract);
   }
-  if (canonicalize([...segmentTypes].sort()) !== canonicalize([...value.response.accepted_segments].sort())) fail("validation_failed", "accepted_segments mismatch");
+  return segmentTypes;
+}
+
+export function validateCatalogUpdateResponse(value, request, contract, validatedSegmentTypes = null) {
+  const segmentTypes = validatedSegmentTypes ?? validateCatalogUpdateRequest(request, contract);
+  exactObject(value, contract.platform_catalog.put_required_response_fields, [], "catalog update response");
+  enumValue(value.platform_profile, contract.profiles, "response platform_profile");
+  if (request.platform_profile !== value.platform_profile) fail("validation_failed");
+  catalogIdentifier(value.catalog_revision, contract, "catalog_revision");
+  uniqueStrings(value.accepted_segments, "accepted_segments", contract.platform_catalog.segment_types);
+  if (request.correlation_id !== value.correlation_id) fail("validation_failed");
+  if (canonicalize([...segmentTypes].sort()) !== canonicalize([...value.accepted_segments].sort())) fail("validation_failed", "accepted_segments mismatch");
+}
+
+export function validateCatalogUpdate(value, contract, currentRevision = null) {
+  exactObject(value, ["request", "response"], [], "catalog update exchange");
+  const segmentTypes = validateCatalogUpdateRequest(value.request, contract, currentRevision);
+  validateCatalogUpdateResponse(value.response, value.request, contract, segmentTypes);
 }
 
 export function validateCatalogUpdateText(text, contract, currentRevision = null) {
-  if (typeof text !== "string") fail("invalid_json", "catalog update exchange must be JSON text");
-  validateJsonText(text);
-  const requestText = topLevelPropertyText(text, "request");
-  if (requestText === null) fail("validation_failed", "catalog update request is required");
-  validateBoundedJsonText(requestText, contract.platform_catalog.maximum_json_bytes, "catalog request", () => {});
-  const value = parseProtocolJson(text);
-  validateCatalogUpdate(value, contract, currentRevision);
-  return value;
+  return validateBoundedJsonText(text, contract.platform_catalog.maximum_json_bytes, "catalog request", (value) => validateCatalogUpdateRequest(value, contract, currentRevision));
 }
 
 export function validateCatalogCursor(request, binding) {
@@ -1377,15 +1383,20 @@ export function validateAcknowledgementIdentity(work, acknowledgement, state = "
     if (Object.hasOwn(work, field) && work[field] !== acknowledgement[field]) fail("identity_conflict");
   }
   if (work.source_revision !== acknowledgement.source_revision || work.source_revision_sequence !== acknowledgement.source_revision_sequence || work.policy_revision !== acknowledgement.policy_revision) fail("revision_conflict");
+  enumValue(context.destination_mode, ["dynamic", "static"], "destination_mode");
   if (acknowledgement.stage === "synchronized") {
-    exactObject(context, ["received_at", "claimed_at"], [], "acknowledgement acceptance context");
+    exactObject(context, ["received_at", "claimed_at", "destination_mode"], [], "acknowledgement acceptance context");
+    const acknowledgementClaimsDynamic = acknowledgement.deployment_state === "not_required" && acknowledgement.verification_state === "not_required";
+    if (context.destination_mode === "dynamic" && !acknowledgementClaimsDynamic) fail("stage_conflict", "dynamic destination requires terminal synchronized acknowledgement");
+    if (context.destination_mode === "static" && acknowledgementClaimsDynamic) fail("stage_conflict", "static destination requires deployment and verification");
     timestamp(context.received_at, "received_at");
     timestamp(context.claimed_at, "claimed_at");
     validateLeaseTime(work.lease_expires_at, context.received_at);
     if (compareTimestamps(context.received_at, context.claimed_at, "received_at", "claimed_at") < 0 || compareTimestamps(acknowledgement.synchronized_at, context.claimed_at, "synchronized_at", "claimed_at") < 0) fail("validation_failed", "synchronization cannot precede claim issuance");
     if (compareTimestamps(acknowledgement.synchronized_at, context.received_at, "synchronized_at", "received_at") > 0) fail("validation_failed", "synchronization cannot occur after receipt");
   } else {
-    exactObject(context, [], ["received_at"], "acknowledgement acceptance context");
+    exactObject(context, ["destination_mode"], ["received_at"], "acknowledgement acceptance context");
+    if (context.destination_mode !== "static") fail("stage_conflict", "dynamic destination cannot advance beyond synchronization");
     if (Object.hasOwn(context, "received_at")) {
       timestamp(context.received_at, "received_at");
       const eventTime = acknowledgement.stage === "deployed" ? acknowledgement.deployed_at : acknowledgement.publicly_verified_at;

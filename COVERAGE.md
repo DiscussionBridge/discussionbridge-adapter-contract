@@ -37,12 +37,12 @@ missing approved requirement.
 | E-01 | Opaque snapshot/cursor, policy-bound initial inventory, high-water, 30-day activity retention, expiry, and restart/deduplication rule. | Initial and resumed source-inventory fixtures plus cursor/snapshot mismatch fixture. |
 | E-02 | Revision-pinned source detail and bounded content transport. | Inline/chunked detail fixtures plus raw 256 KiB metadata-envelope exact/over-limit controls. |
 | E-03 | Cursor/high-water revocation index/detail, reasons, retention, restart deduplication, work-owned delivery acknowledgement, and same-identity restore rule. | Revocation index/detail and restart trace plus hold/unpublish/restore work. |
-| E-04 | Bounded claim, lease, renewal, staged acknowledgement, failure, serialized binding work, expiry, retention, and supersession rules. | Independent dynamic and static three-stage traces bind every response to authoritative work, actual stage and terminal semantics; work items have executable raw 128 KiB, 120-taxonomy, identifier/kind and duplicate-source controls; interruption states, failure fixtures, and late-superseded negatives. |
+| E-04 | Bounded claim, lease, renewal, staged acknowledgement, failure, serialized binding work, expiry, retention, and supersession rules. | Independent dynamic and static three-stage traces bind every response to authoritative work, receiver-owned destination mode, actual stage and terminal semantics; work items have executable raw 128 KiB, leading/trailing/interior exact-boundary controls, malformed-plus-one pre-parse rejection, 120-taxonomy, identifier/kind and duplicate-source controls; interruption states, failure fixtures, and late-superseded negatives. |
 | E-05 | Receiver-owned retryable/terminal registry, one initial plus three retries, exact backoff/exhaustion, and bounded manual retry. | Complete retry trace plus failure, retry-wait, and exhausted/operator-attention fixtures. |
 | E-06 | Exact immutable `policy_revision` in inventory, work, and acknowledgement. | Inventory/work/ack fixtures. |
-| E-07 | Separate synchronization, deployment, and public verification; static completion rule. | Dynamic acknowledgement; static synchronized → deployed → verified trace; deployment/verification failures. |
-| E-08 | Required header/body correlation across every route and exact error envelope. | Correlated route fixtures plus raw 4,096/4,097-byte response controls, malformed-message-type exact errors, oversized/secret-exposure negatives, and shared raw-byte-guard source reversion. |
-| F-01 | Segmented bounded descriptive catalog with exact item and GET/PUT schemas and no authorization authority. | Positive fixtures for all six segments and update; raw 65,536/65,537-byte GET-response and PUT-request controls; exact/max-plus-one UTF-8 controls for 255-byte identifiers/references, 200-byte names and 100-byte container kinds; independently valid aggregate overflow; unknown-field/authority negatives; raw, aggregate and identifier source reversions. |
+| E-07 | Separate synchronization, deployment, and public verification; static completion rule. | Authoritative dynamic-mode acknowledgement; authoritative static synchronized → deployed → verified trace; static-as-dynamic and dynamic-as-static rejection; missing/malformed mode rejection; deployment/verification failures; destination-mode source reversion. |
+| E-08 | Required header/body correlation across every route and exact error envelope. | Correlated route fixtures plus raw 4,096/4,097-byte response controls, malformed-plus-one pre-parse ordering, malformed-message-type exact errors, oversized/secret-exposure negatives, and shared raw-byte guard/removal/order source reversions. |
+| F-01 | Segmented bounded descriptive catalog with exact item and GET/PUT schemas and no authorization authority. | Positive fixtures for all six segments and update; standalone raw 65,536/65,537-byte GET-response and PUT-request controls across leading/trailing/interior forms; malformed-plus-one pre-parse rejection; separate response/correlation composition; exact/max-plus-one UTF-8 controls for 255-byte identifiers/references, 200-byte names and 100-byte container kinds; independently valid aggregate overflow; unknown-field/authority negatives; raw removal/order, aggregate and identifier source reversions. |
 | F-02 | Exact bounded `catalog_revision` referenced by operator policy. | Atomic update, exact/max-plus-one 255-byte response/base revisions, stale revision, removed mapping, and authority rules/fixtures. |
 | F-03 | Native public pagination remains platform-owned. | README Platform-owned behavior. |
 | G-01 | Bounded source-author schema both directions without shared identity. | Source detail author fixture and authorship rules. |
@@ -91,8 +91,9 @@ missing approved requirement.
   chronology rather than validating shapes in isolation. Dynamic authoritative
   work identity is sourced independently from the response. Targeted in-memory
   source reversions prove response-work, response-terminal, synchronization
-  chronology, excerpt structure, bounded exact-integer parsing, catalog-ID and
-  aggregate bounds, raw endpoint limits, successful chunk reassembly, and each
+  chronology, authoritative destination mode, excerpt structure, bounded exact-
+  integer parsing, catalog-ID and aggregate bounds, raw endpoint limits and
+  pre-parse ordering, claim-work preflight, successful chunk reassembly, and each
   I-JSON Unicode branch exercise their intended individual guards.
 - Protocol JSON parsing preserves `existing_topic_id` numeric source tokens as
   exact integers before JavaScript Number rounding. Adjacent values above

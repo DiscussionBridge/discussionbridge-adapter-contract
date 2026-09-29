@@ -425,6 +425,7 @@
   },
   "publication_work": {
     "maximum_json_bytes": 131072,
+    "maximum_json_bytes_rule": "The limit applies independently to each complete raw UTF-8 publication work item inside a claim response and is enforced by bounded lexical preflight before that item is parsed, decoded, or retained.",
     "claim": {
       "method": "POST",
       "path": "/discussion-bridge/v1/publication-work/claim.json",
@@ -469,7 +470,7 @@
       "response_conditional_fields": ["next_stage_token"],
       "response_rule": "A nonterminal synchronized or deployed response requires next_stage_token and terminal false. A terminal dynamic synchronized or static verified response omits next_stage_token and requires terminal true. Exact request replay returns the same response.",
       "stages": ["synchronized", "deployed", "verified"],
-      "rule": "Acknowledgement is accepted only for the exact work identity, current stage token, source revision, policy revision, destination policy, action, connection, and destination binding. The synchronized stage requires the active publication lease. Dynamic destinations finish at synchronized with deployment_state and verification_state not_required. Static destinations persist the exact destination binding and publication revision at synchronized, then receive a new stage token for deployed and verified acknowledgements; deployed_at is required at deployed and publicly_verified_at is required at verified.",
+      "rule": "Acknowledgement is accepted only for the exact work identity, current stage token, source revision, policy revision, destination policy, action, connection, destination binding, and receiver-owned authoritative destination mode. The synchronized stage requires the active publication lease. Dynamic destinations finish at synchronized with deployment_state and verification_state not_required. Static destinations persist the exact destination binding and publication revision at synchronized, then receive a new stage token for deployed and verified acknowledgements; acknowledgement-controlled states cannot select or downgrade the destination mode; deployed_at is required at deployed and publicly_verified_at is required at verified.",
       "stage_transition_rule": "Stages are monotonic and idempotent for an exact request. synchronized may advance only to deployed; deployed only to verified. A stale stage token, skipped stage, changed binding/revision/policy, late acknowledgement after supersession, or repeated stage with different data fails closed without changing state.",
       "static_recovery_rule": "Lease expiry after synchronized does not discard the persisted binding or return publication work to native mutation. The receiver exposes the same work at awaiting_deployment or awaiting_verification with a new bounded stage token until verified, failed into retry_wait, or placed in operator_attention."
     },
