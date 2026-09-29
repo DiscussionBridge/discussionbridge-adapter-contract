@@ -68,6 +68,13 @@ function compareTimestamps(left, right, leftName = "left timestamp", rightName =
   return af === bf ? 0 : af < bf ? -1 : 1;
 }
 
+function addTimestampSeconds(value, seconds, name) {
+  const parts = timestampParts(value, name);
+  positiveInteger(seconds, "seconds");
+  const wholeSecond = new Date(Number(parts.second + BigInt(seconds)) * 1000).toISOString().replace(".000Z", "");
+  return `${wholeSecond}${parts.fraction ? `.${parts.fraction}` : ""}Z`;
+}
+
 function validUnicode(value, name) {
   if (typeof value !== "string" || Buffer.from(value, "utf8").toString("utf8") !== value) fail("validation_failed", `${name} is not valid UTF-8 text`);
 }
@@ -80,50 +87,134 @@ function validateUtf8Bytes(value, name) {
   }
 }
 
+function decodeHtmlReferences(value, name) {
+  const named = new Map([
+    ["amp", "&"], ["lt", "<"], ["gt", ">"], ["quot", '"'], ["apos", "'"], ["nbsp", "\u00a0"],
+  ]);
+  return value.replace(/&(#(?:x[0-9a-f]+|[0-9]+)|[a-z][a-z0-9]+);/gi, (reference, entity) => {
+    if (entity.startsWith("#")) {
+      const hexadecimal = entity[1]?.toLowerCase() === "x";
+      const codePoint = Number.parseInt(entity.slice(hexadecimal ? 2 : 1), hexadecimal ? 16 : 10);
+      if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff || (codePoint >= 0xd800 && codePoint <= 0xdfff)) fail("validation_failed", `${name} contains an invalid character reference`);
+      return String.fromCodePoint(codePoint);
+    }
+    return named.get(entity.toLowerCase()) ?? reference;
+  });
+}
+
+function findTagEnd(value, start, name) {
+  let quote = null;
+  for (let index = start + 1; index < value.length; index += 1) {
+    const character = value[index];
+    if (quote) {
+      if (character === quote) quote = null;
+    } else if (character === '"' || character === "'") quote = character;
+    else if (character === ">") return index;
+  }
+  fail("validation_failed", `${name} contains unclosed markup`);
+}
+
+function parseHtmlAttributes(source, name) {
+  const attributes = new Map();
+  let cursor = 0;
+  while (cursor < source.length) {
+    while (/\s/.test(source[cursor] ?? "")) cursor += 1;
+    if (cursor >= source.length) break;
+    const match = /^[^\s=/>]+/.exec(source.slice(cursor));
+    if (!match) fail("validation_failed", `${name} contains malformed attributes`);
+    const attributeName = match[0].toLowerCase();
+    if (attributes.has(attributeName)) fail("validation_failed", `${name} contains a duplicate attribute`);
+    cursor += match[0].length;
+    while (/\s/.test(source[cursor] ?? "")) cursor += 1;
+    let attributeValue = "";
+    if (source[cursor] === "=") {
+      cursor += 1;
+      while (/\s/.test(source[cursor] ?? "")) cursor += 1;
+      const quote = source[cursor];
+      if (quote === '"' || quote === "'") {
+        const end = source.indexOf(quote, cursor + 1);
+        if (end < 0) fail("validation_failed", `${name} contains an unclosed attribute`);
+        attributeValue = source.slice(cursor + 1, end);
+        cursor = end + 1;
+      } else {
+        const valueMatch = /^[^\s"'=<>`]+/.exec(source.slice(cursor));
+        if (!valueMatch) fail("validation_failed", `${name} contains a malformed attribute value`);
+        attributeValue = valueMatch[0];
+        cursor += valueMatch[0].length;
+      }
+    }
+    attributes.set(attributeName, decodeHtmlReferences(attributeValue, name));
+  }
+  return attributes;
+}
+
 function analyzeHtml(value, name) {
   validUnicode(value, name);
   const stack = [];
   const anchors = [];
   let visibleText = "";
   const voidElements = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
-  const uncommented = value.replace(/<!--[\s\S]*?-->/g, "");
-  const tokenPattern = /<![^>]*>|<\/?[A-Za-z][^>]*>/g;
-  const tokens = uncommented.match(tokenPattern) ?? [];
-  if (tokens.length === 0) fail("validation_failed", `${name} must contain HTML markup`);
+  const inertElements = new Set(["script", "style", "template", "textarea", "title"]);
+  const rawTextElements = new Set(["script", "style", "textarea", "title"]);
   let cursor = 0;
-  for (const token of tokens) {
-    const index = uncommented.indexOf(token, cursor);
-    const text = uncommented.slice(cursor, index);
-    if (/[<>]/.test(text)) fail("validation_failed", `${name} contains malformed markup`);
-    visibleText += text;
-    for (const entry of stack) if (entry.anchor) entry.anchor.text += text;
-    cursor = index + token.length;
-    if (token.startsWith("<!")) continue;
+  let markupCount = 0;
+  const appendText = (text) => {
+    if (!text || stack.some((entry) => !entry.visible)) return;
+    const decoded = decodeHtmlReferences(text, name);
+    visibleText += decoded;
+    for (const entry of stack) if (entry.anchor) entry.anchor.text += decoded;
+  };
+  while (cursor < value.length) {
+    const raw = stack.at(-1);
+    if (rawTextElements.has(raw?.tag)) {
+      const closingIndex = value.toLowerCase().indexOf(`</${raw.tag}`, cursor);
+      if (closingIndex < 0) fail("validation_failed", `${name} contains unclosed raw-text markup`);
+      cursor = closingIndex;
+    }
+    const tagStart = value.indexOf("<", cursor);
+    if (tagStart < 0) {
+      appendText(value.slice(cursor));
+      cursor = value.length;
+      break;
+    }
+    appendText(value.slice(cursor, tagStart));
+    if (value.startsWith("<!--", tagStart)) {
+      const commentEnd = value.indexOf("-->", tagStart + 4);
+      if (commentEnd < 0) fail("validation_failed", `${name} contains an unclosed comment`);
+      cursor = commentEnd + 3;
+      continue;
+    }
+    const tagEnd = findTagEnd(value, tagStart, name);
+    const token = value.slice(tagStart, tagEnd + 1);
+    cursor = tagEnd + 1;
+    if (/^<!/.test(token)) continue;
     const closing = /^<\//.test(token);
     const match = /^<\/?\s*([A-Za-z][A-Za-z0-9:-]*)/.exec(token);
     if (!match) fail("validation_failed", `${name} contains malformed markup`);
     const tag = match[1].toLowerCase();
+    markupCount += 1;
     if (closing) {
+      if (!/^<\/\s*[A-Za-z][A-Za-z0-9:-]*\s*>$/.test(token)) fail("validation_failed", `${name} contains malformed closing markup`);
       if (stack.pop()?.tag !== tag) fail("validation_failed", `${name} contains mismatched markup`);
-    } else if (!voidElements.has(tag) && !/\/\s*>$/.test(token)) {
+    } else {
+      const selfClosing = /\/\s*>$/.test(token);
+      const contentEnd = token.length - (selfClosing ? 2 : 1);
+      const attributes = parseHtmlAttributes(token.slice(match[0].length, contentEnd), name);
+      const parentVisible = !stack.some((entry) => !entry.visible);
+      const style = attributes.get("style")?.toLowerCase() ?? "";
+      const hidden = attributes.has("hidden") || attributes.get("aria-hidden")?.toLowerCase() === "true" || /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden)\s*(?:!important\s*)?(?:;|$)/.test(style);
+      const visible = parentVisible && !hidden && !inertElements.has(tag);
       let anchor = null;
       if (tag === "a") {
-        const attributes = new Map();
-        const attributeText = token.slice(match[0].length, -1);
-        const attributePattern = /\s+([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
-        let attribute;
-        while ((attribute = attributePattern.exec(attributeText)) !== null) attributes.set(attribute[1].toLowerCase(), attribute[2] ?? attribute[3] ?? attribute[4] ?? "");
-        anchor = { href: attributes.get("href"), text: "" };
-        anchors.push(anchor);
+        if (stack.some((entry) => entry.anchor)) fail("validation_failed", `${name} contains nested anchors`);
+        anchor = { href: attributes.get("href"), text: "", visible };
+        if (visible) anchors.push(anchor);
       }
-      stack.push({ tag, anchor });
+      if (!voidElements.has(tag) && !selfClosing) stack.push({ tag, anchor, visible });
     }
   }
-  const trailing = uncommented.slice(cursor);
-  if (/[<>]/.test(trailing)) fail("validation_failed", `${name} contains malformed markup`);
-  visibleText += trailing;
-  for (const entry of stack) if (entry.anchor) entry.anchor.text += trailing;
   if (stack.length !== 0) fail("validation_failed", `${name} contains unclosed markup`);
+  if (markupCount === 0) fail("validation_failed", `${name} must contain HTML markup`);
   return { anchors, visibleText };
 }
 
@@ -588,10 +679,10 @@ export function validateRenewal(value, contract, context) {
   timestamp(context.claimed_at, "claimed_at");
   timestamp(context.request_received_at, "request_received_at");
   if (compareTimestamps(context.request_received_at, context.claimed_at, "request_received_at", "claimed_at") < 0) fail("validation_failed");
-  if ((Date.parse(context.work.lease_expires_at) - Date.parse(context.claimed_at)) / 1000 !== context.current_total_lease_seconds) fail("validation_failed", "current lease total does not match claimed lease");
+  if (compareTimestamps(context.work.lease_expires_at, addTimestampSeconds(context.claimed_at, context.current_total_lease_seconds, "claimed_at"), "lease_expires_at", "expected current lease expiry") !== 0) fail("validation_failed", "current lease total does not match claimed lease");
   validateLeaseRenewal(context.current_total_lease_seconds, value.request.requested_lease_seconds, contract.publication_work.claim.maximum_total_lease_seconds);
   if (value.response.total_lease_seconds !== context.current_total_lease_seconds + value.request.requested_lease_seconds) fail("validation_failed", "total lease seconds do not match renewal");
-  const expectedExpiry = new Date(Date.parse(context.work.lease_expires_at) + value.request.requested_lease_seconds * 1000).toISOString().replace(".000Z", "Z");
+  const expectedExpiry = addTimestampSeconds(context.work.lease_expires_at, value.request.requested_lease_seconds, "lease_expires_at");
   if (compareTimestamps(value.response.lease_expires_at, expectedExpiry, "response.lease_expires_at", "expected lease expiry") !== 0) fail("validation_failed", "lease expiry does not match renewal");
   correlation(value.request.correlation_id, contract);
 }
@@ -642,6 +733,7 @@ export function validateStageTransition(previous, next, previousResponse) {
   }
   if (canonicalize(previous.destination_binding) !== canonicalize(next.destination_binding)) fail("identity_conflict");
   if (next.synchronized_at !== previous.synchronized_at) fail("identity_conflict");
+  if (previous.stage === "deployed" && next.deployed_at !== previous.deployed_at) fail("identity_conflict");
   pattern(previousResponse.next_stage_token, "^[a-f0-9]{64}$", "stage_conflict", "issued next_stage_token");
   if (next.stage_token !== previousResponse.next_stage_token || previous.stage_token === next.stage_token) fail("stage_conflict");
 }
@@ -868,6 +960,7 @@ export function validateOperatorEntitlement(entitlement, operator, trust, contex
   if (compareTimestamps(entitlement.not_before, entitlement.issued_at) < 0) fail("validation_failed");
   if (compareTimestamps(entitlement.expires_at, entitlement.not_before) <= 0 || (Date.parse(entitlement.expires_at) - Date.parse(entitlement.issued_at)) / 1000 > operator.entitlement.maximum_lifetime_seconds) fail("validation_failed");
   if (compareTimestamps(entitlement.grace_until, entitlement.expires_at) < 0 || (Date.parse(entitlement.grace_until) - Date.parse(entitlement.expires_at)) / 1000 > operator.entitlement.maximum_grace_seconds) fail("validation_failed");
+  object(context, "operator execution context");
   if (Object.keys(context).length > 0) {
     exactObject(context, ["forumId", "at", "state", "scope", "mutation"], ["operationSha256", "proposalId", "customerApproval"], "operator execution context");
     pattern(context.forumId, operator.entitlement.forum_id_pattern, "scope_denied", "context.forumId");
@@ -941,16 +1034,26 @@ export function validateIdentity(stored, incoming) {
   if (stored.canonical_url === incoming.canonical_url && stored.external_id !== incoming.external_id) fail("identity_conflict");
 }
 
-export function validateAcknowledgementIdentity(work, acknowledgement, state = "leased") {
+export function validateAcknowledgementIdentity(work, acknowledgement, state = "leased", context = {}) {
   if (state === "superseded") fail("work_superseded");
   const expectedState = { synchronized: "leased", deployed: "awaiting_deployment", verified: "awaiting_verification" }[acknowledgement.stage];
   if (state !== expectedState) fail("stage_conflict", "acknowledgement is not legal for current work state");
+  object(context, "acknowledgement acceptance context");
   if (Object.hasOwn(work, "lease_token") && work.lease_token !== acknowledgement.lease_token) fail("reconciliation_required");
   if (Object.hasOwn(work, "stage_token") && work.stage_token !== acknowledgement.stage_token) fail("stage_conflict");
   for (const field of ["resource_id", "destination_policy_id", "action"]) {
     if (Object.hasOwn(work, field) && work[field] !== acknowledgement[field]) fail("identity_conflict");
   }
   if (work.source_revision !== acknowledgement.source_revision || work.source_revision_sequence !== acknowledgement.source_revision_sequence || work.policy_revision !== acknowledgement.policy_revision) fail("revision_conflict");
+  if (acknowledgement.stage === "synchronized") {
+    exactObject(context, ["received_at"], [], "acknowledgement acceptance context");
+    timestamp(context.received_at, "received_at");
+    validateLeaseTime(work.lease_expires_at, context.received_at);
+    if (compareTimestamps(acknowledgement.synchronized_at, context.received_at, "synchronized_at", "received_at") > 0) fail("validation_failed", "synchronization cannot occur after receipt");
+  } else {
+    exactObject(context, [], ["received_at"], "acknowledgement acceptance context");
+    if (Object.hasOwn(context, "received_at")) timestamp(context.received_at, "received_at");
+  }
 }
 
 export function validateUrlProof(value) {
@@ -1074,7 +1177,7 @@ export function validateRetryTrace(value, contract) {
   exactObject(value.successful_retry, ["attempt_count", "resulting_state"], [], "successful retry");
   if (!Number.isSafeInteger(value.successful_retry.attempt_count) || value.successful_retry.attempt_count < 1 || value.successful_retry.attempt_count > contract.publication_work.maximum_total_attempts || value.successful_retry.resulting_state !== "acknowledged") fail("validation_failed");
   exactObject(value.terminal_failure, ["attempt_count", "resulting_state"], [], "terminal failure");
-  positiveInteger(value.terminal_failure.attempt_count, "terminal failure attempt_count");
+  if (!Number.isSafeInteger(value.terminal_failure.attempt_count) || value.terminal_failure.attempt_count < 1 || value.terminal_failure.attempt_count > contract.publication_work.maximum_total_attempts) fail("validation_failed");
   if (value.terminal_failure.resulting_state !== "operator_attention") fail("validation_failed");
   exactObject(value.manual_retry, ["customer_authorized", "condition_corrected", "same_work_id", "from_retry_generation", "to_retry_generation", "reentry_state", "next_attempt_count"], [], "manual retry");
   if (value.manual_retry.customer_authorized !== true || value.manual_retry.condition_corrected !== true || value.manual_retry.same_work_id !== true) fail("validation_failed");
