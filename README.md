@@ -46,6 +46,11 @@ through:
 
 That response reports receiver policy and never expands it.
 
+An empty configured `lanes` array means no-lane-only, not wildcard access.
+Only a request that omits `lane` is admitted for that connection. A connection
+with named lanes requires an exact member; omission is denied. Explicit blank,
+null, or undefined lane values are invalid, not aliases for omission.
+
 The capability response is limited to 64 KiB, 100 lanes, 100 destination
 policies, and 1,000 taxonomy or author mappings per policy. Opaque mapping,
 policy, catalog, container and destination identifiers are limited to 255 UTF-8
@@ -140,20 +145,66 @@ revision-pinned 32 KiB decoded base64 chunks. The adapter verifies every chunk,
 total byte count, and complete SHA-256 before parsing or publishing the
 reassembled UTF-8 HTML.
 
+Chunk descriptors must be feasible: empty content has one zero-byte chunk;
+nonempty content has between `ceil(byte_length / 32768)` and `byte_length`
+chunks, each making nonzero progress. Varying chunk sizes, shuffled arrival
+and UTF-8 sequences split across chunks remain valid. Declared and encoded
+chunk bounds are checked before decoding or hashing. Aggregate declared bytes
+must exactly match the descriptor before copying, sorting or concatenating
+the set. Finite feasibility alone does not qualify practical runtime tolerance
+for a very large number of small chunks.
+
 The source-detail metadata envelope is limited to 256 KiB. It carries at most
 20 categories and 100 tags; their opaque IDs are limited to 255 UTF-8 bytes and
 their descriptive names to 200 bytes. Duplicate category or tag source IDs are
 rejected. These metadata limits do not cap the complete source publication,
 which continues to use the bounded inline/chunked content transport.
 
-The receiver accepts no source item larger than the connection-advertised
-finite Alpha.22 source bound (currently 16 MiB). This protects both sides from
-unbounded work without imposing a destination-content ceiling.
+There is no aggregate source-size eligibility ceiling. The capability's
+`bounds` object does not advertise `source_content_bytes`; resolve records
+retain that field as measured complete-source identity. Byte counts and chunk
+indices/counts must be exactly representable safe integers, not a replacement
+publication-size policy. Complete size/hash equality, descriptor feasibility,
+per-message/per-chunk bounds and integrity checks remain required.
 
 Chunking bounds each API response; it is not a destination-content ceiling.
 The complete source is published whenever the destination accepts it. Only a
 real destination-native limit permits a safe destination excerpt with
 **Read More** to the source topic.
+
+The conformance set helper materializes a complete source in process memory.
+Its above-old-threshold reassembly tests are source-level evidence, not a
+production streaming implementation or qualification of arbitrarily large
+sources or many tiny chunks. Runtime resource handling and actual native
+complete-versus-excerpt publication require their separate qualification.
+
+Source detail always labels transport `complete`: it contains the entire
+authoritative cooked first-post HTML at the requested exact revision. This remains
+true when that first post is already an upstream excerpt with Read More. Its
+transport byte count and hash cover that whole current post, not the upstream
+article. Verify that transport before selecting each destination's native complete
+or bounded-excerpt outcome. Destination acknowledgement `complete`/`excerpt`
+and To-Discourse excerpts retain their separate meanings.
+
+### Paged enumeration completion
+
+Inventory, revocation-index and catalog-segment responses use the same strict
+continuation shape: `complete:false` requires a nonblank opaque `next_cursor`;
+`complete:true` requires `next_cursor:null`. An empty terminal page is valid.
+An empty nonterminal page requires real progress in the same pinned enumeration;
+merely changing a token does not prove progress. Shape validation does not prove
+producer progress or successful native delivery.
+
+The completed unit is respectively the immutable inventory snapshot, the fixed
+revocation high-water window, or one catalog segment at its exact revision.
+The inventory's initial high-water cut is fixed when the snapshot is established,
+not at the last page read; no additional inventory wire field is required.
+Connection and each operation's existing pinned context remain unchanged, with
+current authorization checked separately. Context changes must not silently
+continue the old unit; retain the existing mismatch/expiry/restart/deduplication
+rules. A later revocation window is a new unit. Enumeration completion does not
+acknowledge publication or revocation delivery, grant mapping authority, or accept
+a catalog PUT. Catalog updates retain their existing exact-revision atomic rules.
 
 ## Durable publication work
 
@@ -183,6 +234,15 @@ Whitespace inside an empty `publication_work` array does not create a work item
 and therefore does not consume the per-item budget. When an item exists, its
 leading and trailing whitespace remain part of that item's raw-byte accounting.
 
+The whole raw claim response is limited to 4,259,840 UTF-8 bytes before
+scanner/key processing. This preserves 32 raw 131,072-byte work items plus a
+65,536-byte control envelope. After bounded item extraction, all bytes outside
+the raw item spans—including empty-array whitespace, escaped outer field names
+and timestamp spelling—count toward that envelope, which is checked before
+full parsing or timestamp arithmetic. Exact fractional timestamp semantics
+remain unchanged within the bounded response. Object validators enforce
+serialized bounds but do not establish raw-ingress pre-parse protection.
+
 The first `synchronized` acknowledgement is valid only for the exact active
 lease after the native operation succeeds. It preserves destination identity
 and separately records source revision, destination publication revision,
@@ -195,6 +255,18 @@ interruption never repeats the native mutation or discards the binding. The
 receiver supplies the authoritative dynamic/static destination mode to its
 acceptance decision; acknowledgement-controlled state labels cannot select or
 downgrade that lifecycle.
+
+An excerpt acknowledgement carries `destination_binding.read_more_url` to
+the canonical source topic, separately from the destination's `canonical_url`.
+Complete acknowledgements omit it. Excerpt acceptance requires a receiver-owned
+`source_reference` containing the exact `resource_id`, `source_revision`,
+`source_revision_sequence` and retained `topic_url` for the work revision;
+the Read More target must match that URL. It is not derived from the untrusted
+acknowledgement. Static stages preserve the exact binding and source target.
+Synchronized From-Discourse presentation bindings retain the excerpt target;
+pre-first-ack migration bindings may omit it, and unrelated To-Discourse
+source-role bindings acquire no new target requirement. These validators do
+not prove that an installed receiver supplies authoritative retained context.
 
 The initial attempt is attempt 1. Registered transient failures after attempts
 1, 2, and 3 retry at 60, 300, and 900 seconds; a failure on attempt 4 enters

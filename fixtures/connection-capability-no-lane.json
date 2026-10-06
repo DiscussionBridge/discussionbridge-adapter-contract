@@ -1,0 +1,56 @@
+{
+  "contract_version": "0.2.0-alpha.22",
+  "connection_id": "dbc_111111111111111111111111",
+  "enabled": true,
+  "directions": [
+    "from_discourse"
+  ],
+  "lanes": [],
+  "forum_name": "Community Forum",
+  "allowed_presentation_modes": [
+    "simple",
+    "full",
+    "interactive"
+  ],
+  "supported_operations": [
+    "resolve",
+    "inventory",
+    "claim",
+    "renew",
+    "acknowledge",
+    "fail",
+    "revocations",
+    "catalog"
+  ],
+  "bounds": {
+    "resolve_json_bytes": 65536,
+    "claim_maximum_items": 32,
+    "lease_maximum_seconds": 14400,
+    "catalog_segment_items": 100
+  },
+  "destination_policies": [
+    {
+      "destination_policy_id": "destination:ghost:primary:1",
+      "profile": "ghost",
+      "presentation_mode": "interactive",
+      "container_mapping": {
+        "source": "discourse:category:2",
+        "destination": "ghost:tag:announcements"
+      },
+      "taxonomy_mapping": {
+        "mode": "mapped_only"
+      },
+      "author_mapping": {
+        "mode": "source_attribution"
+      },
+      "native_limit_policy": {
+        "maximum_bytes": 1000000,
+        "overflow_behavior": "excerpt_with_read_more"
+      },
+      "catalog_revision": "catalog:ghost:2026-09-27:1"
+    }
+  ],
+  "catalog_required": true,
+  "policy_revision": "policy:2026-09-27:1",
+  "correlation_id": "connection-capability-no-lane-01"
+}

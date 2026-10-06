@@ -9,7 +9,6 @@
   "supported_operations": ["resolve", "inventory", "claim", "renew", "acknowledge", "fail", "revocations", "catalog"],
   "bounds": {
     "resolve_json_bytes": 65536,
-    "source_content_bytes": 16777216,
     "claim_maximum_items": 32,
     "lease_maximum_seconds": 14400,
     "catalog_segment_items": 100

@@ -1,0 +1,23 @@
+{
+  "lease_token": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "resource_id": "a4965d46-e657-4af4-af47-6439e544eeb9",
+  "source_revision": "post:12:version:4",
+  "source_revision_sequence": 4,
+  "policy_revision": "policy:2026-09-27:1",
+  "destination_policy_id": "destination:statamic:primary:1",
+  "action": "update",
+  "stage": "synchronized",
+  "stage_token": "2222222222222222222222222222222222222222222222222222222222222222",
+  "destination_binding": {
+    "binding_id": "dbb_11111111111111111111111111111111",
+    "external_id": "page:site-7:roadmap",
+    "canonical_url": "https://publisher.example/roadmap/",
+    "publication_revision": "statamic:entry:roadmap:revision:7",
+    "content_disposition": "excerpt",
+    "read_more_url": "https://forum.example/t/forum-originated-roadmap/8"
+  },
+  "synchronized_at": "2026-09-27T18:31:00Z",
+  "deployment_state": "pending",
+  "verification_state": "pending",
+  "correlation_id": "work-01"
+}

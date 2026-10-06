@@ -100,7 +100,7 @@ assert.equal(contract.publication_work.initial_attempts + contract.publication_w
 assert.equal(contract.publication_work.retry_backoff_seconds.length, contract.publication_work.maximum_automatic_retries);
 assert.equal(operator.entitlement.canonicalization, "RFC 8785 JCS");
 assert.deepEqual(
-  [...new Set([...contract.records.destination_binding_required_fields, ...contract.records.destination_binding_synchronization_fields, ...contract.records.destination_binding_event_timestamp_fields])].sort(),
+  [...new Set([...contract.records.destination_binding_required_fields, ...contract.records.destination_binding_synchronization_fields, ...contract.records.destination_binding_event_timestamp_fields, ...contract.records.destination_binding_conditional_fields])].sort(),
   [...contract.records.destination_binding_fields].sort(),
   "destination binding required/conditional fields must exactly cover the declared field vocabulary",
 );
@@ -144,6 +144,21 @@ const renewalContext = {
   current_total_lease_seconds: 300,
 };
 const acknowledgementContext = { received_at: "2026-09-27T18:31:00Z", claimed_at: claimedWorkFixture.claimed_at, destination_mode: "static" };
+// Fixture traces synthesize their headers; mismatch tests supply independent values.
+// This construction is local test data, not observation of native HTTP traffic.
+const fixtureAcknowledgementHeaders = (acknowledgement, response) => ({
+  request_header: acknowledgement.correlation_id,
+  response_header: response.correlation_id,
+});
+const sourceReferenceFrom = (detail) => ({
+  resource_id: detail.resource_id,
+  source_revision: detail.source_revision,
+  source_revision_sequence: detail.source_revision_sequence,
+  topic_url: detail.topic_url,
+});
+const excerptSourceReference = sourceReferenceFrom(fixtures.get("source-detail-inline.json"));
+const excerptContext = { ...acknowledgementContext, source_reference: excerptSourceReference };
+assert.deepEqual(Object.keys(excerptSourceReference).sort(), [...contract.publication_work.acknowledgement.source_reference_fields].sort());
 const approvedOperationContext = {
   forumId: approvalEntitlement.forum_id,
   at: "2026-09-28T00:00:00Z",
@@ -167,6 +182,7 @@ const positiveHandlers = {
   "authentication-headers.json": (value) => validateAuthenticationHeaders(value, contract),
   "connection-capability.json": (_value, text) => validateConnectionCapabilityText(text, contract),
   "connection-capability-to-discourse.json": (_value, text) => validateConnectionCapabilityText(text, contract),
+  "connection-capability-no-lane.json": (_value, text) => validateConnectionCapabilityText(text, contract),
   "correlation-roundtrip.json": (value) => { for (const transaction of value.transactions) { const exchange = structuredClone(transaction); delete exchange.route; validateCorrelationExchange(exchange, contract); } },
   "created-response.json": (value) => validateResolveResponse(value, contract.resolve.success_response_required_fields, contract),
   "resolved-response.json": (value) => validateResolveResponse(value, contract.resolve.success_response_required_fields, contract),
@@ -207,6 +223,7 @@ const positiveHandlers = {
   "publication-work-withdrawal.json": (_value, text) => validateClaimResponseText(text, contract),
   "publication-lease-renewal.json": (value) => validateRenewal(value, contract, renewalContext),
   "publication-acknowledgement-create.json": (value) => validateAcknowledgement(value, contract),
+  "publication-acknowledgement-excerpt.json": (value) => validateAcknowledgementExchange(claimedWorkFixture.publication_work[0], value, fixtures.get("publication-acknowledgement-responses.json").synchronized, contract, "leased", excerptContext, fixtureAcknowledgementHeaders(value, fixtures.get("publication-acknowledgement-responses.json").synchronized)),
   "publication-acknowledgement-static-pending.json": (value) => {
     validateAcknowledgement(value, contract);
     validateAcknowledgementIdentity(fixtures.get("publication-work-claim.json").publication_work[0], value, "leased", acknowledgementContext);
@@ -227,7 +244,7 @@ const positiveHandlers = {
       claimed_at: value.claimed_at,
       received_at: value.received_at,
       destination_mode: "dynamic",
-    });
+    }, fixtureAcknowledgementHeaders(acknowledgement, response));
     validateCorrelationExchange({ request_header: acknowledgement.correlation_id, request_body: acknowledgement.correlation_id, response_header: response.correlation_id, response_body: response.correlation_id }, contract);
     assert.equal(response.resulting_state, value.terminal_state);
   },
@@ -584,6 +601,189 @@ const validSplitUtf8Chunks = validSplitUtf8Parts.map((content, index) => ({
   correlation_id: `valid-split-utf8-${index + 1}`,
 })).reverse();
 validateChunkSet(validSplitUtf8Descriptor, validSplitUtf8Chunks, contract);
+// CB-01 R1: source evidence is independently selected from the retained source,
+// not from the acknowledgement's destination URL or its proposed Read More URL.
+const excerptAcknowledgement = fixtures.get("publication-acknowledgement-excerpt.json");
+const excerptStages = [excerptAcknowledgement, ...["publication-acknowledgement-static-deployed.json", "publication-acknowledgement.json"].map((name) => {
+  const ack = structuredClone(fixtures.get(name));
+  ack.destination_binding = structuredClone(excerptAcknowledgement.destination_binding);
+  return ack;
+})];
+const excerptResponses = fixtures.get("publication-acknowledgement-responses.json");
+for (const [index, stage] of ["synchronized", "deployed", "verified"].entries()) {
+  const work = { ...claimedWorkFixture.publication_work[0], stage_token: excerptStages[index].stage_token };
+  const context = index === 0 ? excerptContext : { destination_mode: "static", source_reference: excerptSourceReference };
+  validateAcknowledgementExchange(work, excerptStages[index], excerptResponses[stage], contract, ["leased", "awaiting_deployment", "awaiting_verification"][index], context, fixtureAcknowledgementHeaders(excerptStages[index], excerptResponses[stage]));
+  if (index) validateStageTransition(excerptStages[index - 1], excerptStages[index], excerptResponses[["synchronized", "deployed"][index - 1]]);
+}
+const dynamicExcerptWork = structuredClone(fixtures.get("publication-dynamic-trace.json").work);
+dynamicExcerptWork.native_limit_policy.overflow_behavior = "excerpt_with_read_more";
+const dynamicExcerptAcknowledgement = structuredClone(fixtures.get("publication-acknowledgement-create.json"));
+const dynamicRetainedSource = { ...sourceReferenceFrom(dynamicExcerptWork), topic_url: "https://forum.example/t/dynamic-source/501" };
+dynamicExcerptAcknowledgement.destination_binding.content_disposition = "excerpt";
+dynamicExcerptAcknowledgement.destination_binding.read_more_url = dynamicRetainedSource.topic_url;
+const dynamicExcerptContext = {
+  claimed_at: fixtures.get("publication-dynamic-trace.json").claimed_at,
+  received_at: fixtures.get("publication-dynamic-trace.json").received_at,
+  destination_mode: "dynamic",
+  source_reference: dynamicRetainedSource,
+};
+validateAcknowledgementExchange(dynamicExcerptWork, dynamicExcerptAcknowledgement, excerptResponses.dynamic, contract, "leased", dynamicExcerptContext, fixtureAcknowledgementHeaders(dynamicExcerptAcknowledgement, excerptResponses.dynamic));
+const persistedExcerpt = structuredClone(fixtures.get("from-discourse-record.json"));
+persistedExcerpt.bridge_record.bindings[0].content_disposition = "excerpt";
+persistedExcerpt.bridge_record.bindings[0].read_more_url = excerptSourceReference.topic_url;
+validateRecordShow(persistedExcerpt, contract);
+const preAcknowledgementExcerpt = structuredClone(persistedExcerpt);
+for (const field of [...contract.records.destination_binding_synchronization_fields, "read_more_url"]) delete preAcknowledgementExcerpt.bridge_record.bindings[0][field];
+validateRecordShow(preAcknowledgementExcerpt, contract);
+const unrelatedSourceBinding = structuredClone(persistedExcerpt);
+unrelatedSourceBinding.bridge_record.direction = "to_discourse";
+unrelatedSourceBinding.bridge_record.bindings[0].role = "source";
+delete unrelatedSourceBinding.bridge_record.bindings[0].read_more_url;
+validateRecordShow(unrelatedSourceBinding, contract);
+
+// CB-01 R2: varying chunk sizes and the existing reverse-ordered UTF-8 split
+// remain admitted. Empty content has one empty chunk, never an empty chunk set.
+function chunkSetFor(content, parts = [content]) {
+  const sourceRevision = "revision:cb01-chunks";
+  const descriptor = { source_revision: sourceRevision, byte_length: content.length, sha256: createHash("sha256").update(content).digest("hex"), chunk_count: parts.length };
+  const chunks = parts.map((part, index) => ({
+    source_revision: sourceRevision, chunk: index + 1, chunk_count: parts.length,
+    decoded_bytes: part.length, chunk_sha256: createHash("sha256").update(part).digest("hex"),
+    content_base64: part.toString("base64"), correlation_id: `cb01-chunk-${index + 1}`,
+  }));
+  return { descriptor, chunks };
+}
+const emptyChunkSet = chunkSetFor(Buffer.alloc(0));
+const maximumChunkSet = chunkSetFor(Buffer.alloc(contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes, 0x61));
+validateChunkSet(emptyChunkSet.descriptor, emptyChunkSet.chunks, contract);
+validateChunkSet(maximumChunkSet.descriptor, maximumChunkSet.chunks, contract);
+const minimumChunkSet = chunkSetFor(Buffer.from("A"));
+validateChunkSet(minimumChunkSet.descriptor, minimumChunkSet.chunks, contract);
+// R5: source identity is not an aggregate publication-eligibility policy.
+const formerSourceCeiling = 16777216;
+for (const object of [contract.common, contract.resolve]) assert.equal(Object.hasOwn(object, "source_content_maximum_bytes"), false);
+assert.equal(Object.hasOwn(contract.source_publication.detail, "maximum_source_content_bytes"), false);
+assert.equal(contract.connection_capability.bounds_required_fields.includes("source_content_bytes"), false);
+const r5ExcerptBase = fixtures.get("to-discourse-excerpt-request.json").bridge_record;
+const r5SourceSizes = [formerSourceCeiling, formerSourceCeiling + 1, 33554432, Number.MAX_SAFE_INTEGER];
+for (const byteLength of r5SourceSizes) {
+  const excerpt = { ...structuredClone(r5ExcerptBase), source_content_bytes: byteLength };
+  validateResolveRequestText(JSON.stringify({ bridge_record: excerpt }), contract);
+  validateConnectionCapability(fixtures.get("connection-capability-to-discourse.json"), contract);
+  validateDirection(fixtures.get("connection-capability-to-discourse.json"), excerpt);
+  validateScope(fixtures.get("connection-capability-to-discourse.json"), excerpt);
+  const detail = structuredClone(fixtures.get("source-detail-chunked.json"));
+  detail.content_transport.byte_length = byteLength;
+  detail.content_transport.chunk_count = Math.ceil(byteLength / contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes);
+  validateSourceDetailText(JSON.stringify(detail), contract);
+  const record = structuredClone(fixtures.get("from-discourse-record.json"));
+  record.bridge_record.content_transport = structuredClone(detail.content_transport);
+  validateRecordShow(record, contract);
+}
+const r5StandaloneChunks = [formerSourceCeiling + 1, Number.MAX_SAFE_INTEGER].map((count) => ({
+  ...structuredClone(minimumChunkSet.chunks[0]), chunk: count, chunk_count: count,
+}));
+for (const chunk of r5StandaloneChunks) validateChunk(chunk, null, contract);
+
+// Actual bounded test payload, not a fixture declaration or production memory claim.
+const r5CompleteSource = Buffer.alloc(formerSourceCeiling + 1, 0x61);
+r5CompleteSource.write("<p>", 0, "utf8");
+r5CompleteSource.write("</p>", r5CompleteSource.length - 4, "utf8");
+const r5ChunkMaximum = contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes;
+Buffer.from("😀", "utf8").copy(r5CompleteSource, r5ChunkMaximum - 2);
+const r5Parts = [];
+for (let offset = 0; offset < r5CompleteSource.length;) {
+  const length = offset === 0 ? r5ChunkMaximum - 1 : r5ChunkMaximum;
+  r5Parts.push(r5CompleteSource.subarray(offset, Math.min(offset + length, r5CompleteSource.length)));
+  offset += length;
+}
+const r5LargeChunkSet = chunkSetFor(r5CompleteSource, r5Parts);
+const r5LargeExcerpt = {
+  ...structuredClone(r5ExcerptBase), source_content_bytes: r5CompleteSource.length,
+  source_content_sha256: r5LargeChunkSet.descriptor.sha256,
+};
+validateResolveRequestText(JSON.stringify({ bridge_record: r5LargeExcerpt }), contract);
+const r5NativeCompleteWork = structuredClone(dynamicExcerptWork);
+r5NativeCompleteWork.native_limit_policy = { maximum_bytes: 33554432, overflow_behavior: "complete" };
+validateWork(r5NativeCompleteWork, contract);
+const r5LargeDetail = structuredClone(fixtures.get("source-detail-chunked.json"));
+Object.assign(r5LargeDetail, {
+  resource_id: r5NativeCompleteWork.resource_id, topic_id: 501,
+  topic_url: dynamicRetainedSource.topic_url,
+  source_revision: r5NativeCompleteWork.source_revision,
+  source_revision_sequence: r5NativeCompleteWork.source_revision_sequence,
+  content_transport: {
+    mode: "chunked", media_type: "text/html; charset=utf-8",
+    byte_length: r5LargeChunkSet.descriptor.byte_length, sha256: r5LargeChunkSet.descriptor.sha256,
+    chunk_count: r5LargeChunkSet.descriptor.chunk_count, decoded_chunk_maximum_bytes: r5ChunkMaximum,
+  },
+});
+r5LargeChunkSet.descriptor.source_revision = r5LargeDetail.source_revision;
+for (const chunk of r5LargeChunkSet.chunks) chunk.source_revision = r5LargeDetail.source_revision;
+validateSourceDetailText(JSON.stringify(r5LargeDetail), contract);
+validateChunkSet(r5LargeChunkSet.descriptor, [...r5LargeChunkSet.chunks].reverse(), contract);
+const r5LargeRecord = structuredClone(fixtures.get("from-discourse-record.json"));
+for (const field of ["resource_id", "topic_id", "topic_url", "source_revision", "source_revision_sequence", "content_transport"]) {
+  r5LargeRecord.bridge_record[field] = structuredClone(r5LargeDetail[field]);
+}
+r5LargeRecord.bridge_record.bindings[0].applied_source_revision = r5LargeDetail.source_revision;
+validateRecordShow(r5LargeRecord, contract);
+const r5NativeCompleteAcknowledgement = structuredClone(fixtures.get("publication-acknowledgement-create.json"));
+validateAcknowledgementExchange(r5NativeCompleteWork, r5NativeCompleteAcknowledgement, excerptResponses.dynamic, contract, "leased", dynamicExcerptContext, fixtureAcknowledgementHeaders(r5NativeCompleteAcknowledgement, excerptResponses.dynamic));
+const r5NativeExcerptWork = structuredClone(r5NativeCompleteWork);
+r5NativeExcerptWork.native_limit_policy = { maximum_bytes: 65536, overflow_behavior: "excerpt_with_read_more" };
+validateWork(r5NativeExcerptWork, contract);
+validateAcknowledgementExchange(r5NativeExcerptWork, dynamicExcerptAcknowledgement, excerptResponses.dynamic, contract, "leased", dynamicExcerptContext, fixtureAcknowledgementHeaders(dynamicExcerptAcknowledgement, excerptResponses.dynamic));
+// These are valid source/work/acknowledgement compositions, not execution of
+// destination-native sizing selection, publication, persistence or rendering.
+
+function observeChunkAllocation(action) {
+  const originalFrom = Buffer.from;
+  const originalConcat = Buffer.concat;
+  const originalSort = Array.prototype.sort;
+  let decodes = 0;
+  let concatenations = 0;
+  let sorts = 0;
+  let error = null;
+  Buffer.from = (...args) => { if (args[1] === "base64") decodes += 1; return originalFrom(...args); };
+  Buffer.concat = (...args) => { concatenations += 1; return originalConcat(...args); };
+  Array.prototype.sort = function (...args) { sorts += 1; return originalSort.apply(this, args); };
+  try { action(); } catch (caught) { error = caught; }
+  finally { Buffer.from = originalFrom; Buffer.concat = originalConcat; Array.prototype.sort = originalSort; }
+  return { error, decodes, concatenations, sorts };
+}
+function assertRejectsBeforeChunkAllocation(action, code, message) {
+  const observed = observeChunkAllocation(action);
+  assert.ok(observed.error instanceof ProtocolError && observed.error.code === code, message);
+  for (const operation of ["decodes", "concatenations", "sorts"]) assert.equal(observed[operation], 0, `${message}: ${operation} before rejection`);
+}
+assertRejectsBeforeChunkAllocation(() => validateChunk({ ...minimumChunkSet.chunks[0], decoded_bytes: 32769 }, null, contract), "validation_failed", "declared oversize guard");
+assertRejectsBeforeChunkAllocation(() => validateChunk({ ...minimumChunkSet.chunks[0], content_base64: "A".repeat(43693) }, null, contract), "validation_failed", "encoded oversize guard");
+assertRejectsBeforeChunkAllocation(() => validateChunkSet({ ...minimumChunkSet.descriptor, byte_length: 2 }, minimumChunkSet.chunks, contract), "integrity_failed", "aggregate deficit guard");
+assertRejectsBeforeChunkAllocation(() => validateChunkSet({ ...maximumChunkSet.descriptor, byte_length: 1 }, maximumChunkSet.chunks, contract), "integrity_failed", "aggregate excess guard");
+
+// CB-01 R4: real directional ingress; no invented From-Discourse resolve.
+const noLaneCapability = fixtures.get("connection-capability-no-lane.json");
+const noLaneToCapability = structuredClone(fixtures.get("connection-capability-to-discourse.json"));
+noLaneToCapability.lanes = [];
+const noLaneResolve = structuredClone(fixtures.get("to-discourse-request.json"));
+delete noLaneResolve.bridge_record.lane;
+validateConnectionCapability(noLaneCapability, contract);
+validateConnectionCapability(noLaneToCapability, contract);
+validateResolveRequestText(JSON.stringify(noLaneResolve), contract);
+validateDirection(noLaneToCapability, noLaneResolve.bridge_record);
+validateScope(noLaneToCapability, noLaneResolve.bridge_record);
+validateDirection(noLaneCapability, { direction: "from_discourse" });
+validateScope(noLaneCapability, { direction: "from_discourse" });
+validateRecordShow(fixtures.get("from-discourse-record.json"), contract);
+validateSourceDetail(fixtures.get("source-detail-inline.json"), contract);
+assert.equal(fixtures.get("from-discourse-record.json").bridge_record.bindings[0].connection_id, noLaneCapability.connection_id);
+const configuredLaneResolve = structuredClone(noLaneResolve);
+configuredLaneResolve.bridge_record.lane = fixtures.get("connection-capability-to-discourse.json").lanes[0];
+validateResolveRequestText(JSON.stringify(configuredLaneResolve), contract);
+validateDirection(fixtures.get("connection-capability-to-discourse.json"), configuredLaneResolve.bridge_record);
+validateScope(fixtures.get("connection-capability-to-discourse.json"), configuredLaneResolve.bridge_record);
 const validSupplementaryEntitlement = resignApprovalEntitlement({
   ...structuredClone(approvalEntitlement),
   provider_name: "Provider 😀",
@@ -644,8 +844,45 @@ validateClaimResponseText(
 );
 validateClaimResponseText(claimResponseWithItemCount(contract.publication_work.claim.maximum_items), contract);
 validateClaimResponseText(claimResponseWithEmptyArrayWhitespace(0), contract);
-validateClaimResponseText(claimResponseWithEmptyArrayWhitespace(contract.publication_work.maximum_json_bytes), contract);
-validateClaimResponseText(claimResponseWithEmptyArrayWhitespace(contract.publication_work.maximum_json_bytes + 1), contract);
+const emptyClaimBytes = Buffer.byteLength(claimResponseWithEmptyArrayWhitespace(0));
+validateClaimResponseText(claimResponseWithEmptyArrayWhitespace(contract.publication_work.claim.envelope_maximum_json_bytes - emptyClaimBytes), contract);
+assert.equal(contract.publication_work.claim.response_maximum_json_bytes, contract.publication_work.claim.maximum_items * contract.publication_work.maximum_json_bytes + contract.publication_work.claim.envelope_maximum_json_bytes);
+const maximumRawWork = claimResponseWithRawWorkSize(contract.publication_work.maximum_json_bytes).match(/"publication_work":\[([\s\S]+)\],"claimed_at"/)[1];
+const maximumBatchPrefix = `{"publication_work":[${Array.from({ length: 32 }, () => maximumRawWork).join(",")}],"claimed_at":"2026-09-27T18:30:00Z","correlation_id":"work-01"}`;
+const maximumBatch = maximumBatchPrefix + " ".repeat(contract.publication_work.claim.response_maximum_json_bytes - Buffer.byteLength(maximumBatchPrefix));
+validateClaimResponseText(maximumBatch, contract);
+validateClaimResponseText(JSON.stringify({ publication_work: [], claimed_at: `2026-09-27T18:30:00.${"0".repeat(1000)}1Z`, correlation_id: "precise-claim" }), contract);
+
+// Observe actual raw-ingress work, not just the eventual rejection code.
+function observeClaimPreparse(action) {
+  const originalParse = JSON.parse;
+  const originalSlice = String.prototype.slice;
+  let parseCalls = 0;
+  let slices = 0;
+  let error = null;
+  JSON.parse = (...args) => { parseCalls += 1; return originalParse(...args); };
+  String.prototype.slice = function (...args) { slices += 1; return originalSlice.apply(this, args); };
+  try { action(); } catch (caught) { error = caught; }
+  finally { JSON.parse = originalParse; String.prototype.slice = originalSlice; }
+  return { error, parseCalls, slices };
+}
+const overWholeClaim = claimResponseWithEmptyArrayWhitespace(0) + " ".repeat(contract.publication_work.claim.response_maximum_json_bytes - emptyClaimBytes + 1);
+const overWholeMultibyteClaim = `{"publication_work":[],"ignored":"${"é".repeat(Math.floor(contract.publication_work.claim.response_maximum_json_bytes / 2) + 1)}"}`;
+assert.ok(overWholeMultibyteClaim.length < contract.publication_work.claim.response_maximum_json_bytes);
+assert.ok(Buffer.byteLength(overWholeMultibyteClaim) > contract.publication_work.claim.response_maximum_json_bytes);
+for (const [name, text] of [["ASCII whole bound", overWholeClaim], ["UTF-8 whole bound", overWholeMultibyteClaim], ["malformed whole bound", `[${" ".repeat(contract.publication_work.claim.response_maximum_json_bytes)}`]]) {
+  const observed = observeClaimPreparse(() => validateClaimResponseText(text, contract));
+  assert.ok(observed.error instanceof ProtocolError && observed.error.code === "validation_failed", name);
+  assert.equal(observed.parseCalls, 0, `${name}: key decoded or JSON parsed before whole guard`);
+  assert.equal(observed.slices, 0, `${name}: text sliced before whole guard`);
+}
+const overEnvelopeClaim = claimResponseWithEmptyArrayWhitespace(contract.publication_work.claim.envelope_maximum_json_bytes - emptyClaimBytes + 1);
+const malformedOverEnvelopeClaim = overEnvelopeClaim + "x";
+for (const text of [overEnvelopeClaim, malformedOverEnvelopeClaim]) {
+  const observed = observeClaimPreparse(() => validateClaimResponseText(text, contract));
+  assert.ok(observed.error instanceof ProtocolError && observed.error.code === "validation_failed", "envelope excess must precede full syntax validation");
+  assert.equal(observed.parseCalls, 1, "only the bounded publication_work key is decoded before envelope rejection");
+}
 
 function assertProtocolRejectionBeforeJsonParse(action, expectedCode, maximumParseCalls, message) {
   const originalJsonParse = JSON.parse;
@@ -846,10 +1083,48 @@ for (const name of negativeNames) {
 }
 
 const mutationCases = [
+  ["excerpt acknowledgement missing target", () => { const ack = structuredClone(excerptAcknowledgement); delete ack.destination_binding.read_more_url; validateAcknowledgement(ack, contract); }, "validation_failed"],
+  ...["javascript:alert(1)", "https://user:password@forum.example/t/source/8", null].map((target) => ["excerpt invalid target", () => { const ack = structuredClone(excerptAcknowledgement); ack.destination_binding.read_more_url = target; validateAcknowledgement(ack, contract); }, "validation_failed"]),
+  ["excerpt wrong canonical source target", () => { const ack = structuredClone(excerptAcknowledgement); ack.destination_binding.read_more_url = ack.destination_binding.canonical_url; validateAcknowledgementExchange(claimedWorkFixture.publication_work[0], ack, excerptResponses.synchronized, contract, "leased", excerptContext, fixtureAcknowledgementHeaders(ack, excerptResponses.synchronized)); }, "identity_conflict"],
+  ["excerpt missing receiver source context", () => validateAcknowledgementExchange(claimedWorkFixture.publication_work[0], excerptAcknowledgement, excerptResponses.synchronized, contract, "leased", acknowledgementContext, fixtureAcknowledgementHeaders(excerptAcknowledgement, excerptResponses.synchronized)), "validation_failed"],
+  ...[["resource_id", "b4965d46-e657-4af4-af47-6439e544eeb8", "identity_conflict"], ["source_revision", "wrong-revision", "revision_conflict"], ["source_revision_sequence", 5, "revision_conflict"], ["source_revision_sequence", 0, "validation_failed"], ["topic_url", null, "validation_failed"]].map(([field, value, code]) => [`excerpt wrong source reference ${field}`, () => validateAcknowledgementExchange(claimedWorkFixture.publication_work[0], excerptAcknowledgement, excerptResponses.synchronized, contract, "leased", { ...excerptContext, source_reference: { ...excerptSourceReference, [field]: value } }, fixtureAcknowledgementHeaders(excerptAcknowledgement, excerptResponses.synchronized)), code]),
+  ["excerpt target changes between stages", () => { const next = structuredClone(excerptStages[1]); next.destination_binding.read_more_url += "?other-source"; validateStageTransition(excerptStages[0], next, excerptResponses.synchronized); }, "identity_conflict"],
+  ["persisted synchronized excerpt missing target", () => { const record = structuredClone(persistedExcerpt); delete record.bridge_record.bindings[0].read_more_url; validateRecordShow(record, contract); }, "validation_failed"],
+  ["complete receipt must omit target", () => { const ack = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); ack.destination_binding.read_more_url = excerptSourceReference.topic_url; validateAcknowledgement(ack, contract); }, "validation_failed"],
+  ["chunk descriptor too few chunks", () => { const detail = structuredClone(fixtures.get("source-detail-chunked.json")); detail.content_transport.chunk_count = 2; validateSourceDetail(detail, contract); }, "validation_failed"],
+  ["chunk descriptor too many chunks", () => { const detail = structuredClone(fixtures.get("source-detail-chunked.json")); detail.content_transport.chunk_count = detail.content_transport.byte_length + 1; validateSourceDetail(detail, contract); }, "validation_failed"],
+  ["chunk descriptor unsafe count", () => validateChunkSet({ ...minimumChunkSet.descriptor, chunk_count: Number.MAX_SAFE_INTEGER }, minimumChunkSet.chunks, contract), "validation_failed"],
+  ["empty chunk set is not empty content representation", () => validateChunkSet(emptyChunkSet.descriptor, [], contract), "integrity_failed"],
+  ["empty descriptor requires one chunk", () => validateChunkSet({ ...emptyChunkSet.descriptor, chunk_count: 2 }, emptyChunkSet.chunks, contract), "validation_failed"],
+  ["nonempty descriptor rejects zero progress", () => validateChunkSet(minimumChunkSet.descriptor, [{ ...emptyChunkSet.chunks[0], source_revision: minimumChunkSet.descriptor.source_revision }], contract), "validation_failed"],
+  ["chunk declared bytes must be safe", () => validateChunk({ ...minimumChunkSet.chunks[0], decoded_bytes: Number.MAX_SAFE_INTEGER }, minimumChunkSet.descriptor, contract), "validation_failed"],
+  ["chunk hash mismatch", () => validateChunk({ ...minimumChunkSet.chunks[0], chunk_sha256: "0".repeat(64) }, minimumChunkSet.descriptor, contract), "integrity_failed"],
+  ["chunk noncanonical padding bits", () => validateChunk({ ...minimumChunkSet.chunks[0], content_base64: "QR==" }, minimumChunkSet.descriptor, contract), "validation_failed"],
+  ["chunk invalid base64 alphabet", () => validateChunk({ ...minimumChunkSet.chunks[0], content_base64: "?A==" }, minimumChunkSet.descriptor, contract), "validation_failed"],
+  ["chunk set duplicate sequence", () => validateChunkSet(validSplitUtf8Descriptor, [validSplitUtf8Chunks[0], validSplitUtf8Chunks[0]], contract), "integrity_failed"],
+  ["chunk set missing sequence", () => validateChunkSet(validSplitUtf8Descriptor, [validSplitUtf8Chunks[0]], contract), "integrity_failed"],
+  ["chunk wrong source revision", () => validateChunk({ ...minimumChunkSet.chunks[0], source_revision: "other-revision" }, minimumChunkSet.descriptor, contract), "revision_conflict"],
+  ["claim whole budget plus one", () => validateClaimResponseText(maximumBatch + " ", contract), "validation_failed"],
+  ["claim empty envelope plus one", () => validateClaimResponseText(claimResponseWithEmptyArrayWhitespace(contract.publication_work.claim.envelope_maximum_json_bytes - emptyClaimBytes + 1), contract), "validation_failed"],
+  ["claim former empty-array item-size padding", () => validateClaimResponseText(claimResponseWithEmptyArrayWhitespace(contract.publication_work.maximum_json_bytes), contract), "validation_failed"],
+  ["claim huge fractional timestamp envelope", () => validateClaimResponseText(JSON.stringify({ publication_work: [], claimed_at: `2026-09-27T18:30:00.${"0".repeat(200000)}1Z`, correlation_id: "bounded-timestamp" }), contract), "validation_failed"],
+  ["claim escaped key padding envelope", () => validateClaimResponseText(claimResponseWithEmptyArrayWhitespace(contract.publication_work.claim.envelope_maximum_json_bytes).replace('"publication_work"', '"publication_\\u0077ork"'), contract), "validation_failed"],
+  ["no-lane connection denies named lane", () => validateScope(noLaneCapability, { lane: configuredLaneResolve.bridge_record.lane }), "scope_denied"],
+  ["configured connection denies missing lane", () => validateScope(fixtures.get("connection-capability.json"), {}), "scope_denied"],
+  ["configured connection denies foreign lane", () => validateScope(fixtures.get("connection-capability.json"), { lane: "unconfigured-lane" }), "scope_denied"],
+  ...["", " ", null, undefined].map((lane) => [`scope rejects explicit invalid lane ${String(lane)}`, () => validateScope(noLaneCapability, { lane }), "validation_failed"]),
   ["missing required field", () => { const value = structuredClone(baseComplete); delete value.source_revision; validateResolveRecord(value, contract); }, "validation_failed"],
   ["unknown field", () => validateResolveRecord({ ...structuredClone(baseComplete), invented_control: true }, contract), "unknown_field"],
   ["invalid enum", () => validateResolveRecord({ ...structuredClone(baseComplete), presentation_mode: "fullInteractive" }, contract), "validation_failed"],
-  ["content bound", () => validateResolveRecord({ ...structuredClone(baseComplete), source_content_bytes: contract.resolve.source_content_maximum_bytes + 1 }, contract), "validation_failed"],
+  ["source size unsafe integer", () => validateResolveRecord({ ...structuredClone(baseComplete), source_content_bytes: Number.MAX_SAFE_INTEGER + 1 }, contract), "validation_failed"],
+  ...[-1, 1.5, "16777217", null, Number.NaN, Number.POSITIVE_INFINITY].map((size) => [`source size invalid ${String(size)}`, () => validateResolveRecord({ ...structuredClone(r5ExcerptBase), source_content_bytes: size }, contract), "validation_failed"]),
+  ...[0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, "16777217", null].map((count) => [`standalone chunk unsafe/nonpositive count ${String(count)}`, () => validateChunk({ ...minimumChunkSet.chunks[0], chunk_count: count }, null, contract), "validation_failed"]),
+  ...[0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1].map((index) => [`standalone chunk unsafe/nonpositive index ${String(index)}`, () => validateChunk({ ...minimumChunkSet.chunks[0], chunk: index }, null, contract), "validation_failed"]),
+  ...[-1, 1.5, Number.MAX_SAFE_INTEGER + 1, "16777217", null].map((length) => [`source descriptor invalid length ${String(length)}`, () => { const detail = structuredClone(r5LargeDetail); detail.content_transport.byte_length = length; validateSourceDetail(detail, contract); }, "validation_failed"]),
+  ["above-old-ceiling descriptor infeasible count", () => { const detail = structuredClone(r5LargeDetail); detail.content_transport.chunk_count -= 1; validateSourceDetail(detail, contract); }, "validation_failed"],
+  ["above-old-ceiling descriptor excessive count", () => { const detail = structuredClone(r5LargeDetail); detail.content_transport.chunk_count = detail.content_transport.byte_length + 1; validateSourceDetail(detail, contract); }, "validation_failed"],
+  ["complete source size mismatch is integrity failure", () => validateResolveRecord({ ...structuredClone(baseComplete), source_content_bytes: formerSourceCeiling + 1 }, contract), "integrity_failed"],
+  ...[formerSourceCeiling, null].map((bound) => [`obsolete capability source policy ${String(bound)}`, () => { const capability = structuredClone(fixtures.get("connection-capability.json")); capability.bounds.source_content_bytes = bound; validateConnectionCapability(capability, contract); }, "unknown_field"]),
   ["content hash", () => validateResolveRecord({ ...structuredClone(baseComplete), source_content_sha256: "0".repeat(64) }, contract), "integrity_failed"],
   ["signature", () => { const value = structuredClone(validEntitlement); value.signature = `${value.signature[0] === "A" ? "B" : "A"}${value.signature.slice(1)}`; validateOperatorEntitlement(value, operator, trust); }, "entitlement_invalid_signature"],
   ["authentication unknown field", () => validateAuthenticationHeaders({ ...structuredClone(fixtures.get("authentication-headers.json")), unexpected: true }, contract), "unknown_field"],
@@ -1083,16 +1358,16 @@ const mutationCases = [
         claimed_at: trace.claimed_at,
         received_at: trace.received_at,
         destination_mode: "dynamic",
-      });
+      }, fixtureAcknowledgementHeaders(acknowledgement, fixtures.get("publication-acknowledgement-responses.json")[trace.response_key]));
     },
     ["lease_token"].includes(field) ? "reconciliation_required" : field === "stage_token" ? "stage_conflict" : ["source_revision", "source_revision_sequence", "policy_revision"].includes(field) ? "revision_conflict" : "identity_conflict",
   ]),
   ["acknowledgement premature static terminal response", () => { const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").dynamic); response.work_id = claimedWorkFixture.publication_work[0].work_id; validateAcknowledgementResponse(response, contract, { work: claimedWorkFixture.publication_work[0], acknowledgement: fixtures.get("publication-acknowledgement-static-pending.json"), destination_mode: "static" }); }, "stage_conflict"],
   ["acknowledgement inappropriate dynamic nonterminal response", () => { const trace = fixtures.get("publication-dynamic-trace.json"); const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").synchronized); response.work_id = trace.work.work_id; response.correlation_id = fixtures.get(trace.acknowledgement).correlation_id; validateAcknowledgementResponse(response, contract, { work: trace.work, acknowledgement: fixtures.get(trace.acknowledgement), destination_mode: "dynamic" }); }, "stage_conflict"],
-  ["static destination cannot claim dynamic terminal state", () => { const acknowledgement = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); acknowledgement.deployment_state = "not_required"; acknowledgement.verification_state = "not_required"; const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").dynamic); response.work_id = claimedWorkFixture.publication_work[0].work_id; response.correlation_id = acknowledgement.correlation_id; validateAcknowledgementExchange(claimedWorkFixture.publication_work[0], acknowledgement, response, contract, "leased", { ...acknowledgementContext, destination_mode: "static" }); }, "stage_conflict"],
-  ["dynamic destination cannot claim static pending state", () => { const trace = fixtures.get("publication-dynamic-trace.json"); const acknowledgement = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); acknowledgement.resource_id = trace.work.resource_id; acknowledgement.destination_policy_id = trace.work.destination_policy_id; acknowledgement.action = trace.work.action; acknowledgement.source_revision = trace.work.source_revision; acknowledgement.source_revision_sequence = trace.work.source_revision_sequence; acknowledgement.policy_revision = trace.work.policy_revision; acknowledgement.lease_token = trace.work.lease_token; acknowledgement.stage_token = trace.work.stage_token; acknowledgement.correlation_id = fixtures.get(trace.acknowledgement).correlation_id; const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").synchronized); response.work_id = trace.work.work_id; response.correlation_id = acknowledgement.correlation_id; validateAcknowledgementExchange(trace.work, acknowledgement, response, contract, "leased", { claimed_at: trace.claimed_at, received_at: trace.received_at, destination_mode: "dynamic" }); }, "stage_conflict"],
-  ["acknowledgement exchange missing authoritative destination mode", () => { const trace = fixtures.get("publication-dynamic-trace.json"); validateAcknowledgementExchange(trace.work, fixtures.get(trace.acknowledgement), fixtures.get("publication-acknowledgement-responses.json")[trace.response_key], contract, "leased", { claimed_at: trace.claimed_at, received_at: trace.received_at }); }, "validation_failed"],
-  ["acknowledgement exchange malformed authoritative destination mode", () => { const trace = fixtures.get("publication-dynamic-trace.json"); validateAcknowledgementExchange(trace.work, fixtures.get(trace.acknowledgement), fixtures.get("publication-acknowledgement-responses.json")[trace.response_key], contract, "leased", { claimed_at: trace.claimed_at, received_at: trace.received_at, destination_mode: "unknown" }); }, "validation_failed"],
+  ["static destination cannot claim dynamic terminal state", () => { const acknowledgement = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); acknowledgement.deployment_state = "not_required"; acknowledgement.verification_state = "not_required"; const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").dynamic); response.work_id = claimedWorkFixture.publication_work[0].work_id; response.correlation_id = acknowledgement.correlation_id; validateAcknowledgementExchange(claimedWorkFixture.publication_work[0], acknowledgement, response, contract, "leased", { ...acknowledgementContext, destination_mode: "static" }, fixtureAcknowledgementHeaders(acknowledgement, response)); }, "stage_conflict"],
+  ["dynamic destination cannot claim static pending state", () => { const trace = fixtures.get("publication-dynamic-trace.json"); const acknowledgement = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")); acknowledgement.resource_id = trace.work.resource_id; acknowledgement.destination_policy_id = trace.work.destination_policy_id; acknowledgement.action = trace.work.action; acknowledgement.source_revision = trace.work.source_revision; acknowledgement.source_revision_sequence = trace.work.source_revision_sequence; acknowledgement.policy_revision = trace.work.policy_revision; acknowledgement.lease_token = trace.work.lease_token; acknowledgement.stage_token = trace.work.stage_token; acknowledgement.correlation_id = fixtures.get(trace.acknowledgement).correlation_id; const response = structuredClone(fixtures.get("publication-acknowledgement-responses.json").synchronized); response.work_id = trace.work.work_id; response.correlation_id = acknowledgement.correlation_id; validateAcknowledgementExchange(trace.work, acknowledgement, response, contract, "leased", { claimed_at: trace.claimed_at, received_at: trace.received_at, destination_mode: "dynamic" }, fixtureAcknowledgementHeaders(acknowledgement, response)); }, "stage_conflict"],
+  ["acknowledgement exchange missing authoritative destination mode", () => { const trace = fixtures.get("publication-dynamic-trace.json"); validateAcknowledgementExchange(trace.work, fixtures.get(trace.acknowledgement), fixtures.get("publication-acknowledgement-responses.json")[trace.response_key], contract, "leased", { claimed_at: trace.claimed_at, received_at: trace.received_at }, fixtureAcknowledgementHeaders(fixtures.get(trace.acknowledgement), fixtures.get("publication-acknowledgement-responses.json")[trace.response_key])); }, "validation_failed"],
+  ["acknowledgement exchange malformed authoritative destination mode", () => { const trace = fixtures.get("publication-dynamic-trace.json"); validateAcknowledgementExchange(trace.work, fixtures.get(trace.acknowledgement), fixtures.get("publication-acknowledgement-responses.json")[trace.response_key], contract, "leased", { claimed_at: trace.claimed_at, received_at: trace.received_at, destination_mode: "unknown" }, fixtureAcknowledgementHeaders(fixtures.get(trace.acknowledgement), fixtures.get("publication-acknowledgement-responses.json")[trace.response_key])); }, "validation_failed"],
   ["existing topic rounded fractional token", () => validateResolveRecord(resolveWithExistingTopicToken("9007199254740992.5"), contract), "validation_failed"],
   ...["1.0000000000000001", "0.99999999999999999", "1.0000000000000001e0"].map((token) => [
     `existing topic nonintegral token ${token}`,
@@ -1153,7 +1428,10 @@ for (const [name, operation, code] of mutationCases) {
 
 const validatorSource = await readFile(path.join(root, "tests", "protocol-validation.mjs"), "utf8");
 const parse5Url = pathToFileURL(path.join(root, "node_modules", "parse5", "dist", "index.js")).href;
+const sourceReversionLabels = new Set();
 async function loadValidatorMutation(label, search, replacement) {
+  assert.ok(!sourceReversionLabels.has(label), `${label} must identify a distinct source reversion`);
+  sourceReversionLabels.add(label);
   assert.equal(validatorSource.split(search).length, 2, `${label} mutation target must occur exactly once`);
   const source = validatorSource
     .replace('from "parse5";', `from "${parse5Url}";`)
@@ -1162,6 +1440,8 @@ async function loadValidatorMutation(label, search, replacement) {
 }
 
 async function loadValidatorMutations(label, mutations) {
+  assert.ok(!sourceReversionLabels.has(label), `${label} must identify a distinct source reversion`);
+  sourceReversionLabels.add(label);
   let source = validatorSource.replace('from "parse5";', `from "${parse5Url}";`);
   for (const [search, replacement] of mutations) {
     assert.equal(source.split(search).length, 2, `${label} mutation target must occur exactly once`);
@@ -1225,6 +1505,7 @@ assert.doesNotThrow(() => dynamicAuthorityMutant.validateAcknowledgementExchange
   contract,
   "leased",
   { claimed_at: dynamicTrace.claimed_at, received_at: dynamicTrace.received_at, destination_mode: "dynamic" },
+  fixtureAcknowledgementHeaders(foreignDynamicAcknowledgement, fixtures.get("publication-acknowledgement-responses.json")[dynamicTrace.response_key]),
 ), "dynamic authority regression must detect removal of the full acknowledgement/work binding");
 
 const excerptStructureMutant = await loadValidatorMutation(
@@ -1315,8 +1596,8 @@ assert.throws(
 
 const claimWorkPreflightOrderMutant = await loadValidatorMutation(
   "claim-work-preparse-byte-guard-order",
-  '  const rawWorkItems = topLevelArrayElementTexts(text, "publication_work", contract.publication_work.maximum_json_bytes, contract.publication_work.claim.maximum_items);\n  if (rawWorkItems === null) fail("validation_failed", "claim response.publication_work is required");\n  validateJsonText(text);',
-  '  validateJsonText(text);\n  const rawWorkItems = topLevelArrayElementTexts(text, "publication_work", contract.publication_work.maximum_json_bytes, contract.publication_work.claim.maximum_items);\n  if (rawWorkItems === null) fail("validation_failed", "claim response.publication_work is required");',
+  '  const rawWorkItems = topLevelArrayElementTexts(text, "publication_work", contract.publication_work.maximum_json_bytes, contract.publication_work.claim.maximum_items);\n  if (rawWorkItems === null) fail("validation_failed", "claim response.publication_work is required");\n  const envelopeBytes = rawBytes - rawWorkItems.reduce((total, item) => total + bytes(item), 0);\n  if (envelopeBytes > contract.publication_work.claim.envelope_maximum_json_bytes) fail("validation_failed", "claim envelope exceeds maximum_json_bytes");\n  validateJsonText(text);',
+  '  validateJsonText(text);\n  const rawWorkItems = topLevelArrayElementTexts(text, "publication_work", contract.publication_work.maximum_json_bytes, contract.publication_work.claim.maximum_items);\n  if (rawWorkItems === null) fail("validation_failed", "claim response.publication_work is required");\n  const envelopeBytes = rawBytes - rawWorkItems.reduce((total, item) => total + bytes(item), 0);\n  if (envelopeBytes > contract.publication_work.claim.envelope_maximum_json_bytes) fail("validation_failed", "claim envelope exceeds maximum_json_bytes");',
 );
 assert.throws(
   () => claimWorkPreflightOrderMutant.validateClaimResponseText(claimResponseWithRawWorkText("x".repeat(contract.publication_work.maximum_json_bytes + 1)), contract, fixtures.get("publication-work-claim-request.json")),
@@ -1401,6 +1682,7 @@ assert.doesNotThrow(
     contract,
     "leased",
     acknowledgementContext,
+    fixtureAcknowledgementHeaders(downgradedStaticAcknowledgement, downgradedStaticResponse),
   ),
   "acknowledgement regression must detect replacement of authoritative static mode with claimant-controlled dynamic mode",
 );
@@ -1454,6 +1736,95 @@ assert.throws(
   "chunk-set regression must require successful complete reassembly",
 );
 
+// CB-01 regressions must fail when their own guard is removed or deferred.
+const excerptTargetMutant = await loadValidatorMutation("excerpt-canonical-source-target", '    if (acknowledgement.destination_binding.read_more_url !== context.source_reference.topic_url) fail("identity_conflict", "excerpt source target mismatch");', "");
+const wrongExcerptTarget = structuredClone(excerptAcknowledgement);
+wrongExcerptTarget.destination_binding.read_more_url = wrongExcerptTarget.destination_binding.canonical_url;
+assert.doesNotThrow(() => excerptTargetMutant.validateAcknowledgementExchange(claimedWorkFixture.publication_work[0], wrongExcerptTarget, excerptResponses.synchronized, contract, "leased", excerptContext, fixtureAcknowledgementHeaders(wrongExcerptTarget, excerptResponses.synchronized)), "source-target regression must distinguish destination URL from retained source URL");
+const excerptRevisionMutant = await loadValidatorMutation("excerpt-retained-source-revision", '    if (context.source_reference.source_revision !== work.source_revision || context.source_reference.source_revision_sequence !== work.source_revision_sequence) fail("revision_conflict", "excerpt source revision mismatch");', "");
+const staleExcerptContext = { ...excerptContext, source_reference: { ...excerptSourceReference, source_revision_sequence: excerptSourceReference.source_revision_sequence + 1 } };
+assert.doesNotThrow(() => excerptRevisionMutant.validateAcknowledgementExchange(claimedWorkFixture.publication_work[0], excerptAcknowledgement, excerptResponses.synchronized, contract, "leased", staleExcerptContext, fixtureAcknowledgementHeaders(excerptAcknowledgement, excerptResponses.synchronized)), "source-revision regression must exercise retained context independently of acknowledgement fields");
+const persistedExcerptTargetMutant = await loadValidatorMutation("persisted-excerpt-target-required", '    if (requiresExcerptTarget && !Object.hasOwn(binding, "read_more_url")) fail("validation_failed", "synchronized excerpt binding requires read_more_url");', "");
+const unlinkedPersistedExcerpt = structuredClone(persistedExcerpt);
+delete unlinkedPersistedExcerpt.bridge_record.bindings[0].read_more_url;
+assert.doesNotThrow(() => persistedExcerptTargetMutant.validateRecordShow(unlinkedPersistedExcerpt, contract), "persisted excerpt regression must detect loss of the synchronized source link");
+
+const oversizedDecodedChunk = chunkSetFor(Buffer.alloc(contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes + 1, 0x61)).chunks[0];
+assertRejectsBeforeChunkAllocation(() => validateChunk(oversizedDecodedChunk, null, contract), "validation_failed", "correctly hashed oversize chunk rejected before decoding");
+const decodedChunkBoundMutant = await loadValidatorMutation("chunk-decoded-bound", '  if (value.decoded_bytes > maximum) fail("validation_failed", "decoded chunk bound");', "");
+assert.doesNotThrow(() => decodedChunkBoundMutant.validateChunk(oversizedDecodedChunk, null, contract), "decoded-bound regression must not be masked by a malformed hash or encoding");
+const chunkHeaderOrderMutant = await loadValidatorMutations("chunk-header-before-decode", [
+  ["  validateChunkHeader(value, descriptor, contract);", ""],
+  ['  const decoded = Buffer.from(value.content_base64, "base64");', '  const decoded = Buffer.from(value.content_base64, "base64");\n  validateChunkHeader(value, descriptor, contract);'],
+]);
+const lateChunkHeader = observeChunkAllocation(() => chunkHeaderOrderMutant.validateChunk(oversizedDecodedChunk, null, contract));
+assert.ok(lateChunkHeader.error instanceof chunkHeaderOrderMutant.ProtocolError && lateChunkHeader.error.code === "validation_failed");
+assert.ok(lateChunkHeader.decodes > 0, "header-order reversion must expose allocation before the bound rejection");
+const chunkLayoutMutant = await loadValidatorMutation("chunk-feasible-count", '  if (descriptor.chunk_count < minimumCount || descriptor.chunk_count > maximumCount) fail("validation_failed", "impossible chunk count");', "");
+const impossibleChunkDetail = structuredClone(fixtures.get("source-detail-chunked.json"));
+impossibleChunkDetail.content_transport.chunk_count = impossibleChunkDetail.content_transport.byte_length + 1;
+assert.throws(() => validateSourceDetail(impossibleChunkDetail, contract), (error) => error instanceof ProtocolError && error.code === "validation_failed");
+assert.doesNotThrow(() => chunkLayoutMutant.validateSourceDetail(impossibleChunkDetail, contract), "descriptor feasibility regression must exercise count, not eventual chunk integrity");
+const aggregatePreflight = '  let remaining = descriptor.byte_length;\n  for (const chunk of chunks) {\n    validateChunkHeader(chunk, descriptor, contract);\n    if (chunk.decoded_bytes > remaining) fail("integrity_failed", "chunk aggregate exceeds descriptor");\n    remaining -= chunk.decoded_bytes;\n  }\n  if (remaining !== 0) fail("integrity_failed", "chunk aggregate does not complete descriptor");';
+const aggregateOrderMutant = await loadValidatorMutations("chunk-aggregate-before-copy-sort", [
+  [aggregatePreflight, ""],
+  ["  const ordered = [...chunks].sort((a, b) => a.chunk - b.chunk);", `  const ordered = [...chunks].sort((a, b) => a.chunk - b.chunk);\n${aggregatePreflight}`],
+]);
+const lateAggregate = observeChunkAllocation(() => aggregateOrderMutant.validateChunkSet({ ...minimumChunkSet.descriptor, byte_length: 2 }, minimumChunkSet.chunks, contract));
+assert.ok(lateAggregate.error instanceof aggregateOrderMutant.ProtocolError && lateAggregate.error.code === "integrity_failed");
+assert.ok(lateAggregate.sorts > 0, "aggregate-order reversion must expose copy/sort before rejection");
+
+const wholeUnitGuard = '  if (text.length > contract.publication_work.claim.response_maximum_json_bytes) fail("validation_failed", "claim response exceeds maximum_json_bytes");';
+const wholeByteGuard = '  if (rawBytes > contract.publication_work.claim.response_maximum_json_bytes) fail("validation_failed", "claim response exceeds maximum_json_bytes");';
+const envelopeGuard = '  if (envelopeBytes > contract.publication_work.claim.envelope_maximum_json_bytes) fail("validation_failed", "claim envelope exceeds maximum_json_bytes");';
+const wholeClaimMutant = await loadValidatorMutations("claim-whole-preparse-bound", [[wholeUnitGuard, ""], [wholeByteGuard, ""]]);
+const missingWholeGuard = observeClaimPreparse(() => wholeClaimMutant.validateClaimResponseText(overWholeClaim, contract));
+assert.ok(missingWholeGuard.error instanceof wholeClaimMutant.ProtocolError && missingWholeGuard.error.code === "validation_failed");
+assert.ok(missingWholeGuard.parseCalls > 0 && missingWholeGuard.slices > 0, "whole-guard removal must expose key processing before eventual envelope rejection");
+const wholeUtf8Mutant = await loadValidatorMutation("claim-whole-UTF8-bound", wholeByteGuard, "");
+const missingUtf8Guard = observeClaimPreparse(() => wholeUtf8Mutant.validateClaimResponseText(overWholeMultibyteClaim, contract));
+assert.ok(missingUtf8Guard.error instanceof wholeUtf8Mutant.ProtocolError && missingUtf8Guard.error.code === "validation_failed");
+assert.ok(missingUtf8Guard.parseCalls > 0, "UTF-8 guard removal must not be masked by the cheaper code-unit bound");
+const claimEnvelopeMutant = await loadValidatorMutation("claim-envelope-raw-bound", envelopeGuard, "");
+assert.doesNotThrow(() => claimEnvelopeMutant.validateClaimResponseText(overEnvelopeClaim, contract), "raw envelope regression must not be masked by compact-object validation");
+const claimEnvelopeOrderMutant = await loadValidatorMutation("claim-envelope-before-full-parser", `${envelopeGuard}\n  validateJsonText(text);`, `  validateJsonText(text);\n${envelopeGuard}`);
+assert.throws(() => claimEnvelopeOrderMutant.validateClaimResponseText(malformedOverEnvelopeClaim, contract), (error) => error instanceof claimEnvelopeOrderMutant.ProtocolError && error.code === "invalid_json", "envelope-order regression must expose full syntax validation before envelope rejection");
+
+const noLaneCapabilityMutant = await loadValidatorMutation("capability-no-lane-admission", '  uniqueStrings(value.lanes, "lanes", null, { nonempty: false });', '  uniqueStrings(value.lanes, "lanes");');
+assert.throws(() => noLaneCapabilityMutant.validateConnectionCapability(noLaneCapability, contract), (error) => error instanceof noLaneCapabilityMutant.ProtocolError && error.code === "validation_failed", "capability regression must require legitimate empty lane arrays");
+const omittedLaneMutant = await loadValidatorMutation("configured-lane-omission-denied", '    if (connection.lanes.length !== 0) fail("scope_denied");', "");
+assert.doesNotThrow(() => omittedLaneMutant.validateScope(fixtures.get("connection-capability-to-discourse.json"), noLaneResolve.bridge_record), "omitted-lane regression must retain configured connection restrictions");
+const namedLaneMutant = await loadValidatorMutation("no-lane-not-wildcard", '  if (!connection.lanes.includes(request.lane)) fail("scope_denied");', "");
+assert.doesNotThrow(() => namedLaneMutant.validateScope(noLaneToCapability, configuredLaneResolve.bridge_record), "empty scope regression must deny named lanes rather than grant wildcard access");
+
+
+// R5 regressions explicitly restore numeric rejection, not comparisons with
+// absent contract properties (which would evaluate against undefined/NaN).
+const r5ResolveCeilingMutant = await loadValidatorMutation(
+  "r5-restore-to-source-ceiling",
+  '  nonnegativeInteger(record.source_content_bytes, "source_content_bytes");',
+  '  nonnegativeInteger(record.source_content_bytes, "source_content_bytes");\n  if (record.source_content_bytes > 16777216) fail("validation_failed", "restored source ceiling");',
+);
+assert.throws(() => r5ResolveCeilingMutant.validateResolveRecord(r5LargeExcerpt, contract), (error) => error instanceof r5ResolveCeilingMutant.ProtocolError && error.code === "validation_failed", "valid above-old-ceiling To excerpt must detect restored numeric rejection");
+const r5DescriptorCeilingMutant = await loadValidatorMutation(
+  "r5-restore-from-source-ceiling",
+  '  nonnegativeInteger(descriptor.byte_length, "byte_length");',
+  '  nonnegativeInteger(descriptor.byte_length, "byte_length");\n  if (descriptor.byte_length > 16777216) fail("validation_failed", "restored source ceiling");',
+);
+assert.throws(() => r5DescriptorCeilingMutant.validateSourceDetail(r5LargeDetail, contract), (error) => error instanceof r5DescriptorCeilingMutant.ProtocolError && error.code === "validation_failed", "valid above-old-ceiling From descriptor must detect restored numeric rejection");
+const r5StandaloneCountMutant = await loadValidatorMutation(
+  "r5-restore-source-derived-count-ceiling",
+  '  if (value.chunk > value.chunk_count) fail("validation_failed");',
+  '  if (value.chunk > value.chunk_count) fail("validation_failed");\n  if (value.chunk_count > 16777216) fail("validation_failed", "restored source-derived count ceiling");',
+);
+assert.throws(() => r5StandaloneCountMutant.validateChunk(r5StandaloneChunks[0], null, contract), (error) => error instanceof r5StandaloneCountMutant.ProtocolError && error.code === "validation_failed", "valid progressing standalone chunk must detect restored numeric count ceiling");
+const r5CapabilityCeilingMutant = await loadValidatorMutation(
+  "r5-restore-capability-source-ceiling",
+  "    resolve_json_bytes: contract.resolve.maximum_json_bytes,",
+  "    resolve_json_bytes: contract.resolve.maximum_json_bytes,\n    source_content_bytes: 16777216,",
+);
+assert.throws(() => r5CapabilityCeilingMutant.validateConnectionCapability(fixtures.get("connection-capability.json"), contract), (error) => error instanceof r5CapabilityCeilingMutant.ProtocolError && error.code === "validation_failed", "valid corrected capability must detect restored numeric source-bound expectation");
+
 const activeText = [
   JSON.stringify(contract),
   JSON.stringify(operator),
@@ -1464,4 +1835,340 @@ const activeText = [
 assert.doesNotMatch(activeText, /fullInteractive/);
 assert.doesNotMatch(activeText, /Repeal OBBBA Forum|obbba-/i);
 
-console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and 19 targeted source-reversion probes for ${contract.version}.`);
+// Central definitions: these are synthetic validator/context models, not
+// installed producer, authorization, restart persistence or native delivery proof.
+assert.deepEqual(contract.source_publication.detail.content_disposition_values, ["complete"]);
+assert.ok(!contract.source_publication.inventory.required_response_fields.includes("high_water"));
+assert.match(contract.source_publication.inventory.high_water_rule, /when.*snapshot is established/);
+for (const name of ["source-detail-inline.json", "source-detail-chunked.json", "network-source-detail.json", "network-spoke-source-detail.json"]) {
+  const detail = structuredClone(fixtures.get(name));
+  validateSourceDetailText(JSON.stringify(detail), contract);
+  for (const disposition of ["excerpt", "partial", null, undefined]) {
+    assert.throws(() => validateSourceDetail({ ...detail, content_disposition: disposition }, contract),
+      (error) => error instanceof ProtocolError && error.code === "validation_failed",
+      `${name} source transport must be complete, not a destination disposition`);
+  }
+}
+const centralFirstPost = '<p>Current first-post excerpt 🌉.</p><p><a href="https://platform.example/articles/original">Read More</a></p>';
+const centralFirstPostBytes = Buffer.from(centralFirstPost);
+const centralFirstPostHash = createHash("sha256").update(centralFirstPostBytes).digest("hex");
+const centralInlineDetail = structuredClone(fixtures.get("source-detail-inline.json"));
+centralInlineDetail.content_transport = {
+  mode: "inline", media_type: fixtures.get("source-detail-inline.json").content_transport.media_type, byte_length: centralFirstPostBytes.length,
+  sha256: centralFirstPostHash, content_html: centralFirstPost,
+};
+validateSourceDetailText(JSON.stringify(centralInlineDetail), contract);
+const centralUpstreamOriginal = "<p>Different, longer original upstream article.</p>";
+for (const transport of [
+  { ...centralInlineDetail.content_transport, byte_length: Buffer.byteLength(centralUpstreamOriginal) },
+  { ...centralInlineDetail.content_transport, sha256: createHash("sha256").update(centralUpstreamOriginal).digest("hex") },
+]) {
+  assert.throws(() => validateSourceDetail({ ...centralInlineDetail, content_transport: transport }, contract),
+    (error) => error instanceof ProtocolError && error.code === "integrity_failed",
+    "upstream-original identity must not replace whole-current-post transport identity");
+}
+const centralUtf8Split = centralFirstPostBytes.indexOf(Buffer.from("🌉")) + 2;
+const centralChunkSet = chunkSetFor(centralFirstPostBytes, [
+  centralFirstPostBytes.subarray(0, centralUtf8Split), centralFirstPostBytes.subarray(centralUtf8Split),
+]);
+const centralChunkedDetail = {
+  ...structuredClone(centralInlineDetail), source_revision: centralChunkSet.descriptor.source_revision,
+  content_transport: {
+    mode: "chunked", media_type: centralInlineDetail.content_transport.media_type, byte_length: centralChunkSet.descriptor.byte_length,
+    sha256: centralChunkSet.descriptor.sha256, chunk_count: centralChunkSet.descriptor.chunk_count,
+    decoded_chunk_maximum_bytes: contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes,
+  },
+};
+validateSourceDetailText(JSON.stringify(centralChunkedDetail), contract);
+validateChunkSet(centralChunkSet.descriptor, [...centralChunkSet.chunks].reverse(), contract);
+assert.throws(() => validateChunkSet({ ...centralChunkSet.descriptor,
+  sha256: createHash("sha256").update(centralUpstreamOriginal).digest("hex") }, centralChunkSet.chunks, contract),
+  (error) => error instanceof ProtocolError && error.code === "integrity_failed");
+validateResolveRecord(fixtures.get("to-discourse-excerpt-request.json").bridge_record, contract);
+validateAcknowledgement(fixtures.get("publication-acknowledgement-excerpt.json"), contract);
+validateAcknowledgement(fixtures.get("publication-acknowledgement-create.json"), contract);
+
+const centralConnection = "dbc_111111111111111111111111";
+const centralEnumerations = [
+  { name: "inventory", base: fixtures.get("source-inventory-page.json"), validate: validateInventory,
+    context: validateCursorSnapshot, binding: { connection_id: centralConnection,
+      snapshot: fixtures.get("source-inventory-page.json").snapshot,
+      policy_revision: fixtures.get("source-inventory-page.json").policy_revision },
+    key: (item) => JSON.stringify([item.resource_id, item.source_revision]),
+    declaration: contract.source_publication.inventory },
+  { name: "revocations", base: fixtures.get("source-revocation-index.json"), validate: validateRevocationIndex,
+    context: validateRevocationCursor, binding: { connection_id: centralConnection,
+      high_water: fixtures.get("source-revocation-index.json").high_water,
+      policy_revision: fixtures.get("source-revocation-index.json").policy_revision },
+    key: (item) => item.revocation_id, declaration: contract.source_publication.revocations },
+  { name: "catalog", base: fixtures.get("platform-catalog-authors.json"), validate: validateCatalogSegment,
+    context: validateCatalogCursor, binding: { connection_id: centralConnection,
+      platform_profile: "ghost", segment_type: "authors",
+      catalog_revision: fixtures.get("platform-catalog-authors.json").catalog_revision },
+    key: (item) => item.id, declaration: contract.platform_catalog },
+];
+for (const entry of centralEnumerations) {
+  assert.equal(entry.declaration.continuation_rule, contract.source_publication.inventory.continuation_rule);
+  assert.match(entry.declaration.empty_page_rule, /changed cursor string alone is not proof/);
+  assert.match(entry.declaration.completion_rule, /enumerated/);
+  for (const items of [entry.base.items, []]) {
+    for (const [complete, next_cursor] of [[true, null], [false, "opaque continuation / not parsed"]]) {
+      entry.validate({ ...structuredClone(entry.base), items, complete, next_cursor }, contract);
+    }
+    for (const [complete, next_cursor] of [
+      [false, null], [true, "terminal checkpoint"], [false, ""], [false, "  "],
+      [true, ""], [true, undefined], [false, undefined], [false, 1], [true, 1],
+      ["true", null], [null, null],
+    ]) {
+      assert.throws(() => entry.validate({ ...structuredClone(entry.base), items, complete, next_cursor }, contract),
+        (error) => error instanceof ProtocolError && error.code === "validation_failed",
+        `${entry.name} rejects inconsistent completion/cursor shape, including empty pages`);
+    }
+  }
+  entry.context({ ...entry.binding }, entry.binding);
+  for (const field of Object.keys(entry.binding)) {
+    assert.throws(() => entry.context({ ...entry.binding, [field]: `changed:${entry.binding[field]}` }, entry.binding),
+      (error) => error instanceof ProtocolError && error.code === "cursor_snapshot_mismatch",
+      `${entry.name} must not silently continue across changed ${field}`);
+  }
+  // The model's advancing position establishes finite empty-page progress.
+  // Validator shape/token changes alone cannot prove a real producer advances.
+  const pages = [
+    { ...structuredClone(entry.base), items: [], complete: false, next_cursor: "model-position-1" },
+    { ...structuredClone(entry.base), complete: false, next_cursor: "model-position-2" },
+    { ...structuredClone(entry.base), items: [], complete: true, next_cursor: null },
+  ];
+  const continuations = new Map([["model-start", 0], ["model-position-1", 1], ["model-position-2", 2]]);
+  const seen = new Map();
+  for (let replay = 0; replay < 2; replay += 1) {
+    let cursor = "model-start";
+    let reads = 0;
+    while (cursor !== null) {
+      const position = continuations.get(cursor);
+      assert.ok(Number.isInteger(position));
+      assert.ok(reads < pages.length, "synthetic enumeration must terminate");
+      const page = pages[position];
+      entry.context({ ...entry.binding }, entry.binding);
+      entry.validate(page, contract);
+      for (const item of page.items) seen.set(entry.key(item), item);
+      reads += 1;
+      if (!page.complete) assert.equal(continuations.get(page.next_cursor), position + 1);
+      cursor = page.next_cursor;
+    }
+    assert.equal(reads, pages.length);
+  }
+  assert.equal(seen.size, new Set(entry.base.items.map(entry.key)).size,
+    "synthetic duplicate replay uses stable identity, not native acknowledgement");
+}
+const centralDetailEnumMutant = await loadValidatorMutation(
+  "central-restore-source-detail-excerpt",
+  '  enumValue(value.content_disposition, ["complete"], "content_disposition");',
+  '  enumValue(value.content_disposition, ["complete", "excerpt"], "content_disposition");',
+);
+centralDetailEnumMutant.validateSourceDetail({ ...centralInlineDetail, content_disposition: "excerpt" }, contract);
+const centralContinuationMutant = await loadValidatorMutation(
+  "central-restore-independent-complete-cursor",
+  "function validateEnumerationContinuation(value) {\n  boolean(value.complete, \"complete\");\n  if (value.complete) {\n    if (value.next_cursor !== null) fail(\"validation_failed\", \"complete enumeration must have null next_cursor\");\n  } else {\n    requiredString(value.next_cursor, \"next_cursor\");\n  }\n}",
+  'function validateEnumerationContinuation(value) {\n  optionalNullableString(value.next_cursor, "next_cursor");\n  boolean(value.complete, "complete");\n}',
+);
+for (const entry of centralEnumerations) {
+  const mutatedValidate = centralContinuationMutant[entry.validate.name];
+  for (const [complete, next_cursor] of [[false, null], [true, "terminal checkpoint"]]) {
+    mutatedValidate({ ...structuredClone(entry.base), complete, next_cursor }, contract);
+  }
+}
+console.log("Central definitions checked: whole-current-post transport, three pinned enumeration shapes/models, and two detecting source reversions.");
+
+// CB-CENTRAL-WC01-04-01: finite conformance evidence, not installed/native proof.
+const wcValidationError = (error) => error instanceof ProtocolError && error.code === "validation_failed";
+const wcProtocolError = (code) => (error) => error instanceof ProtocolError && error.code === code;
+const wcAckCases = [
+  ...["synchronized", "deployed", "verified"].flatMap((stage, index) => {
+    const completeAck = fixtures.get(["publication-acknowledgement-static-pending.json", "publication-acknowledgement-static-deployed.json", "publication-acknowledgement.json"][index]);
+    return [
+      { name: "complete-static-" + stage, ack: completeAck, context: index === 0 ? acknowledgementContext : { destination_mode: "static" } },
+      { name: "excerpt-static-" + stage, ack: excerptStages[index], context: index === 0 ? excerptContext : { destination_mode: "static", source_reference: excerptSourceReference } },
+    ].map((entry) => ({ ...entry, work: { ...claimedWorkFixture.publication_work[0], stage_token: entry.ack.stage_token }, response: excerptResponses[stage], state: ["leased", "awaiting_deployment", "awaiting_verification"][index] }));
+  }),
+  { name: "complete-dynamic", work: r5NativeCompleteWork, ack: r5NativeCompleteAcknowledgement, response: excerptResponses.dynamic, state: "leased", context: dynamicExcerptContext },
+  { name: "excerpt-dynamic", work: r5NativeExcerptWork, ack: dynamicExcerptAcknowledgement, response: excerptResponses.dynamic, state: "leased", context: dynamicExcerptContext },
+];
+for (const entry of wcAckCases) {
+  const wire = fixtureAcknowledgementHeaders(entry.ack, entry.response);
+  const accept = (ack, response, headers) => validateAcknowledgementExchange(entry.work, ack, response, contract, entry.state, entry.context, headers);
+  accept(entry.ack, entry.response, wire);
+  const foreignResponse = { ...entry.response, correlation_id: "foreign-response-" + entry.name };
+  assert.throws(() => accept(entry.ack, foreignResponse, fixtureAcknowledgementHeaders(entry.ack, foreignResponse)), wcValidationError, entry.name + " response body must echo this request");
+  const foreignRequest = { ...entry.ack, correlation_id: "foreign-request-" + entry.name };
+  assert.throws(() => accept(foreignRequest, entry.response, fixtureAcknowledgementHeaders(foreignRequest, entry.response)), wcValidationError, entry.name + " request body cannot borrow a response");
+  for (const field of ["request_header", "response_header"]) {
+    assert.throws(() => accept(entry.ack, entry.response, { ...wire, [field]: "foreign-header-" + entry.name }), wcValidationError, entry.name + " " + field + " must agree with bodies");
+    const missing = { ...wire };
+    delete missing[field];
+    assert.throws(() => accept(entry.ack, entry.response, missing), wcValidationError);
+    for (const value of [null, 7, "", " "]) assert.throws(() => accept(entry.ack, entry.response, { ...wire, [field]: value }), wcValidationError);
+  }
+  assert.throws(() => accept(entry.ack, entry.response, undefined), wcValidationError, "full wire validation requires actual header context");
+  assert.throws(() => accept(entry.ack, entry.response, { ...wire, unexpected: true }), wcProtocolError("unknown_field"));
+}
+
+// WC02: exercise both actual conditional branches without altering requirements.
+const wcForumLimit = contract.configuration.forum_name.maximum_bytes;
+const wcExactForumName = "é".repeat(Math.floor(wcForumLimit / 2)) + "a".repeat(wcForumLimit % 2);
+assert.equal(Buffer.byteLength(wcExactForumName, "utf8"), wcForumLimit);
+for (const [name, base] of [
+  ["required-from", fixtures.get("connection-capability.json")],
+  ["optional-pure-To", fixtures.get("connection-capability-to-discourse.json")],
+]) {
+  const required = base.directions.includes("from_discourse");
+  const omitted = structuredClone(base);
+  delete omitted.forum_name;
+  if (required) assert.throws(() => validateConnectionCapability(omitted, contract), wcValidationError, name);
+  else validateConnectionCapability(omitted, contract);
+  for (const forum_name of ["Configured Forum", wcExactForumName]) validateConnectionCapability({ ...structuredClone(base), forum_name }, contract);
+  for (const forum_name of [null, false, 3, [], {}, "", " ", wcExactForumName + "a", wcExactForumName + "é"]) {
+    assert.throws(() => validateConnectionCapability({ ...structuredClone(base), forum_name }, contract), wcValidationError, name + " invalid/type/UTF8 boundary");
+  }
+}
+
+// WC03: test-only receiver-selected state, not a producer/database implementation.
+// The actual validator enforces work/policy/response correlation; the local model
+// additionally selects the expected persisted binding before any modeled effect.
+const wcA = {
+  work: structuredClone(claimedWorkFixture.publication_work[0]),
+  ack: structuredClone(fixtures.get("publication-acknowledgement-static-pending.json")),
+  response: structuredClone(excerptResponses.synchronized),
+  context: structuredClone(acknowledgementContext),
+  state: "leased",
+  binding_id: fixtures.get("publication-acknowledgement-static-pending.json").destination_binding.binding_id,
+};
+const wcB = structuredClone(wcA);
+wcB.work.work_id = "dbw_" + "7".repeat(32);
+wcB.work.destination_policy_id = "destination:statamic:secondary:1";
+wcB.work.resolved_container = { id: "statamic:collection:secondary", kind: "collection" };
+wcB.work.native_limit_policy.maximum_bytes = 4096;
+wcB.work.lease_token = "e".repeat(64);
+wcB.work.stage_token = "a".repeat(64);
+wcB.work.correlation_id = "secondary-work";
+wcB.ack.destination_policy_id = wcB.work.destination_policy_id;
+wcB.ack.lease_token = wcB.work.lease_token;
+wcB.ack.stage_token = wcB.work.stage_token;
+wcB.ack.correlation_id = "secondary-ack";
+wcB.ack.destination_binding = { ...structuredClone(excerptAcknowledgement.destination_binding), binding_id: "dbb_" + "7".repeat(32), external_id: "page:secondary:roadmap", canonical_url: "https://secondary.example/roadmap/", publication_revision: "secondary:revision:1" };
+wcB.binding_id = wcB.ack.destination_binding.binding_id;
+wcB.context = { ...wcB.context, source_reference: structuredClone(excerptSourceReference) };
+wcB.response = { ...wcB.response, work_id: wcB.work.work_id, correlation_id: wcB.ack.correlation_id, next_stage_token: "b".repeat(64) };
+assert.equal(wcA.work.resource_id, wcB.work.resource_id);
+assert.equal(wcA.work.source_revision, wcB.work.source_revision);
+assert.notEqual(wcA.work.destination_policy_id, wcB.work.destination_policy_id);
+assert.notEqual(wcA.binding_id, wcB.binding_id);
+assert.notDeepEqual(wcA.work.native_limit_policy, wcB.work.native_limit_policy);
+const wcInitial = { A: wcA, B: wcB };
+const wcInitialSnapshot = structuredClone(wcInitial);
+const wcAssertRejectedInputsUnchanged = () => assert.deepEqual(wcInitial, wcInitialSnapshot, "rejected receipts do not change either input model");
+const wcApplyReceipt = (state, key, acknowledgement, response, validator = validateAcknowledgementExchange) => {
+  const selected = state[key]; // receiver-selected destination, never receipt-selected
+  assert.equal(acknowledgement.destination_binding.binding_id, selected.binding_id, "local receiver model rejects a foreign persisted binding");
+  validator(selected.work, acknowledgement, response, contract, selected.state, selected.context, fixtureAcknowledgementHeaders(acknowledgement, response));
+  if (selected.receipt) validateStageTransition(selected.receipt, acknowledgement, selected.response);
+  const next = structuredClone(state);
+  next[key].receipt = structuredClone(acknowledgement);
+  next[key].response = structuredClone(response);
+  next[key].state = response.resulting_state;
+  if (!response.terminal) next[key].work.stage_token = response.next_stage_token;
+  return next;
+};
+const wcForeignPolicyReceipt = { ...structuredClone(wcA.ack), destination_policy_id: wcB.work.destination_policy_id };
+assert.throws(() => wcApplyReceipt(wcInitial, "A", wcForeignPolicyReceipt, wcA.response), wcProtocolError("identity_conflict"));
+wcAssertRejectedInputsUnchanged();
+assert.throws(() => wcApplyReceipt(wcInitial, "A", wcA.ack, { ...wcA.response, work_id: wcB.work.work_id }), wcProtocolError("identity_conflict"));
+wcAssertRejectedInputsUnchanged();
+assert.throws(() => wcApplyReceipt(wcInitial, "A", { ...wcA.ack, destination_binding: wcB.ack.destination_binding }, wcA.response), { code: "ERR_ASSERTION" });
+wcAssertRejectedInputsUnchanged();
+// Detecting assurance controls mutate the actual test-only inputs, not detached
+// copies: an aliased or shallow baseline would miss these changes. Always restore.
+for (const key of ["A", "B"]) {
+  const originalState = wcInitial[key].state;
+  try {
+    wcInitial[key].state = "retry_wait";
+    assert.throws(() => wcAssertRejectedInputsUnchanged(), { code: "ERR_ASSERTION" }, "preservation assertion detects changed " + key + " state");
+  } finally {
+    wcInitial[key].state = originalState;
+  }
+  wcAssertRejectedInputsUnchanged();
+  const originalCorrelationId = wcInitial[key].work.correlation_id;
+  try {
+    wcInitial[key].work.correlation_id = "preservation-sensitivity-" + key;
+    assert.throws(() => wcAssertRejectedInputsUnchanged(), { code: "ERR_ASSERTION" }, "preservation assertion detects changed " + key + " nested work");
+  } finally {
+    wcInitial[key].work.correlation_id = originalCorrelationId;
+  }
+  wcAssertRejectedInputsUnchanged();
+}
+const wcAFirst = wcApplyReceipt(wcInitial, "A", wcA.ack, wcA.response);
+assert.deepEqual(wcAFirst.B, wcInitial.B);
+assert.equal(wcAFirst.A.receipt.destination_binding.content_disposition, "complete");
+const wcBoth = wcApplyReceipt(wcAFirst, "B", wcB.ack, wcB.response);
+assert.deepEqual(wcBoth.A, wcAFirst.A);
+assert.equal(wcBoth.B.receipt.destination_binding.content_disposition, "excerpt");
+assert.equal(wcBoth.B.receipt.destination_binding.read_more_url, excerptSourceReference.topic_url);
+const wcBFirst = wcApplyReceipt(wcInitial, "B", wcB.ack, wcB.response);
+assert.deepEqual(wcBFirst.A, wcInitial.A);
+assert.deepEqual(wcApplyReceipt(wcBFirst, "A", wcA.ack, wcA.response), wcBoth, "independent receipt order has the same model result");
+const wcFailure = structuredClone(fixtures.get("publication-failure.json"));
+validateFailure(wcFailure, contract);
+assert.equal(wcFailure.lease_token, wcA.work.lease_token);
+assert.ok(contract.failure_registry.retryable.includes(wcFailure.error_code));
+const wcFailed = structuredClone(wcBFirst);
+wcFailed.A.state = "retry_wait"; // explicit finite model transition, not producer proof
+wcFailed.A.failure = wcFailure;
+assert.deepEqual(wcFailed.B, wcBFirst.B);
+const wcWithdrawal = { ...structuredClone(fixtures.get("publication-work-withdrawal.json").publication_work[0]), resource_id: wcA.work.resource_id, source_revision: wcA.work.source_revision, source_revision_sequence: wcA.work.source_revision_sequence, destination_policy_id: wcA.work.destination_policy_id, action: "unpublish" };
+validateWork(wcWithdrawal, contract);
+const wcWithdrawn = structuredClone(wcFailed);
+wcWithdrawn.A.superseded_work_id = wcWithdrawn.A.work.work_id;
+wcWithdrawn.A.work = wcWithdrawal;
+wcWithdrawn.A.state = "leased";
+assert.deepEqual(wcWithdrawn.B, wcFailed.B);
+assert.notEqual(wcWithdrawn.A.work.work_id, wcWithdrawn.B.work.work_id);
+assert.throws(() => validateAcknowledgementExchange(wcA.work, wcA.ack, wcA.response, contract, "superseded", wcA.context, fixtureAcknowledgementHeaders(wcA.ack, wcA.response)), wcProtocolError("work_superseded"));
+const wcWithdrawalAck = { ...structuredClone(wcA.ack), lease_token: wcWithdrawal.lease_token, stage_token: wcWithdrawal.stage_token, action: wcWithdrawal.action, synchronized_at: "2026-09-27T19:01:00Z", correlation_id: "withdrawal-A" };
+const wcWithdrawalResponse = { ...wcA.response, work_id: wcWithdrawal.work_id, correlation_id: wcWithdrawalAck.correlation_id };
+wcWithdrawn.A.context = { destination_mode: "static", claimed_at: "2026-09-27T19:00:00Z", received_at: "2026-09-27T19:01:00Z" };
+const wcWithdrawalReceived = wcApplyReceipt(wcWithdrawn, "A", wcWithdrawalAck, wcWithdrawalResponse);
+assert.deepEqual(wcWithdrawalReceived.B, wcWithdrawn.B);
+assert.equal(wcWithdrawalReceived.A.receipt.action, "unpublish");
+const wcBDeployed = { ...structuredClone(fixtures.get("publication-acknowledgement-static-deployed.json")), lease_token: wcB.work.lease_token, stage_token: wcWithdrawalReceived.B.work.stage_token, destination_policy_id: wcB.work.destination_policy_id, destination_binding: structuredClone(wcB.ack.destination_binding), correlation_id: "secondary-deployed" };
+const wcBDeployedResponse = { ...excerptResponses.deployed, work_id: wcB.work.work_id, correlation_id: wcBDeployed.correlation_id };
+wcWithdrawalReceived.B.context = { destination_mode: "static", source_reference: structuredClone(excerptSourceReference), received_at: "2026-09-27T18:36:00Z" };
+const wcBContinued = wcApplyReceipt(wcWithdrawalReceived, "B", wcBDeployed, wcBDeployedResponse);
+assert.deepEqual(wcBContinued.A, wcWithdrawalReceived.A);
+assert.equal(wcBContinued.B.state, "awaiting_verification");
+
+// Each new probe actually exposes acceptance after reverting the stated guard.
+const wcWireComposition = '  exactObject(wireHeaders, ["request_header", "response_header"], [], "acknowledgement wire headers");\n  validateCorrelationExchange({\n    request_header: wireHeaders.request_header,\n    request_body: acknowledgement.correlation_id,\n    response_header: wireHeaders.response_header,\n    response_body: response.correlation_id,\n  }, contract);';
+const wcWireMutant = await loadValidatorMutation("wc01-remove-full-ACK-wire-correlation", wcWireComposition, "");
+const wcWrongResponse = { ...wcA.response, correlation_id: "wrong-request-valid-shape" };
+assert.throws(() => validateAcknowledgementExchange(wcA.work, wcA.ack, wcWrongResponse, contract, "leased", wcA.context, fixtureAcknowledgementHeaders(wcA.ack, wcWrongResponse)), wcValidationError);
+assert.doesNotThrow(() => wcWireMutant.validateAcknowledgementExchange(wcA.work, wcA.ack, wcWrongResponse, contract, "leased", wcA.context, fixtureAcknowledgementHeaders(wcA.ack, wcWrongResponse)));
+assert.doesNotThrow(() => wcWireMutant.validateAcknowledgementExchange(wcA.work, wcA.ack, wcA.response, contract, "leased", wcA.context, { ...fixtureAcknowledgementHeaders(wcA.ack, wcA.response), response_header: "wrong-response-header" }));
+const wcRequiredForumGuard = '  if (value.directions.includes("from_discourse")) nonblank(value.forum_name, contract.configuration.forum_name.maximum_bytes, "forum_name");';
+const wcOptionalForumGuard = '  if (Object.hasOwn(value, "forum_name") && !value.directions.includes("from_discourse")) nonblank(value.forum_name, contract.configuration.forum_name.maximum_bytes, "forum_name");';
+const wcRequiredForumMutant = await loadValidatorMutation("wc02-remove-required-forum-name", wcRequiredForumGuard, "");
+const wcMissingRequiredForum = structuredClone(fixtures.get("connection-capability.json"));
+delete wcMissingRequiredForum.forum_name;
+assert.doesNotThrow(() => wcRequiredForumMutant.validateConnectionCapability(wcMissingRequiredForum, contract));
+const wcOptionalForumMutant = await loadValidatorMutation("wc02-remove-optional-forum-name-validation", wcOptionalForumGuard, "");
+assert.doesNotThrow(() => wcOptionalForumMutant.validateConnectionCapability({ ...structuredClone(fixtures.get("connection-capability-to-discourse.json")), forum_name: "" }, contract));
+const wcForumBoundMutant = await loadValidatorMutations("wc02-remove-forum-name-UTF8-bound", [
+  [wcRequiredForumGuard, '  if (value.directions.includes("from_discourse")) requiredString(value.forum_name, "forum_name");'],
+  [wcOptionalForumGuard, '  if (Object.hasOwn(value, "forum_name") && !value.directions.includes("from_discourse")) requiredString(value.forum_name, "forum_name");'],
+]);
+for (const base of [fixtures.get("connection-capability.json"), fixtures.get("connection-capability-to-discourse.json")]) {
+  assert.doesNotThrow(() => wcForumBoundMutant.validateConnectionCapability({ ...structuredClone(base), forum_name: wcExactForumName + "a" }, contract));
+}
+const wcDestinationPolicyMutant = await loadValidatorMutation("wc03-remove-ACK-destination-policy-binding", '  for (const field of ["resource_id", "destination_policy_id", "action"]) {', '  for (const field of ["resource_id", "action"]) {');
+assert.doesNotThrow(() => wcApplyReceipt(wcInitial, "A", wcForeignPolicyReceipt, wcA.response, wcDestinationPolicyMutant.validateAcknowledgementExchange));
+console.log("WC corrections checked: full ACK wire correlation, forum-name boundaries, two-destination local models and five detecting source reversions.");
+
+console.log(`Conformance validated ${positiveNames.length} positive fixtures, ${negativeNames.length} exact-error negative fixtures, ${mutationCases.length} mutation classes, and ${sourceReversionLabels.size} targeted source-reversion probes for ${contract.version}.`);

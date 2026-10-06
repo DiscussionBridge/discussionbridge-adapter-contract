@@ -566,7 +566,7 @@ export function validateConnectionCapability(value, contract) {
   pattern(value.connection_id, contract.authentication.connection_id_pattern);
   boolean(value.enabled, "enabled");
   uniqueStrings(value.directions, "directions", ["to_discourse", "from_discourse"]);
-  uniqueStrings(value.lanes, "lanes");
+  uniqueStrings(value.lanes, "lanes", null, { nonempty: false });
   if (value.lanes.length > contract.connection_capability.lanes_maximum_items) fail("validation_failed", "too many capability lanes");
   for (const lane of value.lanes) nonblank(lane, contract.connection_capability.lane_maximum_bytes, "capability lane");
   if (value.directions.includes("from_discourse")) nonblank(value.forum_name, contract.configuration.forum_name.maximum_bytes, "forum_name");
@@ -578,7 +578,6 @@ export function validateConnectionCapability(value, contract) {
   exactObject(value.bounds, contract.connection_capability.bounds_required_fields, [], "bounds");
   const expectedBounds = {
     resolve_json_bytes: contract.resolve.maximum_json_bytes,
-    source_content_bytes: contract.common.source_content_maximum_bytes,
     claim_maximum_items: contract.publication_work.claim.maximum_items,
     lease_maximum_seconds: contract.publication_work.claim.maximum_total_lease_seconds,
     catalog_segment_items: contract.platform_catalog.maximum_items_per_segment,
@@ -659,7 +658,7 @@ export function validateResolveRecord(record, contract) {
   timestamp(record.source_created_at, "source_created_at");
   timestamp(record.source_updated_at, "source_updated_at");
   pattern(record.source_content_sha256, contract.common.sha256_pattern, "validation_failed", "source_content_sha256");
-  if (!Number.isSafeInteger(record.source_content_bytes) || record.source_content_bytes < 0 || record.source_content_bytes > contract.resolve.source_content_maximum_bytes) fail("validation_failed", "source content bound");
+  nonnegativeInteger(record.source_content_bytes, "source_content_bytes");
   if (record.content_disposition === "complete") {
     if (Object.hasOwn(record, "read_more_url")) fail("validation_failed");
     if (bytes(record.content_html) !== record.source_content_bytes || sha256(record.content_html) !== record.source_content_sha256) fail("integrity_failed");
@@ -734,7 +733,7 @@ export function validateRecord(record, contract) {
   for (const binding of record.bindings) {
     const synchronizationFields = contract.records.destination_binding_synchronization_fields;
     const eventTimestamps = contract.records.destination_binding_event_timestamp_fields;
-    exactObject(binding, contract.records.destination_binding_required_fields, [...synchronizationFields, ...eventTimestamps], "destination binding");
+    exactObject(binding, contract.records.destination_binding_required_fields, [...synchronizationFields, ...eventTimestamps, ...contract.records.destination_binding_conditional_fields], "destination binding");
     pattern(binding.binding_id, contract.records.binding_id_pattern);
     pattern(binding.connection_id, contract.authentication.connection_id_pattern);
     enumValue(binding.role, contract.records.binding_roles, "binding role");
@@ -748,6 +747,14 @@ export function validateRecord(record, contract) {
     const synchronizationCount = synchronizationFields.filter((field) => Object.hasOwn(binding, field)).length;
     if (synchronizationCount !== 0 && synchronizationCount !== synchronizationFields.length) fail("validation_failed", "synchronization fields must occur together");
     const awaitingFirstAcknowledgement = synchronizationCount === 0;
+    const requiresExcerptTarget = record.direction === "from_discourse"
+      && binding.role === "presentation" && !awaitingFirstAcknowledgement
+      && binding.content_disposition === "excerpt";
+    if (requiresExcerptTarget && !Object.hasOwn(binding, "read_more_url")) fail("validation_failed", "synchronized excerpt binding requires read_more_url");
+    if (Object.hasOwn(binding, "read_more_url")) {
+      if (binding.content_disposition !== "excerpt") fail("validation_failed", "complete binding must omit read_more_url");
+      httpUrl(binding.read_more_url, contract.resolve.field_rules.canonical_url_maximum_bytes, "binding read_more_url");
+    }
     if (!awaitingFirstAcknowledgement && synchronizationCount !== synchronizationFields.length) fail("validation_failed", "synchronization fields are required after synchronization");
     if (synchronizationCount === synchronizationFields.length) {
       nonblank(binding.applied_source_revision, contract.common.source_revision_maximum_bytes, "applied_source_revision");
@@ -782,6 +789,15 @@ export function validateRecordShow(value, contract) {
   correlation(value.correlation_id, contract);
 }
 
+function validateEnumerationContinuation(value) {
+  boolean(value.complete, "complete");
+  if (value.complete) {
+    if (value.next_cursor !== null) fail("validation_failed", "complete enumeration must have null next_cursor");
+  } else {
+    requiredString(value.next_cursor, "next_cursor");
+  }
+}
+
 export function validateInventory(value, contract) {
   exactObject(value, contract.source_publication.inventory.required_response_fields, [], "inventory");
   if (!Array.isArray(value.items) || value.items.length > contract.source_publication.inventory.maximum_limit) fail("validation_failed");
@@ -798,9 +814,19 @@ export function validateInventory(value, contract) {
   }
   requiredString(value.snapshot, "snapshot");
   nonblank(value.policy_revision, contract.common.policy_revision_maximum_bytes, "policy_revision");
-  optionalNullableString(value.next_cursor, "next_cursor");
-  boolean(value.complete, "complete");
+  validateEnumerationContinuation(value);
   correlation(value.correlation_id, contract);
+}
+
+function validateChunkLayout(descriptor, contract) {
+  object(descriptor, "chunk descriptor");
+  nonnegativeInteger(descriptor.byte_length, "byte_length");
+  positiveInteger(descriptor.chunk_count, "chunk_count");
+  const maximum = contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes;
+  const minimumCount = Math.max(1, Math.ceil(descriptor.byte_length / maximum));
+  const maximumCount = Math.max(1, descriptor.byte_length);
+  if (descriptor.chunk_count < minimumCount || descriptor.chunk_count > maximumCount) fail("validation_failed", "impossible chunk count");
+  pattern(descriptor.sha256, contract.common.sha256_pattern);
 }
 
 function validateTransport(transport, contract) {
@@ -816,10 +842,7 @@ function validateTransport(transport, contract) {
   } else if (transport.mode === "chunked") {
     exactObject(transport, contract.source_publication.content_transport.chunked.required_descriptor_fields, [], "chunked descriptor");
     if (transport.media_type !== "text/html; charset=utf-8") fail("validation_failed");
-    nonnegativeInteger(transport.byte_length, "byte_length");
-    if (transport.byte_length > contract.source_publication.detail.maximum_source_content_bytes) fail("validation_failed");
-    pattern(transport.sha256, contract.common.sha256_pattern);
-    positiveInteger(transport.chunk_count, "chunk_count");
+    validateChunkLayout(transport, contract);
     if (transport.decoded_chunk_maximum_bytes !== contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes) fail("validation_failed");
   } else fail("validation_failed");
 }
@@ -863,7 +886,7 @@ export function validateSourceDetail(value, contract) {
     tagIds.add(tag.source_tag_id);
   }
   validateTransport(value.content_transport, contract);
-  enumValue(value.content_disposition, ["complete", "excerpt"], "content_disposition");
+  enumValue(value.content_disposition, ["complete"], "content_disposition");
   if (value.network_provenance !== null) validateNetwork(value.network_provenance, contract, null);
   correlation(value.correlation_id, contract);
 }
@@ -872,27 +895,49 @@ export function validateSourceDetailText(text, contract) {
   return validateBoundedJsonText(text, contract.source_publication.detail.maximum_json_bytes, "source detail", (value) => validateSourceDetail(value, contract));
 }
 
-export function validateChunk(value, descriptor, contract) {
+function validateChunkHeader(value, descriptor, contract) {
   exactObject(value, contract.source_publication.content_transport.chunked.required_chunk_fields, ["correlation_id"], "content chunk");
   nonblank(value.source_revision, contract.common.source_revision_maximum_bytes, "source_revision");
   positiveInteger(value.chunk, "chunk");
   positiveInteger(value.chunk_count, "chunk_count");
   if (value.chunk > value.chunk_count) fail("validation_failed");
   nonnegativeInteger(value.decoded_bytes, "decoded_bytes");
-  pattern(value.chunk_sha256, contract.common.sha256_pattern, "validation_failed", "chunk_sha256");
-  if (typeof value.content_base64 !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value.content_base64)) fail("validation_failed", "content_base64 is not canonical base64");
-  const decoded = Buffer.from(value.content_base64, "base64");
-  if (decoded.length !== value.decoded_bytes || sha256(decoded) !== value.chunk_sha256) fail("integrity_failed");
-  if (value.decoded_bytes > contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes) fail("validation_failed");
+  const maximum = contract.source_publication.content_transport.chunked.decoded_chunk_maximum_bytes;
+  if (value.decoded_bytes > maximum) fail("validation_failed", "decoded chunk bound");
+  if (value.decoded_bytes === 0 && (value.chunk !== 1 || value.chunk_count !== 1)) fail("validation_failed", "chunk makes no progress");
+  if (typeof value.content_base64 !== "string" || value.content_base64.length > 4 * Math.ceil(maximum / 3)) fail("validation_failed", "encoded chunk bound");
+  if (value.content_base64.length !== 4 * Math.ceil(value.decoded_bytes / 3)) fail("integrity_failed", "encoded length does not match decoded_bytes");
   if (descriptor) {
+    validateChunkLayout(descriptor, contract);
     if (value.source_revision !== descriptor.source_revision || value.chunk_count !== descriptor.chunk_count) fail("revision_conflict");
+    if ((descriptor.byte_length === 0) !== (value.decoded_bytes === 0)) fail("validation_failed", "chunk makes no progress");
+    if (value.decoded_bytes > descriptor.byte_length) fail("integrity_failed", "chunk exceeds descriptor");
   }
   if (Object.hasOwn(value, "correlation_id")) correlation(value.correlation_id, contract);
 }
 
+export function validateChunk(value, descriptor, contract) {
+  validateChunkHeader(value, descriptor, contract);
+  pattern(value.chunk_sha256, contract.common.sha256_pattern, "validation_failed", "chunk_sha256");
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value.content_base64)) fail("validation_failed", "content_base64 is not canonical base64");
+  const decoded = Buffer.from(value.content_base64, "base64");
+  if (decoded.toString("base64") !== value.content_base64) fail("validation_failed", "content_base64 is not canonical base64");
+  if (decoded.length !== value.decoded_bytes || sha256(decoded) !== value.chunk_sha256) fail("integrity_failed");
+}
+
 export function validateChunkSet(descriptor, chunks, contract) {
+  validateChunkLayout(descriptor, contract);
+  nonblank(descriptor.source_revision, contract.common.source_revision_maximum_bytes, "source_revision");
+  if (!Array.isArray(chunks)) fail("validation_failed", "chunks must be an array");
+  if (chunks.length !== descriptor.chunk_count) fail("integrity_failed");
+  let remaining = descriptor.byte_length;
+  for (const chunk of chunks) {
+    validateChunkHeader(chunk, descriptor, contract);
+    if (chunk.decoded_bytes > remaining) fail("integrity_failed", "chunk aggregate exceeds descriptor");
+    remaining -= chunk.decoded_bytes;
+  }
+  if (remaining !== 0) fail("integrity_failed", "chunk aggregate does not complete descriptor");
   const ordered = [...chunks].sort((a, b) => a.chunk - b.chunk);
-  if (ordered.length !== descriptor.chunk_count) fail("integrity_failed");
   for (let index = 0; index < ordered.length; index += 1) {
     const chunk = ordered[index];
     validateChunk(chunk, descriptor, contract);
@@ -957,6 +1002,9 @@ export function validateClaimRequest(value, contract) {
 export function validateClaimResponse(value, contract, request = null) {
   exactObject(value, contract.publication_work.claim.response_required_fields, [], "claim response");
   if (!Array.isArray(value.publication_work) || value.publication_work.length > contract.publication_work.claim.maximum_items) fail("validation_failed");
+  boundedJsonObject(value, contract.publication_work.claim.response_maximum_json_bytes, "claim response");
+  const envelope = { ...value, publication_work: [] };
+  boundedJsonObject(envelope, contract.publication_work.claim.envelope_maximum_json_bytes - Math.max(0, value.publication_work.length - 1), "claim envelope");
   for (const item of value.publication_work) validateWork(item, contract);
   timestamp(value.claimed_at, "claimed_at");
   const maximumInitialExpiry = addTimestampSeconds(value.claimed_at, contract.publication_work.claim.maximum_requested_lease_seconds, "claimed_at");
@@ -978,8 +1026,13 @@ export function validateClaimResponse(value, contract, request = null) {
 
 export function validateClaimResponseText(text, contract, request = null) {
   if (typeof text !== "string") fail("invalid_json", "claim response must be JSON text");
+  if (text.length > contract.publication_work.claim.response_maximum_json_bytes) fail("validation_failed", "claim response exceeds maximum_json_bytes");
+  const rawBytes = bytes(text);
+  if (rawBytes > contract.publication_work.claim.response_maximum_json_bytes) fail("validation_failed", "claim response exceeds maximum_json_bytes");
   const rawWorkItems = topLevelArrayElementTexts(text, "publication_work", contract.publication_work.maximum_json_bytes, contract.publication_work.claim.maximum_items);
   if (rawWorkItems === null) fail("validation_failed", "claim response.publication_work is required");
+  const envelopeBytes = rawBytes - rawWorkItems.reduce((total, item) => total + bytes(item), 0);
+  if (envelopeBytes > contract.publication_work.claim.envelope_maximum_json_bytes) fail("validation_failed", "claim envelope exceeds maximum_json_bytes");
   validateJsonText(text);
   const value = parseProtocolJson(text);
   validateClaimResponse(value, contract, request);
@@ -1042,12 +1095,15 @@ export function validateAcknowledgement(value, contract) {
     timestamp(value.publicly_verified_at, "publicly_verified_at");
     if (compareTimestamps(value.deployed_at, value.synchronized_at, "deployed_at", "synchronized_at") < 0 || compareTimestamps(value.publicly_verified_at, value.deployed_at, "publicly_verified_at", "deployed_at") < 0) fail("validation_failed", "publication events are out of order");
   }
-  exactObject(value.destination_binding, ["binding_id", "external_id", "canonical_url", "publication_revision", "content_disposition"], [], "destination_binding");
+  exactObject(value.destination_binding, ["binding_id", "external_id", "canonical_url", "publication_revision", "content_disposition"], contract.publication_work.acknowledgement.destination_binding_conditional_fields, "destination_binding");
   pattern(value.destination_binding.binding_id, contract.records.binding_id_pattern);
   nonblank(value.destination_binding.external_id, contract.resolve.field_rules.external_id_maximum_bytes, "destination_binding.external_id");
   httpUrl(value.destination_binding.canonical_url, contract.resolve.field_rules.canonical_url_maximum_bytes, "destination_binding.canonical_url");
   nonblank(value.destination_binding.publication_revision, contract.common.publication_revision_maximum_bytes, "destination_binding.publication_revision");
   if (!["complete", "excerpt"].includes(value.destination_binding.content_disposition)) fail("validation_failed");
+  if (value.destination_binding.content_disposition === "excerpt") {
+    httpUrl(value.destination_binding.read_more_url, contract.resolve.field_rules.canonical_url_maximum_bytes, "destination_binding.read_more_url");
+  } else if (Object.hasOwn(value.destination_binding, "read_more_url")) fail("validation_failed", "complete binding must omit read_more_url");
   correlation(value.correlation_id, contract);
 }
 
@@ -1100,11 +1156,18 @@ export function validateAcknowledgementResponse(value, contract, context = undef
   }
 }
 
-export function validateAcknowledgementExchange(work, acknowledgement, response, contract, state, acceptanceContext) {
+export function validateAcknowledgementExchange(work, acknowledgement, response, contract, state, acceptanceContext, wireHeaders) {
   validateWork(work, contract);
   validateAcknowledgement(acknowledgement, contract);
   validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext);
   validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: acceptanceContext.destination_mode });
+  exactObject(wireHeaders, ["request_header", "response_header"], [], "acknowledgement wire headers");
+  validateCorrelationExchange({
+    request_header: wireHeaders.request_header,
+    request_body: acknowledgement.correlation_id,
+    response_header: wireHeaders.response_header,
+    response_body: response.correlation_id,
+  }, contract);
 }
 
 export function validateFailure(value, contract) {
@@ -1146,8 +1209,7 @@ export function validateCatalogSegment(value, contract) {
   catalogIdentifier(value.catalog_revision, contract, "catalog_revision");
   enumValue(value.platform_profile, contract.profiles, "platform_profile");
   validateCatalogItems(value.segment_type, value.items, contract);
-  optionalNullableString(value.next_cursor, "next_cursor");
-  boolean(value.complete, "complete");
+  validateEnumerationContinuation(value);
   correlation(value.correlation_id, contract);
 }
 
@@ -1245,8 +1307,7 @@ export function validateRevocationIndex(value, contract) {
   }
   requiredString(value.high_water, "high_water");
   nonblank(value.policy_revision, contract.common.policy_revision_maximum_bytes, "policy_revision");
-  optionalNullableString(value.next_cursor, "next_cursor");
-  boolean(value.complete, "complete");
+  validateEnumerationContinuation(value);
   correlation(value.correlation_id, contract);
 }
 
@@ -1387,6 +1448,14 @@ export function validateDirection(connection, request) {
 }
 
 export function validateScope(connection, request) {
+  object(connection, "scope connection");
+  object(request, "scope request");
+  if (!Array.isArray(connection.lanes)) fail("validation_failed", "connection lanes must be an array");
+  if (!Object.hasOwn(request, "lane")) {
+    if (connection.lanes.length !== 0) fail("scope_denied");
+    return;
+  }
+  requiredString(request.lane, "lane");
   if (!connection.lanes.includes(request.lane)) fail("scope_denied");
 }
 
@@ -1424,7 +1493,7 @@ export function validateAcknowledgementIdentity(work, acknowledgement, state = "
   if (work.source_revision !== acknowledgement.source_revision || work.source_revision_sequence !== acknowledgement.source_revision_sequence || work.policy_revision !== acknowledgement.policy_revision) fail("revision_conflict");
   enumValue(context.destination_mode, ["dynamic", "static"], "destination_mode");
   if (acknowledgement.stage === "synchronized") {
-    exactObject(context, ["received_at", "claimed_at", "destination_mode"], [], "acknowledgement acceptance context");
+    exactObject(context, ["received_at", "claimed_at", "destination_mode"], ["source_reference"], "acknowledgement acceptance context");
     const acknowledgementClaimsDynamic = acknowledgement.deployment_state === "not_required" && acknowledgement.verification_state === "not_required";
     if (context.destination_mode === "dynamic" && !acknowledgementClaimsDynamic) fail("stage_conflict", "dynamic destination requires terminal synchronized acknowledgement");
     if (context.destination_mode === "static" && acknowledgementClaimsDynamic) fail("stage_conflict", "static destination requires deployment and verification");
@@ -1434,13 +1503,21 @@ export function validateAcknowledgementIdentity(work, acknowledgement, state = "
     if (compareTimestamps(context.received_at, context.claimed_at, "received_at", "claimed_at") < 0 || compareTimestamps(acknowledgement.synchronized_at, context.claimed_at, "synchronized_at", "claimed_at") < 0) fail("validation_failed", "synchronization cannot precede claim issuance");
     if (compareTimestamps(acknowledgement.synchronized_at, context.received_at, "synchronized_at", "received_at") > 0) fail("validation_failed", "synchronization cannot occur after receipt");
   } else {
-    exactObject(context, ["destination_mode"], ["received_at"], "acknowledgement acceptance context");
+    exactObject(context, ["destination_mode"], ["received_at", "source_reference"], "acknowledgement acceptance context");
     if (context.destination_mode !== "static") fail("stage_conflict", "dynamic destination cannot advance beyond synchronization");
     if (Object.hasOwn(context, "received_at")) {
       timestamp(context.received_at, "received_at");
       const eventTime = acknowledgement.stage === "deployed" ? acknowledgement.deployed_at : acknowledgement.publicly_verified_at;
       if (compareTimestamps(eventTime, context.received_at, `${acknowledgement.stage}_at`, "received_at") > 0) fail("validation_failed", "publication event cannot occur after receipt");
     }
+  }
+  if (acknowledgement.destination_binding?.content_disposition === "excerpt") {
+    exactObject(context.source_reference, ["resource_id", "source_revision", "source_revision_sequence", "topic_url"], [], "source reference");
+    for (const field of ["resource_id", "source_revision", "topic_url"]) requiredString(context.source_reference[field], `source_reference.${field}`);
+    positiveInteger(context.source_reference.source_revision_sequence, "source_reference.source_revision_sequence");
+    if (context.source_reference.resource_id !== work.resource_id) fail("identity_conflict", "excerpt source resource mismatch");
+    if (context.source_reference.source_revision !== work.source_revision || context.source_reference.source_revision_sequence !== work.source_revision_sequence) fail("revision_conflict", "excerpt source revision mismatch");
+    if (acknowledgement.destination_binding.read_more_url !== context.source_reference.topic_url) fail("identity_conflict", "excerpt source target mismatch");
   }
 }
 

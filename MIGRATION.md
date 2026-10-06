@@ -5,6 +5,49 @@ controlled estate. It is not a rolling compatibility release. There is no
 runtime alias or compatibility behavior for superseded presentation names,
 headers, fields, routes, or state.
 
+## R5 source eligibility and capability correction
+
+The corrected successor removes the obsolete aggregate source-size policy.
+Capability producers and consumers must stop emitting or requiring
+`bounds.source_content_bytes`; both an old numeric value and `null` are
+rejected as unknown fields. The resolve record's separate
+`source_content_bytes` remains measured, nonnegative safe-integer source
+identity. This is coordinated schema adoption, not backward compatibility or
+an installation performed by the source correction batch.
+
+Remove aggregate source admission and source-derived standalone chunk-count
+checks without weakening descriptor count feasibility, progress, per-chunk
+and control-message bounds, revision/hash/UTF-8 integrity, or actual native
+destination policy. To-Discourse delivery remains a safe bounded 48 KiB
+excerpt with canonical platform Read More when needed. From-Discourse
+publication remains complete where the native destination accepts it,
+otherwise a native-bounded excerpt with Read More to the source topic.
+Do not substitute another protocol-wide source ceiling or treat omission as
+permission for unbounded runtime allocation. Consumer migration and practical
+large-source/resource behavior still require their own qualification.
+
+## Central detail/completion adoption
+
+Source detail now accepts only `content_disposition:"complete"`, meaning the
+whole authoritative cooked first post at the requested exact revision. Inline
+and chunked transport byte counts/hashes cover that current post even if it is
+already an upstream excerpt; they must not substitute upstream-original identity.
+To-Discourse and native acknowledgement complete/excerpt outcomes are unchanged.
+
+Inventory, revocation-index and catalog-segment responses now require
+nonterminal `complete:false` with a nonblank opaque cursor, or terminal
+`complete:true` with a null cursor. Previously admitted false/null polling pages
+and true/non-null terminal checkpoints are not conforming under this convention.
+An empty nonterminal page must make real progress in the same pinned unit;
+the validator can enforce shape, not producer progress. Retain existing pinned
+context, current authorization, mismatch/expiry/restart/deduplication and catalog
+atomic-update rules. Inventory's initial cut is fixed at snapshot establishment,
+not final-page time, with no new high-water response field.
+
+This is a central declaration/validator correction, not a version bump, executed
+migration, rolling-compatibility claim or installed-consumer adoption. Consumers
+must be reconciled to these definitions before their separately qualified use.
+
 ## Preconditions
 
 1. Preserve protected backups of every Discourse database/configuration,
@@ -44,6 +87,10 @@ database transaction wherever the database permits it.
 
 - Preserve every Content Connection ID, secret digest, enabled state, origin,
   direction, lane, and existing policy scope.
+- Preserve no-lane-only scope: an empty configured lane list admits only
+  omitted-lane requests, never every named lane. Named configurations retain
+  exact membership and reject omission; blank/null lane values are not migrated
+  into omission or wildcard scope.
 - Preserve every Bridge resource ID, direction, topic ID/URL, source/destination
   external ID, canonical URL, and existing eligible Discourse Core adoption.
 - Do not convert established Bridge Records to `legacy`, `forum_sync_pending`,
@@ -60,6 +107,15 @@ database transaction wherever the database permits it.
   invented. The three fields become required together when synchronization
   succeeds, and a successful exact-revision acknowledgement moves the binding
   to `active`.
+- For synchronized From-Discourse presentation excerpts, retain the canonical
+  source topic as `read_more_url`, separately from the native destination URL.
+  Before the first acknowledgement, a pending excerpt may omit that target;
+  do not fabricate it from the destination. Excerpt acceptance must obtain the
+  exact resource/revision/sequence/topic URL from receiver-owned retained
+  source data. Complete bindings omit the target, and unrelated To-Discourse
+  source-role bindings have no new target requirement. Static deployment and
+  verification preserve the exact acknowledged binding. This specifies a
+  downstream migration obligation; this source batch does not execute it.
 - Existing To-Discourse records retain their topic and resource identity. Their
   source platform must deliver one exact Alpha.22 revision against the existing
   external ID and canonical URL to establish source revision/time/content

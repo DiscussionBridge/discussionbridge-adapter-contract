@@ -37,7 +37,7 @@ missing approved requirement.
 | E-01 | Opaque snapshot/cursor, policy-bound initial inventory, high-water, 30-day activity retention, expiry, and restart/deduplication rule. | Initial and resumed source-inventory fixtures plus cursor/snapshot mismatch fixture. |
 | E-02 | Revision-pinned source detail and bounded content transport. | Inline/chunked detail fixtures plus raw 256 KiB metadata-envelope exact/over-limit controls. |
 | E-03 | Cursor/high-water revocation index/detail, reasons, retention, restart deduplication, work-owned delivery acknowledgement, and same-identity restore rule. | Revocation index/detail and restart trace plus hold/unpublish/restore work. |
-| E-04 | Bounded claim, lease, renewal, staged acknowledgement, failure, serialized binding work, expiry, retention, and supersession rules. | Independent dynamic and static three-stage traces bind every response to authoritative work, receiver-owned destination mode, actual stage and terminal semantics; work items have incremental raw 128 KiB enforcement with leading/trailing/interior and multibyte exact/plus-one controls, padded-empty-array positives, malformed escape/control, unterminated, mismatched and deep-nesting pre-parse rejection, bounded-slice/nesting instrumentation, 32/33-item ordering and guard-removal/bypass/deferred source reversions; plus 120-taxonomy, identifier/kind and duplicate-source controls, interruption states, failure fixtures, and late-superseded negatives. |
+| E-04 | Bounded claim, lease, renewal, staged acknowledgement, failure, serialized binding work, expiry, retention, and supersession rules. | Independent dynamic and static three-stage traces bind every response to authoritative work, receiver-owned destination mode, actual stage and terminal semantics; work items have incremental raw 128 KiB enforcement with leading/trailing/interior and multibyte exact/plus-one controls, empty-array exact-envelope positives and envelope-plus-one/former-item-sized-padding negatives, malformed escape/control, unterminated, mismatched and deep-nesting pre-parse rejection, bounded-slice/nesting instrumentation, 32/33-item ordering and guard-removal/bypass/deferred source reversions; plus 120-taxonomy, identifier/kind and duplicate-source controls, interruption states, failure fixtures, and late-superseded negatives. |
 | E-05 | Receiver-owned retryable/terminal registry, one initial plus three retries, exact backoff/exhaustion, and bounded manual retry. | Complete retry trace plus failure, retry-wait, and exhausted/operator-attention fixtures. |
 | E-06 | Exact immutable `policy_revision` in inventory, work, and acknowledgement. | Inventory/work/ack fixtures. |
 | E-07 | Separate synchronization, deployment, and public verification; static completion rule. | Authoritative dynamic-mode acknowledgement; authoritative static synchronized → deployed → verified trace; static-as-dynamic and dynamic-as-static rejection; missing/malformed mode rejection; deployment/verification failures; destination-mode source reversion. |
@@ -62,6 +62,23 @@ missing approved requirement.
 | --- | --- | --- |
 | J-01–J-06 | Presentation components, rendering assets, pagination, persistence mechanics, themes, installers, services, and static-build commands are platform implementation. | Each adapter's Work List checklist and package-install qualification. |
 | K-01–K-04 | Large-corpus, 1,000-page, network, and artifact-uniformity requirements are qualification evidence rather than request fields. | Component Work List Gates C/D and dedicated qualification plans. |
+
+## CB-01 R1–R4 and R5 correction evidence
+
+The separately authorized R5 batch extends the earlier R1–R4 corrections.
+This changed source candidate is awaiting its own exact independent correction
+review; no prior disposition carries forward. The executable cases below
+establish candidate test coverage, not consumer/runtime, artifact, release or
+product acceptance. In particular, source/work/acknowledgement compositions
+do not execute native destination sizing selection, writes or rendering.
+
+| Repair / related Matrix IDs | Candidate checks and limitations |
+| --- | --- |
+| R1 / C-03, D-02, E-04, E-07 | Static three-stage and dynamic full excerpt exchanges bind Read More to receiver-owned resource/revision/sequence/source URL; missing, malformed, wrong-target and stale-context negatives; persisted synchronized excerpt requirement with pre-first-ack and unrelated source-role compatibility; source-target, retained-revision and persisted-link guard-removal probes. Installed provenance/persistence remain unqualified. |
+| R2 / B-09, C-02 | Feasible count/progress, one-chunk empty content, minimum/maximum decoded bytes, varying sizes, shuffled split-UTF-8 reassembly, count/index/revision/hash/padding/UTF-8 negatives. Instrumented rejection precedes decode/concat/sort; decoded-bound removal, header deferral, impossible descriptor and aggregate-before-copy/sort source reversions. Practical small-chunk amplification remains unqualified. |
+| R3 / E-04 | Whole 4,259,840-byte and outside-item 65,536-byte raw bounds; 32 maximum-sized items, exact/plus-one envelope, empty-array/outer padding, escaped names, malformed/UTF-8 whole excess and preserved high-precision timestamps. Whole guards precede key processing; envelope precedes full parser. Whole/UTF-8/envelope removal and envelope-order reversions detect lost barriers. Constructed-object validation is not raw-ingress proof. |
+| R4 / B-02, A-04 | Real To-Discourse resolve/capability/direction/scope and From-Discourse capability/record/source compositions; omitted lane only for empty scope, configured membership, named denial on empty scope, invalid explicit lane values, and retained nonempty rules for other capability arrays. Empty-lane admission, configured-omission and no-wildcard source reversions. No From-Discourse resolve route or wire lane field is invented. |
+| R5 / C-01–C-03, A-04, B-09 | Removed aggregate source constants and obsolete capability advertisement; measured source identity retained. Above-old-threshold To excerpts and From descriptors/records, safe-integer edges, actual correctly hashed 16,777,217-byte source with variable/shuffled split-UTF-8 chunk reassembly, and progressing standalone counts above the old ceiling. Invalid size/count/index, linked feasibility and obsolete numeric/null capability negatives; the historical source-content-over-bound fixture now tests unsafe numeric representation, not policy size. Four literal/numeric reintroduction probes detect restored To, From, standalone-count and capability ceilings. Valid native-policy/complete/excerpt exchanges prove contract compatibility, not installed policy selection or runtime capacity. |
 
 ## Coordinated transition coverage
 
@@ -102,9 +119,57 @@ missing approved requirement.
   tokens reject, maximum plus one rejects, and all-zero coefficients return
   without exponent-sized string construction.
 
+## Central source-detail and enumeration declarations
+
+The synthetic runner checks complete-only source-detail admission for inline,
+chunked and network examples, whole-current-post byte/hash integrity when that
+post is already an upstream excerpt, actual chunk reassembly, and continued
+To-Discourse/native-acknowledgement excerpt admission. It checks strict terminal
+and nonterminal cursor combinations (including empty pages), each operation's
+pinned-context mismatch checks, finite in-memory page traces and duplicate replay.
+Two in-memory source reversions detect restoration of the ambiguous detail enum
+or independently validated completion/cursor fields.
+
+These checks qualify the declarations and validator boundary only. They do not
+prove authoritative producer selection, real empty-page progress, installed
+restart persistence, current authorization enforcement or native publication.
+They do not close the separately recorded acknowledgement-correlation,
+forum-name boundary, two-destination interaction or padded-empty-claim wording
+findings. No persistent fixtures, dependencies or consumers are changed.
+
 ## Current audit result
 
 All matrix IDs have an explicit candidate or downstream owner. The required
 successor fixture categories have positive and negative representatives in the
 expanded conformance suite. This is a coverage result, not a formal code-review
 disposition and not a release claim.
+
+## CB-CENTRAL-WC01-04-01 correction evidence
+
+The full acknowledgement exchange helper now requires explicit request/response
+headers and composes the existing request-header/request-body/response-header/
+response-body correlation check. Identity-only helpers remain separately named.
+Existing fixture traces supply synthetic headers; the new adversarial matrix
+supplies independent mismatches for complete/excerpt static stages and dynamic
+outcomes. This is conformance evidence, not observed native HTTP traffic.
+
+Forum-name assertions cover required From and optional pure-To branches,
+omission, malformed types/blank names and multibyte exact/over-byte bounds.
+Existing omission rules and limits are unchanged.
+
+One-source/two-destination local compositions use distinct policies, bindings,
+native limits, work and receipts. They reject foreign policy/work receipts,
+select the expected persisted binding in a test-only receiver model, preserve
+the sibling through one-sided failure/withdrawal, and let it continue staging.
+These finite models and test-only state transitions do not prove installed
+producer persistence, authorization, native noninterference or restart recovery.
+
+Five new detecting source-reversion probes remove full ACK wire correlation,
+required-name validation, optional-name validation, forum-name byte bounds and
+destination-policy binding. Direct assertions are not counted as fixture files
+or as mutation classes. The existing fixture census is unchanged; exact run
+counts, failures and independent result dispositions belong in WORKING.
+
+The E-04 row describes the current empty-array exact-envelope positive and
+envelope-plus-one/former-item-sized-padding negatives. No content/JSON limit was
+changed. Historical reports and the earlier definitions-only scope are preserved.
