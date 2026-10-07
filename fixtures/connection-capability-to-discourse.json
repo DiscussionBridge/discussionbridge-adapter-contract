@@ -1,5 +1,5 @@
 {
-  "contract_version":"0.2.0-alpha.22",
+  "contract_version":"0.2.0-alpha.23",
   "connection_id":"dbc_222222222222222222222222",
   "enabled":true,
   "directions":["to_discourse"],

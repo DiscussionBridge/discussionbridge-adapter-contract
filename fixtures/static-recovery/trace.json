@@ -1,0 +1,31 @@
+{
+  "profiles": ["astro", "hugo", "statamic_ssg"],
+  "original_claim": "publication-work-claim.json",
+  "responses": "publication-acknowledgement-responses.json",
+  "cases": [
+    {
+      "state": "awaiting_deployment",
+      "receipt_acknowledgement": "publication-acknowledgement-static-pending.json",
+      "receipt_response": "synchronized",
+      "next_acknowledgement": "publication-acknowledgement-static-deployed.json",
+      "next_response": "deployed",
+      "lease_token": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "stage_token": "5555555555555555555555555555555555555555555555555555555555555555",
+      "correlation_id": "static-recovery-deployment-01"
+    },
+    {
+      "state": "awaiting_verification",
+      "receipt_acknowledgement": "publication-acknowledgement-static-deployed.json",
+      "receipt_response": "deployed",
+      "next_acknowledgement": "publication-acknowledgement.json",
+      "next_response": "verified",
+      "lease_token": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "stage_token": "6666666666666666666666666666666666666666666666666666666666666666",
+      "correlation_id": "static-recovery-verification-01"
+    }
+  ],
+  "claimed_at": "2026-09-27T18:40:00.123456789Z",
+  "lease_expires_at": "2026-09-27T18:45:00.123456789Z",
+  "received_at": "2026-09-27T18:41:00.123456789Z",
+  "excerpt_source_url": "https://forum.example/t/roadmap/12"
+}

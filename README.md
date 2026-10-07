@@ -6,11 +6,15 @@ runtime authority. The contract and conformance fixtures describe the public
 adapter boundary; they do not introduce a broker, installer, or shared adapter
 runtime.
 
-Version `0.2.0-alpha.22` is derived directly from the known-solid Alpha.20
+Version `0.2.0-alpha.23` continues the approved Alpha.22 successor to the known-solid Alpha.20
 contract. It adds the shared behavior required for source revisions,
 set-and-forget initial and continuing publication, directional oversized
 content, destination acknowledgement, Operator Service, and the Discourse
 network profile. It contains no installation- or demo-specific behavior.
+
+Alpha.23 adds the explicitly approved same-work static-stage recovery claim and
+pending-static lease renewal. It does not change routes, transport bounds,
+normal stage transitions, native content limits, or Operator Service behavior.
 
 ## Governing rules
 
@@ -32,10 +36,10 @@ Every adapter request uses one independently issued Content Connection:
 
 - `X-DiscussionBridge-Connection: dbc_<24 lowercase hexadecimal characters>`
 - `X-DiscussionBridge-Secret: <one-time connection secret>`
-- `X-DiscussionBridge-Contract: 0.2.0-alpha.22`
+- `X-DiscussionBridge-Contract: 0.2.0-alpha.23`
 
 Connections independently scope allowed origins, directions, and lanes. A
-missing or different contract version fails before mutation; Alpha.22 does not
+missing or different contract version fails before mutation; Alpha.23 does not
 silently negotiate legacy behavior. Before work begins, the adapter validates
 the authenticated connection's effective contract, scope, conditionally
 present forum name, presentation modes, supported operations, finite bounds,
@@ -83,7 +87,7 @@ Published platform content resolves through:
 
 `POST /discussion-bridge/v1/bridge-records/resolve.json`
 
-Alpha.22 retains Alpha.20 identity, adoption, and fail-closed reconciliation.
+Alpha.23 retains Alpha.20 identity, adoption, and fail-closed reconciliation.
 It additionally requires the source revision, source-created and source-updated
 times, presentation mode, complete source byte count/hash, and whether the
 bounded `content_html` is complete or an excerpt.
@@ -255,6 +259,58 @@ interruption never repeats the native mutation or discards the binding. The
 receiver supplies the authoritative dynamic/static destination mode to its
 acceptance decision; acknowledgement-controlled state labels cannot select or
 downgrade that lifecycle.
+
+### Recovery without repeating native mutation (Alpha.23)
+
+An ordinary claim omits `static_recovery` and authorizes synchronization. A
+receiver-issued recovery claim instead includes exactly:
+
+```json
+{
+  "static_recovery": {
+    "state": "awaiting_deployment",
+    "acknowledgement": "the exact retained synchronized ACK object",
+    "response": "the exact retained nonterminal ACK response object"
+  }
+}
+```
+
+The strings above explain the two complete objects; they are not wire values.
+`awaiting_verification` carries the actual accepted deployed ACK/response instead.
+The field is inside the unchanged bounded work item, not a new endpoint. Neither
+a fabricated receipt nor an adapter's statement can establish historical success.
+Historical correlation IDs, native binding, publication revision, disposition,
+Read More URL and original timestamp strings are preserved exactly.
+
+Recovery requires the old owner to expire or an actual retry to be released to
+available. It never displaces a live owner. Current connection scope, visibility,
+approved policy, catalog and destination ownership must still permit publication.
+The first recovered ACK uses the newly issued claim's lease/stage tokens and the
+current unexpired recovery lease, not the retained response's old next-stage
+token. It may advance only deployment or verification. A previously successful
+operation with a lost ACK is verified and reported with its real event time;
+no timestamp, receipt, native object or content mutation is fabricated.
+After this ACK, use the ordinary response token and current work projection
+without the now-consumed claim's `static_recovery` marker. A later interruption
+requires a new claim carrying the latest actual accepted receipt.
+
+`validateStaticRecoveryClaim` and `validateStaticRecoveryTransition` take
+receiver-owned context separately from wire data. That context contains current
+static mode, issue time, current ownership issue (work/tokens/state/expiry/receipt
+association/attempt/generation), an independently loaded accepted receipt and
+current identity/policy/permission decisions. The claim additionally takes the
+previous ownership issue and eligible previous state; the ACK takes receipt time
+and the existing excerpt source reference when applicable. No caller-provided
+request field substitutes for this context. The ordinary transition validator
+is unchanged; direct recovery identity validation requires the explicit contract.
+
+Renewal permits current static pending ownership using the same request/response,
+additive expiry and four-hour total cap. Expiry recovery does not create a failure
+or increment attempt/generation counters. Actual failure and operator retry keep
+their existing registry, delays, exhaustion and correction requirements.
+The pure conformance validators do not perform receiver locks, database writes,
+external deployment, historical replay or crash recovery. Those are separate
+implementation/qualification gates, not properties established by these fixtures.
 
 An excerpt acknowledgement carries `destination_binding.read_more_url` to
 the canonical source topic, separately from the destination's `canonical_url`.

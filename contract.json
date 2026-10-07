@@ -1,6 +1,6 @@
 {
   "contract": "discussionbridge-adapter",
-  "version": "0.2.0-alpha.22",
+  "version": "0.2.0-alpha.23",
   "authority": {
     "runtime": "discussionbridge-for-discourse",
     "scope_rule": "The authenticated Content Connection is the only adapter authorization and scope authority.",
@@ -10,10 +10,10 @@
     "connection_header": "X-DiscussionBridge-Connection",
     "secret_header": "X-DiscussionBridge-Secret",
     "contract_header": "X-DiscussionBridge-Contract",
-    "contract_header_value": "0.2.0-alpha.22",
+    "contract_header_value": "0.2.0-alpha.23",
     "connection_id_pattern": "^dbc_[a-f0-9]{24}$",
     "adapter_identity_role": "diagnostic_only",
-    "version_rule": "Every authenticated Alpha.22 request supplies the exact contract header. A missing or different value fails before mutation and never triggers compatibility behavior."
+    "version_rule": "Every authenticated Alpha.23 request supplies the exact contract header. A missing or different value fails before mutation and never triggers compatibility behavior."
   },
   "profiles": [
     "astro",
@@ -464,7 +464,7 @@
       "path": "/discussion-bridge/v1/publication-work/{work_id}/renew.json",
       "required_fields": ["lease_token", "requested_lease_seconds", "correlation_id"],
       "response_required_fields": ["work_id", "lease_expires_at", "total_lease_seconds", "correlation_id"],
-      "rule": "Renewal succeeds only for the active lease and cannot make total lease time exceed 14400 seconds. Expired, superseded, wrong-token, or over-limit renewal fails without changing work or destination state."
+      "rule": "Renewal succeeds only for the current active ownership lease in leased, awaiting_deployment, or awaiting_verification, and cannot make that lease's total time exceed 14400 seconds. Pending-stage renewal additionally requires receiver-owned static destination mode. Renewal never changes the pending stage, binding, receipt, attempt_count, or retry_generation. Expired, superseded, wrong-token, inactive, dynamic-pending, or over-limit renewal fails without changing work or destination state. Request and response fields and additive expiry arithmetic are unchanged."
     },
     "acknowledgement": {
       "method": "PUT",
@@ -494,8 +494,8 @@
       "response_rule": "A nonterminal synchronized or deployed response requires next_stage_token and terminal false. A terminal dynamic synchronized or static verified response omits next_stage_token and requires terminal true. Exact request replay returns the same response.",
       "stages": ["synchronized", "deployed", "verified"],
       "rule": "Acknowledgement is accepted only for the exact work identity, current stage token, source revision, policy revision, destination policy, action, connection, destination binding, and receiver-owned authoritative destination mode. The synchronized stage requires the active publication lease. Dynamic destinations finish at synchronized with deployment_state and verification_state not_required. Static destinations persist the exact destination binding and publication revision at synchronized, then receive a new stage token for deployed and verified acknowledgements; acknowledgement-controlled states cannot select or downgrade the destination mode; deployed_at is required at deployed and publicly_verified_at is required at verified.",
-      "stage_transition_rule": "Stages are monotonic and idempotent for an exact request. synchronized may advance only to deployed; deployed only to verified. A stale stage token, skipped stage, changed binding/revision/policy, late acknowledgement after supersession, or repeated stage with different data fails closed without changing state.",
-      "static_recovery_rule": "Lease expiry after synchronized does not discard the persisted binding or return publication work to native mutation. The receiver exposes the same work at awaiting_deployment or awaiting_verification with a new bounded stage token until verified, failed into retry_wait, or placed in operator_attention."
+      "stage_transition_rule": "Stages are monotonic and idempotent for an exact request. synchronized may advance only to deployed; deployed only to verified. An ordinary transition uses the preceding accepted response's next_stage_token. The first transition after a receiver-issued static_recovery claim instead uses that current claim's stage_token and exact retained receipt association under publication_work.static_recovery; it is not validated by rewriting the earlier response. A stale stage token, skipped stage, changed binding/revision/policy, late acknowledgement after supersession, or repeated stage with different data fails closed without changing state.",
+      "static_recovery_rule": "Lease expiry after synchronized does not discard the persisted binding or return publication work to native mutation. The existing claim route reissues the same eligible work at awaiting_deployment or awaiting_verification with static_recovery, a fresh bounded ownership lease, and new lease/stage tokens under publication_work.static_recovery. Repeated recovery of a pending stage preserves the actual accepted receipt. A newer desired work or policy supersedes the expired older stage rather than reissuing it; changed visibility or connection scope never authorizes continued publication. Recovery remains pending until the next ordered stage is accepted, an actual failure enters retry_wait or operator_attention, or the work is superseded."
     },
     "failure": {
       "method": "PUT",
@@ -526,6 +526,34 @@
       "retry_generation",
       "correlation_id"
     ],
+    "work_optional_fields": ["static_recovery"],
+    "static_recovery": {
+      "required_fields": [
+        "state",
+        "acknowledgement",
+        "response"
+      ],
+      "states": [
+        "awaiting_deployment",
+        "awaiting_verification"
+      ],
+      "stage_pairs": {
+        "awaiting_deployment": {
+          "accepted_stage": "synchronized",
+          "next_stage": "deployed"
+        },
+        "awaiting_verification": {
+          "accepted_stage": "deployed",
+          "next_stage": "verified"
+        }
+      },
+      "authority_rule": "static_recovery is receiver-issued only for a receiver-owned static destination mode. Its acknowledgement and response are exact copies of the actual latest accepted nonterminal receipt for this work, not adapter assertions, inferred history, or fabricated receipts. The receiver rechecks authenticated connection scope, current visibility, current approved policy, catalog availability, and destination ownership before issuing recovery.",
+      "identity_rule": "The retained response names the same work_id. The retained acknowledgement matches resource_id, source_revision, source_revision_sequence, policy_revision, destination_policy_id, and action in the claimed work. Its accepted stage and resulting_state match stage_pairs and state. The exact destination_binding, publication_revision, content_disposition, conditional read_more_url, synchronized_at, and conditional deployed_at remain unchanged, including timestamp spelling and fractional precision. Historical request and response correlation IDs remain their original values.",
+      "lease_rule": "Recovery uses the existing claim route, request, count limits, byte bounds, default lease duration, maximum requested duration, and maximum total renewal duration. It is eligible only after the previous owner lease expires, or after an actual static-stage failure is released from retry_wait or authorized operator Retry returns it to available. A live owner is never displaced. The receiver atomically retains the same pending stage and receipt association, issues fresh lease_token and stage_token, and records the new ownership issue without modifying prior issues or receipts. Lease totals apply to this newly issued ownership lease, as for an ordinary fresh claim.",
+      "token_rule": "The first acknowledgement after recovery uses the new claim's lease_token and stage_token, not the historical receipt response's next_stage_token. Both new tokens differ from the preceding ownership tokens. Acceptance requires the receiver's current active ownership issue and its exact retained receipt association. An old token cannot advance a stage or renew ownership. An exact replay of an already accepted request retains the original response and makes no state or ownership change; an old replay response does not restore a token's authority. Superseded work remains rejected.",
+      "acknowledgement_rule": "The recovery acknowledgement advances only to stage_pairs[state].next_stage, repeats the exact retained destination_binding and synchronized_at, and also repeats deployed_at when resuming verification. Its newly acknowledged deployment or verification event must not precede the preceding accepted event or occur after receiver receipt time. If that next-stage operation already succeeded before an acknowledgement was lost, the adapter verifies the exact actual result and reports its real event time rather than inventing a timestamp or repeating native mutation. Acceptance of this first recovered stage requires the current unexpired recovery lease. It creates a new acknowledgement receipt against the new ownership issue; no synchronization, prior deployment receipt, native content write, or native identity is recreated. Subsequent stages follow the ordinary acknowledgement rules.",
+      "retry_rule": "Lease-expiry recovery does not increment attempt_count or retry_generation and does not create a failure receipt. An actual registered static-stage failure keeps the existing 60/300/900-second backoff, four-attempt limit and terminal attention behavior. After its due automatic retry or authorized operator Retry, the claim resumes the retained static stage, never native mutation; existing attempt and generation accounting is unchanged. Missing, altered, terminal, or inconsistent retained receipt context fails closed with reconciliation_required or integrity_failed, not a replacement object."
+    },
     "work_id_pattern": "^dbw_[a-f0-9]{32}$",
     "lease_token_pattern": "^[a-f0-9]{64}$",
     "stage_token_pattern": "^[a-f0-9]{64}$",
@@ -542,7 +570,7 @@
     "actions": ["publish", "update", "hold", "unpublish", "restore"],
     "lifecycle_states": ["available", "leased", "awaiting_deployment", "awaiting_verification", "acknowledged", "retry_wait", "operator_attention", "superseded"],
     "lifecycle_transitions": {
-      "available": ["leased", "superseded"],
+      "available": ["leased", "awaiting_deployment", "awaiting_verification", "superseded"],
       "leased": ["awaiting_deployment", "acknowledged", "retry_wait", "available", "operator_attention"],
       "awaiting_deployment": ["awaiting_verification", "retry_wait", "operator_attention", "superseded"],
       "awaiting_verification": ["acknowledged", "retry_wait", "operator_attention", "superseded"],
@@ -556,7 +584,7 @@
     "maximum_total_attempts": 4,
     "retry_backoff_seconds": [60, 300, 900],
     "rules": [
-      "Only one worker may own an item during an active lease. A claimed item supplies the synchronized-stage token. Each accepted nonterminal static acknowledgement atomically returns the next stage token and invalidates the prior token; replay of the exact accepted request is idempotent, while reuse with different data fails stage_conflict.",
+      "Only one worker may own an item during an active lease. A normal native-mutation claim supplies the synchronized-stage token; a static_recovery claim supplies the token for its declared next static stage and never authorizes synchronized or another native content write. Each accepted nonterminal static acknowledgement atomically returns the next stage token and invalidates the prior token; replay of the exact accepted request is idempotent, while reuse with different data fails stage_conflict. available may transition directly to awaiting_deployment or awaiting_verification only through validated static_recovery with the actual retained nonterminal receipt. Reissuing an already pending stage changes ownership tokens, not stage order.",
       "Expired unacknowledged work returns to available or retry_wait without changing destination identity.",
       "Work is serialized per destination binding: only one revision may perform a native mutation for a binding at a time.",
       "A changed source, policy, or destination-policy revision may supersede older available or retry_wait work immediately. It never mutates an active lease: the leased attempt may finish or expire, after which it becomes superseded and the newer work becomes available. A late acknowledgement for superseded work fails closed.",

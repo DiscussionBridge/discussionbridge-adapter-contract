@@ -1,5 +1,39 @@
 # Coordinated Alpha.20 to Alpha.22 Transition
 
+## Current Alpha.23 static-recovery correction
+
+The guide below records the historical Alpha.20-to-Alpha.22 transition. Current
+source is Alpha.23. Its strict header/package/contract/Operator Service metadata
+must move together in a separately qualified coordinated installation. No
+Alpha.22 alias, rolling fallback, installation or deployment is executed here.
+Operator Service signing and behavior are unchanged; only its version identity
+moves with the central contract. Example plugin/adapter versions in fixtures
+are not release declarations.
+
+Alpha.23 makes the existing static recovery promise executable: the same claim
+route may issue `static_recovery` with the actual prior nonterminal receipt and
+fresh bounded ownership. Consumers must distinguish this from native-mutation
+claims, retain the exact binding/timestamps, and acknowledge only the pending
+deployment or verification stage using the new lease/stage tokens. An old
+receipt response is immutable; its token is not rewritten to pass validation.
+After that first recovered ACK, follow the ordinary returned next-stage token.
+Pending renewal additionally requires receiver-owned static destination mode.
+
+Receiver implementations must separately prove current connection/visibility/
+policy authority, real persisted receipt association, atomic ownership reissue,
+old-owner denial, immutable replay and crash/restart behavior before use. Adapters
+must separately prove actual deployment/verification and no duplicate native
+mutation, including a successful operation whose ACK was lost. Do not synthesize
+historical receipts or event timestamps. Contract fixtures alone do not establish
+these properties. Existing bounds, native limits, retry schedule and generation
+accounting are unchanged.
+
+The current cutover manifest/rehearsal fixtures use Alpha.23 and its canonical
+example-manifest hash. Their synthetic `passed` values are test data, not evidence
+that any controlled forum or adapter has been cut over.
+
+## Historical Alpha.22 transition (not current installation instructions)
+
 Alpha.22 is a coordinated contract transition for the DiscussionBridge-
 controlled estate. It is not a rolling compatibility release. There is no
 runtime alias or compatibility behavior for superseded presentation names,

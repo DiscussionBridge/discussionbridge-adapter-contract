@@ -1,6 +1,6 @@
 {
   "manifest_id":"dbm_11111111111111111111111111111111",
-  "manifest_sha256":"25a3ddd23df84a7cbac388d1026c4429171f871c3906c62172699de64375ca74",
+  "manifest_sha256":"d912aa2decf7e6eeb69de451cdbc097d7f78e2a0a42ff95f009d479ffb0c0255",
   "preflight":"passed",
   "mismatch_rejected_before_mutation":true,
   "one_item_canary":"passed",

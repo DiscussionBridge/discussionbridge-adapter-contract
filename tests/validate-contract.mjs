@@ -74,6 +74,7 @@ import {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const load = async (relative) => parseProtocolJson(await readFile(path.join(root, relative), "utf8"));
 const contract = await load("contract.json");
+await (await import("./static-recovery-validation.mjs")).validateStaticRecoveryConformance(contract);
 const operator = await load("operator-service-contract.json");
 const packageMetadata = await load("package.json");
 const rfc8785Example = await load("tests/rfc8785-example.json");
@@ -94,7 +95,7 @@ const invalid = new Map();
 for (const name of negativeNames) invalid.set(name, await load(`fixtures/invalid/${name}`));
 
 assert.equal(contract.contract, "discussionbridge-adapter");
-assert.equal(contract.version, "0.2.0-alpha.22");
+assert.equal(contract.version, "0.2.0-alpha.23");
 assert.deepEqual(contract.configuration.presentation_modes, ["simple", "full", "interactive"]);
 assert.equal(contract.publication_work.initial_attempts + contract.publication_work.maximum_automatic_retries, contract.publication_work.maximum_total_attempts);
 assert.equal(contract.publication_work.retry_backoff_seconds.length, contract.publication_work.maximum_automatic_retries);
@@ -1492,7 +1493,7 @@ assert.doesNotThrow(() => responseTerminalMutant.validateAcknowledgementResponse
 
 const dynamicAuthorityMutant = await loadValidatorMutation(
   "dynamic-acknowledgement-authority-binding",
-  "  validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext);",
+  "  validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext, contract);",
   "",
 );
 const dynamicTrace = fixtures.get("publication-dynamic-trace.json");
@@ -1665,8 +1666,8 @@ assert.ok(
 
 const acknowledgementModeAuthorityMutant = await loadValidatorMutation(
   "acknowledgement-authoritative-destination-mode",
-  '  validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext);\n  validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: acceptanceContext.destination_mode });',
-  '  const claimantControlledContext = { ...acceptanceContext, destination_mode: "dynamic" };\n  validateAcknowledgementIdentity(work, acknowledgement, state, claimantControlledContext);\n  validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: claimantControlledContext.destination_mode });',
+  '  validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext, contract);\n  validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: acceptanceContext.destination_mode });',
+  '  const claimantControlledContext = { ...acceptanceContext, destination_mode: "dynamic" };\n  validateAcknowledgementIdentity(work, acknowledgement, state, claimantControlledContext, contract);\n  validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: claimantControlledContext.destination_mode });',
 );
 const downgradedStaticAcknowledgement = structuredClone(fixtures.get("publication-acknowledgement-static-pending.json"));
 downgradedStaticAcknowledgement.deployment_state = "not_required";

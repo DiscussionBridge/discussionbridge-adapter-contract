@@ -1,9 +1,32 @@
-# Alpha.22 Matrix Coverage Ledger
+# Alpha.23 Matrix Coverage Ledger
 
 This ledger maps every item in
 `planning/ADAPTER_PROTOCOL_ALPHA20_SUCCESSOR_CHANGE_MATRIX.md` to the exact
-Alpha.22 candidate artifact. It prevents a green parser test from hiding a
+Alpha.23 candidate artifact. It prevents a green parser test from hiding a
 missing approved requirement.
+
+## Approved REC0158 static recovery correction
+
+Phil approved the seven static-recovery definitions and coordinated Alpha.23
+identity on 2026-10-07. The original matrix remains the successor authority;
+this section records the subsequently approved bounded correction, not a new
+matrix or rollout approval.
+
+| Definition | Executable coverage | Limit of evidence |
+| --- | --- | --- |
+| Optional `static_recovery` with two pending states and real prior ACK/response | `validateWork`, `validateStaticRecovery`; fixture `static-recovery/trace.json`; shape, correlation, identity and fresh-token tests. | Schema validity does not prove actual persisted history. |
+| Existing claim route reissues receipt-linked static ownership | `validateStaticRecoveryClaim`; independent receiver-context receipt/issue, active-owner, current policy/scope, retry eligibility and repeated interruption controls. | Pure validators; receiver transaction, retry authorization and restart still need native qualification. |
+| First recovered ACK uses the current issue, not an old response's next token | `validateStaticRecoveryTransition`, `validateAcknowledgementIdentity`, `validateAcknowledgementExchange`; exact complete/excerpt binding, raw timestamps, lost-ACK event time, expired/stale/skipped/correlation controls. | Actual external deployment/public verification remains the adapter's responsibility. |
+| Pending static renewal | `validateRenewal`; both stages, static-only context, expiry, ownership and original additive/four-hour boundaries. | Caller must supply current receiver work; no database lock is supplied by a validator. |
+| Conditional available-to-pending retry and normal-vs-recovery claim | Real retained stage required; no synchronization authorization; ordinary transition body remains unchanged; existing retry registry/backoff tests retained. | Atomicity, immutable history, exact replay response and native write count require receiver tests. |
+
+The new test module runs within the existing `npm test` suite. Exact positive
+and negative counts are printed by the run, not assumed here. It independently
+loads receipt fixtures instead of treating a client's claim as proof. The same
+schema is exercised for Astro, Hugo and Statamic SSG; this is not qualification
+of those adapter packages. Existing dynamic/ordinary static and raw-byte tests
+continue running. There is no product/family, installation, release, deployment,
+restart or formal-review acceptance implied by this ledger.
 
 ## Retained Alpha.20 behavior
 

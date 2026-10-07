@@ -950,7 +950,7 @@ export function validateChunkSet(descriptor, chunks, contract) {
 
 export function validateWork(value, contract) {
   boundedJsonObject(value, contract.publication_work.maximum_json_bytes, "publication work");
-  exactObject(value, contract.publication_work.work_required_fields, [], "publication work");
+  exactObject(value, contract.publication_work.work_required_fields, contract.publication_work.work_optional_fields, "publication work");
   pattern(value.work_id, contract.publication_work.work_id_pattern);
   uuid(value.resource_id, contract, "resource_id");
   pattern(value.connection_id, contract.authentication.connection_id_pattern);
@@ -985,6 +985,98 @@ export function validateWork(value, contract) {
   if (!Number.isSafeInteger(value.retry_generation) || value.retry_generation < 0) fail("validation_failed");
   timestamp(value.lease_expires_at, "lease_expires_at");
   correlation(value.correlation_id, contract);
+  if (Object.hasOwn(value, "static_recovery")) validateStaticRecovery(value, contract);
+}
+
+function validateStaticRecovery(work, contract) {
+  const recovery = work.static_recovery;
+  const definition = contract.publication_work.static_recovery;
+  exactObject(recovery, definition.required_fields, [], "static recovery");
+  enumValue(recovery.state, definition.states, "static recovery state");
+  const previous = recovery.acknowledgement;
+  validateAcknowledgement(previous, contract);
+  if (recovery.response?.terminal !== false) fail("reconciliation_required", "static recovery cannot use a terminal or missing receipt response");
+  validateAcknowledgementResponse(recovery.response, contract, { work, acknowledgement: previous, destination_mode: "static" });
+  const pair = definition.stage_pairs[recovery.state];
+  if (previous.stage !== pair.accepted_stage || recovery.response.resulting_state !== recovery.state || recovery.response.terminal !== false) fail("reconciliation_required", "static recovery needs the retained nonterminal stage");
+  for (const field of ["resource_id", "source_revision", "source_revision_sequence", "policy_revision", "destination_policy_id", "action"]) {
+    if (previous[field] !== work[field]) fail("reconciliation_required", "static recovery receipt identity mismatch");
+  }
+  if (previous.correlation_id !== recovery.response.correlation_id) fail("integrity_failed", "retained receipt correlation mismatch");
+  if (work.lease_token === previous.lease_token || work.stage_token === previous.stage_token || work.stage_token === recovery.response.next_stage_token) fail("reconciliation_required", "static recovery tokens must be newly issued");
+}
+
+// This is receiver-owned validation context, never an added request field.
+// A shaped receipt is not proof: compare it to the caller's persisted receipt
+// and current ownership issue before granting either claim or ACK authority.
+function validateStaticRecoveryContext(work, contract, context) {
+  validateWork(work, contract);
+  if (!Object.hasOwn(work, "static_recovery")) fail("reconciliation_required", "static recovery context is missing");
+  if (context.destination_mode !== "static") fail("reconciliation_required", "recovery requires receiver-owned static mode");
+  exactObject(context.accepted_receipt, ["receipt_id", "acknowledgement", "response"], [], "retained receiver receipt");
+  nonblank(context.accepted_receipt.receipt_id, contract.common.opaque_identifier_maximum_bytes, "receipt_id");
+  if (canonicalize(work.static_recovery.acknowledgement) !== canonicalize(context.accepted_receipt.acknowledgement)
+      || canonicalize(work.static_recovery.response) !== canonicalize(context.accepted_receipt.response)) fail("integrity_failed", "recovery does not match the actual retained receipt");
+  const issue = context.current_issue;
+  exactObject(issue, ["work_id", "lease_token", "stage_token", "claimed_at", "lease_expires_at", "state", "receipt_id", "active", "attempt_count", "retry_generation"], [], "current receiver ownership issue");
+  if (issue.active !== true) fail("lease_conflict", "recovery ownership is inactive");
+  for (const field of ["work_id", "lease_token", "stage_token", "lease_expires_at", "attempt_count", "retry_generation"]) {
+    if (issue[field] !== work[field]) fail("reconciliation_required", "recovery does not match current receiver ownership");
+  }
+  timestamp(context.claimed_at, "claimed_at");
+  if (issue.claimed_at !== context.claimed_at || issue.state !== work.static_recovery.state
+      || issue.receipt_id !== context.accepted_receipt.receipt_id) fail("reconciliation_required", "recovery receipt/issue association mismatch");
+  if (compareTimestamps(issue.lease_expires_at, context.claimed_at, "lease_expires_at", "claimed_at") <= 0) fail("work_expired");
+  const retainedEvent = work.static_recovery.acknowledgement.deployed_at ?? work.static_recovery.acknowledgement.synchronized_at;
+  if (compareTimestamps(retainedEvent, context.claimed_at, "retained event", "claimed_at") > 0) fail("integrity_failed", "retained event cannot follow recovery issuance");
+  if (compareTimestamps(issue.lease_expires_at, addTimestampSeconds(context.claimed_at, contract.publication_work.claim.maximum_total_lease_seconds, "claimed_at"), "lease_expires_at", "maximum ownership expiry") > 0) fail("lease_limit_exceeded");
+  const authority = context.authority;
+  const identityFields = ["connection_id", "resource_id", "source_revision", "source_revision_sequence", "policy_revision", "destination_policy_id", "catalog_revision"];
+  const permissionFields = ["visible", "enabled", "in_scope", "policy_available", "destination_owned"];
+  exactObject(authority, [...identityFields, ...permissionFields], [], "current receiver recovery authority");
+  for (const field of identityFields) if (authority[field] !== work[field]) fail("work_superseded", "current desired identity/policy supersedes recovery");
+  for (const field of permissionFields) if (authority[field] !== true) fail("reconciliation_required", "current scope/visibility/policy denies recovery");
+}
+
+export function validateStaticRecoveryClaim(work, contract, context) {
+  exactObject(context, ["destination_mode", "claimed_at", "current_issue", "accepted_receipt", "authority", "previous_issue", "previous_state"], [], "recovery claim context");
+  if (context.previous_state === "superseded") fail("work_superseded");
+  validateStaticRecoveryContext(work, contract, context);
+  if (!["available", work.static_recovery.state].includes(context.previous_state)) fail("reconciliation_required", "static work is not eligible for recovery");
+  exactObject(context.previous_issue, ["lease_token", "stage_token", "lease_expires_at", "active"], [], "previous receiver ownership issue");
+  const previous = context.previous_issue;
+  pattern(previous.lease_token, contract.publication_work.lease_token_pattern, "reconciliation_required", "previous lease_token");
+  pattern(previous.stage_token, contract.publication_work.stage_token_pattern, "stage_conflict", "previous stage_token");
+  timestamp(previous.lease_expires_at, "previous lease_expires_at");
+  boolean(previous.active, "previous active ownership");
+  if (previous.active && compareTimestamps(context.claimed_at, previous.lease_expires_at, "claimed_at", "previous lease_expires_at") <= 0) fail("lease_conflict", "a live owner cannot be displaced");
+  if (!previous.active && context.previous_state !== "available") fail("reconciliation_required", "released retry must be available before recovery");
+  if (previous.lease_token === work.lease_token || previous.stage_token === work.stage_token) fail("reconciliation_required", "recovery reused previous ownership tokens");
+  const maximumExpiry = addTimestampSeconds(context.claimed_at, contract.publication_work.claim.maximum_requested_lease_seconds, "claimed_at");
+  if (compareTimestamps(work.lease_expires_at, maximumExpiry, "lease_expires_at", "maximum initial expiry") > 0) fail("lease_limit_exceeded");
+}
+
+export function validateStaticRecoveryTransition(work, next, contract, state, context) {
+  if (state === "superseded") fail("work_superseded");
+  exactObject(context, ["destination_mode", "claimed_at", "received_at", "current_issue", "accepted_receipt", "authority"], ["source_reference"], "recovery acknowledgement context");
+  validateStaticRecoveryContext(work, contract, context);
+  validateAcknowledgement(next, contract);
+  const recovery = work.static_recovery;
+  const previous = context.accepted_receipt.acknowledgement;
+  if (state !== recovery.state || next.stage !== contract.publication_work.static_recovery.stage_pairs[recovery.state].next_stage) fail("stage_conflict", "recovery can advance only the next retained stage");
+  if (next.lease_token !== work.lease_token) fail("reconciliation_required");
+  if (next.stage_token !== work.stage_token) fail("stage_conflict");
+  for (const field of ["resource_id", "source_revision", "source_revision_sequence", "policy_revision", "destination_policy_id", "action"]) {
+    if (next[field] !== previous[field]) fail("revision_conflict");
+  }
+  if (canonicalize(next.destination_binding) !== canonicalize(previous.destination_binding)
+      || next.synchronized_at !== previous.synchronized_at
+      || (previous.stage === "deployed" && next.deployed_at !== previous.deployed_at)) fail("identity_conflict", "recovery changed the retained binding or raw timestamps");
+  timestamp(context.received_at, "received_at");
+  if (compareTimestamps(context.received_at, context.claimed_at, "received_at", "claimed_at") < 0) fail("validation_failed");
+  if (compareTimestamps(context.received_at, work.lease_expires_at, "received_at", "lease_expires_at") >= 0) fail("work_expired");
+  const eventTime = next.stage === "deployed" ? next.deployed_at : next.publicly_verified_at;
+  if (compareTimestamps(eventTime, context.received_at, "event time", "received_at") > 0) fail("validation_failed", "recovery event cannot occur after receipt");
 }
 
 export function validateWorkText(text, contract) {
@@ -1051,10 +1143,12 @@ export function validateRenewal(value, contract, context) {
   validateLeaseRenewal(0, value.response.total_lease_seconds, contract.publication_work.claim.maximum_total_lease_seconds);
   if (value.request.correlation_id !== value.response.correlation_id) fail("validation_failed");
   object(context, "renewal context");
-  exactObject(context, ["work", "state", "claimed_at", "request_received_at", "current_total_lease_seconds"], [], "renewal context");
-  if (context.state !== "leased") fail("lease_conflict");
+  exactObject(context, ["work", "state", "claimed_at", "request_received_at", "current_total_lease_seconds"], ["destination_mode"], "renewal context");
+  if (context.state !== "leased" && !(contract.publication_work.static_recovery.states.includes(context.state) && context.destination_mode === "static")) fail("lease_conflict");
+  if (Object.hasOwn(context, "destination_mode")) enumValue(context.destination_mode, ["dynamic", "static"], "destination_mode");
   if (value.request.lease_token !== context.work.lease_token || value.response.work_id !== context.work.work_id) fail("lease_conflict");
   validateLeaseTime(context.work.lease_expires_at, context.request_received_at);
+  if (context.state !== "leased" && compareTimestamps(context.request_received_at, context.work.lease_expires_at, "request_received_at", "lease_expires_at") >= 0) fail("work_expired");
   nonnegativeInteger(context.current_total_lease_seconds, "current_total_lease_seconds");
   timestamp(context.claimed_at, "claimed_at");
   timestamp(context.request_received_at, "request_received_at");
@@ -1159,7 +1253,7 @@ export function validateAcknowledgementResponse(value, contract, context = undef
 export function validateAcknowledgementExchange(work, acknowledgement, response, contract, state, acceptanceContext, wireHeaders) {
   validateWork(work, contract);
   validateAcknowledgement(acknowledgement, contract);
-  validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext);
+  validateAcknowledgementIdentity(work, acknowledgement, state, acceptanceContext, contract);
   validateAcknowledgementResponse(response, contract, { work, acknowledgement, destination_mode: acceptanceContext.destination_mode });
   exactObject(wireHeaders, ["request_header", "response_header"], [], "acknowledgement wire headers");
   validateCorrelationExchange({
@@ -1480,8 +1574,13 @@ export function validateIdentity(stored, incoming) {
   if (stored.canonical_url === incoming.canonical_url && stored.external_id !== incoming.external_id) fail("identity_conflict");
 }
 
-export function validateAcknowledgementIdentity(work, acknowledgement, state = "leased", context = {}) {
+export function validateAcknowledgementIdentity(work, acknowledgement, state = "leased", context = {}, contract = undefined) {
   if (state === "superseded") fail("work_superseded");
+  const firstRecoveredStage = Object.hasOwn(work, "static_recovery");
+  if (firstRecoveredStage) {
+    if (contract === undefined) fail("reconciliation_required", "recovery requires the explicit central contract");
+    validateStaticRecoveryTransition(work, acknowledgement, contract, state, context);
+  }
   const expectedState = { synchronized: "leased", deployed: "awaiting_deployment", verified: "awaiting_verification" }[acknowledgement.stage];
   if (state !== expectedState) fail("stage_conflict", "acknowledgement is not legal for current work state");
   object(context, "acknowledgement acceptance context");
@@ -1502,7 +1601,7 @@ export function validateAcknowledgementIdentity(work, acknowledgement, state = "
     validateLeaseTime(work.lease_expires_at, context.received_at);
     if (compareTimestamps(context.received_at, context.claimed_at, "received_at", "claimed_at") < 0 || compareTimestamps(acknowledgement.synchronized_at, context.claimed_at, "synchronized_at", "claimed_at") < 0) fail("validation_failed", "synchronization cannot precede claim issuance");
     if (compareTimestamps(acknowledgement.synchronized_at, context.received_at, "synchronized_at", "received_at") > 0) fail("validation_failed", "synchronization cannot occur after receipt");
-  } else {
+  } else if (!firstRecoveredStage) {
     exactObject(context, ["destination_mode"], ["received_at", "source_reference"], "acknowledgement acceptance context");
     if (context.destination_mode !== "static") fail("stage_conflict", "dynamic destination cannot advance beyond synchronization");
     if (Object.hasOwn(context, "received_at")) {

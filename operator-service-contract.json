@@ -1,6 +1,6 @@
 {
   "contract": "discussionbridge-operator-service",
-  "version": "0.2.0-alpha.22",
+  "version": "0.2.0-alpha.23",
   "relationship": {
     "maximum_active_providers_per_forum": 1,
     "current_provider": "discussionbridge",
