@@ -36,7 +36,7 @@ export async function validateStaticRecoveryConformance(contract) {
     const issue = { work_id: work.work_id, lease_token: work.lease_token, stage_token: work.stage_token,
       claimed_at: trace.claimed_at, lease_expires_at: work.lease_expires_at, state: entry.state,
       receipt_id: receipt.receipt_id, active: true, attempt_count: work.attempt_count, retry_generation: work.retry_generation };
-    const authority = Object.fromEntries(["connection_id", "resource_id", "source_revision", "source_revision_sequence", "policy_revision", "destination_policy_id", "catalog_revision"].map(field => [field, work[field]]));
+    const authority = Object.fromEntries(["work_id", "action", "connection_id", "resource_id", "source_revision", "source_revision_sequence", "policy_revision", "destination_policy_id", "catalog_revision"].map(field => [field, work[field]]));
     Object.assign(authority, { visible: true, enabled: true, in_scope: true, policy_available: true, destination_owned: true });
     const context = { destination_mode: "static", claimed_at: trace.claimed_at, received_at: trace.received_at,
       current_issue: issue, accepted_receipt: receipt, authority };
@@ -171,6 +171,12 @@ export async function validateStaticRecoveryConformance(contract) {
       mutateTransition(`ACK denies current ${field}`, "reconciliation_required", m => m.context.authority[field] = false);
     }
     mutateClaim("current revision/policy supersedes recovery", "work_superseded", m => m.claimContext.authority.policy_revision += ":new");
+    mutateClaim("new desired work with unchanged source/policy supersedes recovery", "work_superseded", m => m.claimContext.authority.work_id = `dbw_${"9".repeat(32)}`);
+    mutateClaim("new desired withdrawal action supersedes recovery", "work_superseded", m => m.claimContext.authority.action = "unpublish");
+    mutateTransition("new desired work rejects old stage ACK", "work_superseded", m => m.context.authority.work_id = `dbw_${"9".repeat(32)}`);
+    mutateTransition("new desired withdrawal rejects old stage ACK", "work_superseded", m => m.context.authority.action = "unpublish");
+    mutateClaim("missing current desired work cannot stand in for authority", "validation_failed", m => delete m.claimContext.authority.work_id);
+    mutateClaim("missing current desired action cannot stand in for authority", "validation_failed", m => delete m.claimContext.authority.action);
     mutateClaim("live owner cannot be displaced", "lease_conflict", m => m.claimContext.previous_issue.lease_expires_at = "2026-09-27T18:50:00Z");
     mutateClaim("fresh claim must rotate both prior tokens", "reconciliation_required", m => m.claimContext.previous_issue.stage_token = m.work.stage_token);
     mutateClaim("retry_wait is not available before its due transition", "reconciliation_required", m => m.claimContext.previous_state = "retry_wait");
@@ -243,6 +249,10 @@ export async function validateStaticRecoveryConformance(contract) {
   });
   await reversion("current-visibility", '  for (const field of permissionFields) if (authority[field] !== true) fail("reconciliation_required", "current scope/visibility/policy denies recovery");', "", mutant => {
     const changed = copy(m); changed.claimContext.authority.visible = false;
+    assert.doesNotThrow(() => mutant.validateStaticRecoveryClaim(changed.work, contract, changed.claimContext));
+  });
+  await reversion("current-desired-work", '  for (const field of identityFields) if (authority[field] !== work[field]) fail("work_superseded", "current desired identity/policy supersedes recovery");', '  for (const field of identityFields.filter(field => !["work_id", "action"].includes(field))) if (authority[field] !== work[field]) fail("work_superseded", "current desired identity/policy supersedes recovery");', mutant => {
+    const changed = copy(m); changed.claimContext.authority.work_id = `dbw_${"9".repeat(32)}`; changed.claimContext.authority.action = "unpublish";
     assert.doesNotThrow(() => mutant.validateStaticRecoveryClaim(changed.work, contract, changed.claimContext));
   });
   console.log(`Static recovery conformance: ${positives} positive, ${negatives} exact-error negative controls and ${reversions} detecting source reversions; receiver persistence/atomicity/restart remains downstream qualification.`);

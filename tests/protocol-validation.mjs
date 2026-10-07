@@ -1031,7 +1031,7 @@ function validateStaticRecoveryContext(work, contract, context) {
   if (compareTimestamps(retainedEvent, context.claimed_at, "retained event", "claimed_at") > 0) fail("integrity_failed", "retained event cannot follow recovery issuance");
   if (compareTimestamps(issue.lease_expires_at, addTimestampSeconds(context.claimed_at, contract.publication_work.claim.maximum_total_lease_seconds, "claimed_at"), "lease_expires_at", "maximum ownership expiry") > 0) fail("lease_limit_exceeded");
   const authority = context.authority;
-  const identityFields = ["connection_id", "resource_id", "source_revision", "source_revision_sequence", "policy_revision", "destination_policy_id", "catalog_revision"];
+  const identityFields = ["work_id", "action", "connection_id", "resource_id", "source_revision", "source_revision_sequence", "policy_revision", "destination_policy_id", "catalog_revision"];
   const permissionFields = ["visible", "enabled", "in_scope", "policy_available", "destination_owned"];
   exactObject(authority, [...identityFields, ...permissionFields], [], "current receiver recovery authority");
   for (const field of identityFields) if (authority[field] !== work[field]) fail("work_superseded", "current desired identity/policy supersedes recovery");
