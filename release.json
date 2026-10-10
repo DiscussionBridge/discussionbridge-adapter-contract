@@ -1,0 +1,139 @@
+{
+  "release_manifest_format": 1,
+  "contract": "discussionbridge-adapter",
+  "version": "0.2.0-alpha.23",
+  "tag": "v0.2.0-alpha.23",
+  "release_kind": "approved_specification_local_freeze",
+  "source_baseline": {
+    "version": "0.2.0-alpha.20",
+    "commit": "27197b7472cb2486993c8b01b4a4282d8697f478",
+    "tree": "3bb319fabbeecbb70af2785a5c0be3e171a1eb7a"
+  },
+  "approval": {
+    "approved_by": "Phil",
+    "date": "2026-10-10",
+    "conversation": "Bridge Builder",
+    "exact_packet": {
+      "id": "EP01",
+      "reply": "approved",
+      "scope": "The seven exact artifact SHA-256 identities below, including schema, semantics, architecture, engineering values, examples, planned cases and change matrix."
+    },
+    "local_freeze": {
+      "id": "EF01",
+      "reply": "no preference and yes",
+      "question": "What exact new contract version/tag should we assign, and do you authorize its local commit/tag freeze once the required gates are satisfied? GitHub pushes and component implementation would remain separately gated.",
+      "scope": "Bridge Builder may select an unused contract release version and create its local specification commit/tag; no push or component implementation."
+    }
+  },
+  "interpretation": {
+    "authority": "This release manifest binds the unchanged EP01-approved packet to the selected release identity and the preserved Alpha.20 v1 baseline.",
+    "historical_metadata": "Approval-pending wording, null release_version, proposal status and original workstation paths inside approved-packet are historical candidate metadata preserved byte-for-byte; this manifest supplies the current release identity, approval and portable bindings. No wire field or semantic rule is altered.",
+    "v1": "contract.json and fixtures/ retain the exact Alpha.20 Git blobs and v1 meanings; their embedded version is intentionally unchanged.",
+    "v2": "The typed artifact and companion semantics jointly specify v2, including the same-plugin Discourse network. Neither is an executable validator. Their disagreement must not be resolved silently.",
+    "baseline_reference_override": "The candidate's v1.contract_file and v1.fixtures_directory are authoring-workspace references. For this release use portable_bindings.v1_contract and portable_bindings.v1_fixtures_directory.",
+    "document_links": "Use the portable release index and approved_packet member paths, not original workstation hyperlinks, to navigate this committed packet.",
+    "release_boundary": "A local immutable specification identity is not an implemented product, code-review disposition, runtime qualification or deployment approval."
+  },
+  "portable_bindings": {
+    "v1_contract": "contract.json",
+    "v1_fixtures_directory": "fixtures",
+    "v2_types_and_routes": "approved-packet/ADAPTER_PROTOCOL_V2_WIRE_PROPOSAL_20261009.json",
+    "v2_semantics": "approved-packet/ADAPTER_PROTOCOL_V2_WIRE_SPECIFICATION_20261009.md",
+    "v2_examples": "approved-packet/ADAPTER_PROTOCOL_V2_EXAMPLES_20261009.json",
+    "v2_conformance_plan": "approved-packet/ADAPTER_PROTOCOL_V2_CONFORMANCE_CASES_20261009.json",
+    "hub_architecture": "approved-packet/DISCOURSE_HUB_ARCHITECTURE_PROPOSAL_20261009.md",
+    "successor_overview": "approved-packet/ADAPTER_PROTOCOL_SUCCESSOR_PROPOSAL_20261009.md",
+    "requirements_matrix": "approved-packet/ADAPTER_PROTOCOL_SUCCESSOR_CHANGE_MATRIX_20261010.md"
+  },
+  "preserved_v1_members": [
+    {
+      "path": "README.md",
+      "git_blob_sha1": "be05082dde3333a7148177431876832b26989fe5"
+    },
+    {
+      "path": "contract.json",
+      "git_blob_sha1": "34cdf8e40d208034adb7084a53a7a0fd9d497b8a"
+    },
+    {
+      "path": "fixtures/created-response.json",
+      "git_blob_sha1": "3de97c0d31578a99bc4ec44d2d913e8793333a58"
+    },
+    {
+      "path": "fixtures/from-discourse-record.json",
+      "git_blob_sha1": "92cd6fde51a8347cdb2422abbbbc4b2585ac500e"
+    },
+    {
+      "path": "fixtures/reconciliation-required-response.json",
+      "git_blob_sha1": "2ca9fc319890a04e47a1be4e2da5195058ade8f3"
+    },
+    {
+      "path": "fixtures/rejected-response.json",
+      "git_blob_sha1": "ddc0b386b25bbf021cabcb40ea0d28d4d55d8b5c"
+    },
+    {
+      "path": "fixtures/resolved-response.json",
+      "git_blob_sha1": "5cdb5adb2c456ae6e3082dd1a72585d76b7d2846"
+    },
+    {
+      "path": "fixtures/to-discourse-request.json",
+      "git_blob_sha1": "368c396c5bfa07f5dc5c2df9f9cf7f0bcce07273"
+    }
+  ],
+  "approved_packet": [
+    {
+      "path": "approved-packet/ADAPTER_PROTOCOL_SUCCESSOR_PROPOSAL_20261009.md",
+      "bytes": 39227,
+      "sha256": "e9f5db853505fdd545be24bd3bdcdc3fad2dd436c9d6e1a37c2bb60b6e0467fc",
+      "role": "successor_overview"
+    },
+    {
+      "path": "approved-packet/ADAPTER_PROTOCOL_V2_WIRE_SPECIFICATION_20261009.md",
+      "bytes": 75343,
+      "sha256": "56f327cf5a9815b65c003a2fd42723c89946f6456905161d497d30dd8b1399e7",
+      "role": "normative_v2_semantics"
+    },
+    {
+      "path": "approved-packet/ADAPTER_PROTOCOL_V2_WIRE_PROPOSAL_20261009.json",
+      "bytes": 193449,
+      "sha256": "5ee46f7190308914dd88c27cfad499709a899b517ac11ac6fe362de1f9f8cd8f",
+      "role": "normative_v2_types_routes"
+    },
+    {
+      "path": "approved-packet/ADAPTER_PROTOCOL_V2_EXAMPLES_20261009.json",
+      "bytes": 83516,
+      "sha256": "dbb6fdb51cd75e3fe5f276582d293300f684e44e39cc84e29d7927485f145add",
+      "role": "v2_positive_examples"
+    },
+    {
+      "path": "approved-packet/ADAPTER_PROTOCOL_V2_CONFORMANCE_CASES_20261009.json",
+      "bytes": 105180,
+      "sha256": "c5f2bae11a90337541f74fe5ef10d87262cdc986551c6a40e0761d99a7d52b13",
+      "role": "v2_negative_cases_and_runtime_plan"
+    },
+    {
+      "path": "approved-packet/DISCOURSE_HUB_ARCHITECTURE_PROPOSAL_20261009.md",
+      "bytes": 30495,
+      "sha256": "1eef2f05d1eb6546194cfc69ab03c9a4b18b8309e216a93b6a7cd61fdf993b79",
+      "role": "same_plugin_hub_architecture"
+    },
+    {
+      "path": "approved-packet/ADAPTER_PROTOCOL_SUCCESSOR_CHANGE_MATRIX_20261010.md",
+      "bytes": 22782,
+      "sha256": "1029a8a987f91456015541432e47d04c95cebf5cd8e1f248f8725e7e17acbd1d",
+      "role": "requirements_and_future_qualification_matrix"
+    }
+  ],
+  "excluded": {
+    "operator_service_control_documents": "Not members of this release; invented remote Operator Service controls remain excluded.",
+    "historical_trash": "Not an authority or implementation source."
+  },
+  "later_gates": {
+    "component_implementation": "Separate explicit authority required; baseline-derived packets, native hooks, migration, packaging and installation work not performed.",
+    "code_review": "Not commissioned or issued for this specification freeze. Applicable later code-review gates must use the complete controlling doctrine; no prior disposition inherited.",
+    "runtime_cases": "80 planned CMS/network runtime/native cases remain NOT_RUN.",
+    "raw_json_negative_cases": "Two planned malformed-JSON cases remain NOT_RUN.",
+    "sandbox": "No live test, installation, migration, protected credential or service access authorized by this freeze.",
+    "github": "No push, remote branch/tag/main update or remote cleanup authorized by this freeze.",
+    "non_sandbox_deployment": "Separately authorized only after sandbox qualification and an approved valid main."
+  }
+}

@@ -1,0 +1,1564 @@
+{
+  "status": "CMS_AND_NETWORK_PLANNED_CONFORMANCE_NOT_RUN",
+  "scope_notice": "CF01 directions approved; exact wire pending approval. Shape checks are document checks, not product conformance. All semantic/runtime/native cases remain NOT_RUN.",
+  "type_cases": [
+    {
+      "id": "N01_boolean_coercion",
+      "profile": "v2",
+      "type": "ToResolve",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-000000000010",
+        "bridge_record": {
+          "direction": "to_discourse",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "title": "Roadmap",
+          "content_html": "<p>A deterministic source revision.</p>",
+          "published": "true",
+          "source_revision": "native-source-r1",
+          "expected_source_revision": null,
+          "source_created_at": "2026-10-01T12:00:00.000Z",
+          "source_updated_at": "2026-10-09T17:58:00.000Z",
+          "representation": {
+            "kind": "full"
+          },
+          "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "source_content_bytes": 39
+        }
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N02_numeric_core_id",
+      "profile": "v2",
+      "type": "ResolveResult",
+      "input": {
+        "outcome": "created",
+        "reason": "record_created",
+        "resource_id": "11111111-1111-4111-8111-000000000002",
+        "topic_id": 8,
+        "topic_url": "https://forum.example/t/roadmap/8",
+        "direction": "to_discourse",
+        "source_revision": "native-source-r1",
+        "synchronized_at": "2026-10-09T18:00:00.000Z",
+        "core_fallback": false
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N03_nil_mutation",
+      "profile": "v2",
+      "type": "Claim",
+      "input": {
+        "mutation_id": "00000000-0000-0000-0000-000000000000"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N04_unknown_field",
+      "profile": "v2",
+      "type": "Claim",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-000000000014",
+        "enable_publication": true
+      },
+      "expected": {
+        "http": 400,
+        "code": "unknown_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N05_unsupported_presentation",
+      "profile": "v2",
+      "type": "Policy",
+      "input": {
+        "policy_revision": "policy-r1",
+        "enabled": true,
+        "selection": "categories",
+        "category_ids": [
+          "5"
+        ],
+        "include_topic_ids": [],
+        "exclude_topic_ids": [],
+        "include_unlisted": false,
+        "publication_kind": "dynamic",
+        "presentation_mode": "fullInteractive",
+        "author_ids": [],
+        "taxonomy_ids": [],
+        "existing_record_adoption": "disabled",
+        "adoptable_resource_ids": []
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N06_missing_required_revision",
+      "profile": "v2",
+      "type": "ToResolve",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-000000000010",
+        "bridge_record": {
+          "direction": "to_discourse",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "title": "Roadmap",
+          "content_html": "<p>A deterministic source revision.</p>",
+          "published": true,
+          "expected_source_revision": null,
+          "source_created_at": "2026-10-01T12:00:00.000Z",
+          "source_updated_at": "2026-10-09T17:58:00.000Z",
+          "representation": {
+            "kind": "full"
+          },
+          "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "source_content_bytes": 39
+        }
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N07_null_required_revision",
+      "profile": "v2",
+      "type": "ToResolve",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-000000000010",
+        "bridge_record": {
+          "direction": "to_discourse",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "title": "Roadmap",
+          "content_html": "<p>A deterministic source revision.</p>",
+          "published": true,
+          "source_revision": null,
+          "expected_source_revision": null,
+          "source_created_at": "2026-10-01T12:00:00.000Z",
+          "source_updated_at": "2026-10-09T17:58:00.000Z",
+          "representation": {
+            "kind": "full"
+          },
+          "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "source_content_bytes": 39
+        }
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N08_fractional_attempt",
+      "profile": "v2",
+      "type": "Lease",
+      "input": {
+        "work": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "mapping_id": "11111111-1111-4111-8111-000000000001",
+          "source_id": "topic:8",
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1",
+          "action": "publish_revision",
+          "state": "leased",
+          "attempt_cycle": "11111111-1111-4111-8111-000000000004",
+          "attempt": 1.5,
+          "lease_generation": 1,
+          "retry_at": null,
+          "last_failure_code": null
+        },
+        "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "lease_generation": 1,
+        "expires_at": "2026-10-09T18:05:00.000Z",
+        "server_time": "2026-10-09T18:00:00.000Z"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N09_unsafe_integer",
+      "profile": "v2",
+      "type": "Lease",
+      "input": {
+        "work": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "mapping_id": "11111111-1111-4111-8111-000000000001",
+          "source_id": "topic:8",
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1",
+          "action": "publish_revision",
+          "state": "leased",
+          "attempt_cycle": "11111111-1111-4111-8111-000000000004",
+          "attempt": 1,
+          "lease_generation": 9007199254740992,
+          "retry_at": null,
+          "last_failure_code": null
+        },
+        "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "lease_generation": 1,
+        "expires_at": "2026-10-09T18:05:00.000Z",
+        "server_time": "2026-10-09T18:00:00.000Z"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N10_bad_date",
+      "profile": "v2",
+      "type": "Lease",
+      "input": {
+        "work": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "mapping_id": "11111111-1111-4111-8111-000000000001",
+          "source_id": "topic:8",
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1",
+          "action": "publish_revision",
+          "state": "leased",
+          "attempt_cycle": "11111111-1111-4111-8111-000000000004",
+          "attempt": 1,
+          "lease_generation": 1,
+          "retry_at": null,
+          "last_failure_code": null
+        },
+        "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "lease_generation": 1,
+        "expires_at": "2026-10-09T18:05:00.000Z",
+        "server_time": "2026-02-30T18:00:00.000Z"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N11_noncanonical_core_id",
+      "profile": "v2",
+      "type": "ResolveResult",
+      "input": {
+        "outcome": "created",
+        "reason": "record_created",
+        "resource_id": "11111111-1111-4111-8111-000000000002",
+        "topic_id": "08",
+        "topic_url": "https://forum.example/t/roadmap/8",
+        "direction": "to_discourse",
+        "source_revision": "native-source-r1",
+        "synchronized_at": "2026-10-09T18:00:00.000Z",
+        "core_fallback": false
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N12_wrong_union_discriminator",
+      "profile": "v2",
+      "type": "Ack",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-000000000016",
+        "stage": "synchronized",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "native_result": {
+          "kind": "other",
+          "native_id": "native:7",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "native_revision": "native-r1",
+          "ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "representation": {
+            "kind": "full",
+            "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa"
+          }
+        }
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N13_cross_branch_fields",
+      "profile": "v2",
+      "type": "StaticPreparation",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-000000000032",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": null,
+          "policy_revision": "policy-r1"
+        },
+        "transaction_id": "11111111-1111-4111-8111-000000000007",
+        "native_result": {
+          "kind": "withdraw",
+          "native_id": "native:7",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "native_revision": "native-r2",
+          "ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "representation": {
+            "kind": "full",
+            "source_content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        "prepared_at": "2026-10-09T18:00:00.000Z"
+      },
+      "expected": {
+        "http": 400,
+        "code": "unknown_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N14_bad_token_length",
+      "profile": "v2",
+      "type": "Renew",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-000000000015",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "example-token",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        }
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N15_unbounded_html",
+      "profile": "v2",
+      "type": "ToResolve",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-000000000010",
+        "bridge_record": {
+          "direction": "to_discourse",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "title": "Roadmap",
+          "content_html": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "published": true,
+          "source_revision": "native-source-r1",
+          "expected_source_revision": null,
+          "source_created_at": "2026-10-01T12:00:00.000Z",
+          "source_updated_at": "2026-10-09T17:58:00.000Z",
+          "representation": {
+            "kind": "full"
+          },
+          "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "source_content_bytes": 39
+        }
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "N16_http_canonical",
+      "profile": "v2",
+      "type": "MappingPrepare",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-000000000012",
+        "source_id": "topic:8",
+        "source_revision": "source-r1",
+        "policy_revision": "policy-r1",
+        "external_id": "page:site-7:roadmap",
+        "canonical_url": "http://publisher.example/roadmap/"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N01_numeric_origin",
+      "profile": "v2_network",
+      "type": "NetworkOrigin",
+      "input": {
+        "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "topic_id": 8
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N02_path_bound",
+      "profile": "v2_network",
+      "type": "NetworkProvenance",
+      "input": {
+        "immediate_source": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "https://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "recipient": {
+          "forum_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "origin": "https://recipient.example/",
+          "forum_name": "Recipient Forum",
+          "identity_revision": "identity-r1"
+        },
+        "path": [
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        ]
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N03_operator_field",
+      "profile": "v2_network",
+      "type": "NetworkReceivingCreate",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "connection_id": "dbc_111111111111111111111111",
+        "source": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "https://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "connection_secret": "synthetic-secret-not-a-real-credential",
+        "policy": {
+          "policy_revision": "receive-r1",
+          "enabled": false,
+          "allowed_origin_forum_ids": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ],
+          "category_id": "5",
+          "bridge_user_id": "2",
+          "representation_policy": "full_only",
+          "local_discussion_enabled": false,
+          "advertise_related_discussion": false
+        },
+        "support_provider": "DiscussionBridge"
+      },
+      "expected": {
+        "http": 400,
+        "code": "unknown_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N04_override",
+      "profile": "v2_network",
+      "type": "NetworkLocalPolicyWrite",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "local_resource_id": "11111111-1111-4111-8111-111111111111",
+        "expected_local_policy_revision": "revision-r1",
+        "topic_override": "force_on"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N05_consent_boolean",
+      "profile": "v2_network",
+      "type": "NetworkReceivePolicyWrite",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "receiving_id": "11111111-1111-4111-8111-111111111111",
+        "expected_policy_revision": "revision-r1",
+        "policy": {
+          "policy_revision": "receive-r1",
+          "enabled": false,
+          "allowed_origin_forum_ids": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ],
+          "category_id": "5",
+          "bridge_user_id": "2",
+          "representation_policy": "full_only",
+          "local_discussion_enabled": "true",
+          "advertise_related_discussion": false
+        }
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N06_fractional_attempt",
+      "profile": "v2_network",
+      "type": "NetworkLease",
+      "input": {
+        "work": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "action": "publish_revision",
+          "source_revision": "source-r1",
+          "origin_event_sequence": 1,
+          "grant_generation": 1,
+          "policy_revision": "policy-r1",
+          "state": "leased",
+          "attempt_cycle": "11111111-1111-4111-8111-111111111111",
+          "attempt": 1.5,
+          "lease_generation": 1,
+          "retry_at": null,
+          "last_failure_code": null
+        },
+        "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "expires_at": "2026-10-10T18:05:00.000Z",
+        "server_time": "2026-10-10T18:00:00.000Z"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N07_secret_shape",
+      "profile": "v2_network",
+      "type": "NetworkLease",
+      "input": {
+        "work": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "action": "publish_revision",
+          "source_revision": "source-r1",
+          "origin_event_sequence": 1,
+          "grant_generation": 1,
+          "policy_revision": "policy-r1",
+          "state": "leased",
+          "attempt_cycle": "11111111-1111-4111-8111-111111111111",
+          "attempt": 1,
+          "lease_generation": 1,
+          "retry_at": null,
+          "last_failure_code": null
+        },
+        "lease_token": "fake",
+        "expires_at": "2026-10-10T18:05:00.000Z",
+        "server_time": "2026-10-10T18:00:00.000Z"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N08_blob_kind",
+      "profile": "v2_network",
+      "type": "NetworkContentChunk",
+      "input": {
+        "publication_id": "22222222-2222-4222-8222-222222222222",
+        "source_revision": "source-r1",
+        "kind": "html",
+        "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "bytes": 39,
+        "offset": 0,
+        "next_offset": null,
+        "content_base64": "PHA+QSBkZXRlcm1pbmlzdGljIHNvdXJjZSByZXZpc2lvbi48L3A+"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N09_http_peer",
+      "profile": "v2_network",
+      "type": "NetworkReceivingCreate",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "connection_id": "dbc_111111111111111111111111",
+        "source": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "http://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "connection_secret": "synthetic-secret-not-a-real-credential",
+        "policy": {
+          "policy_revision": "receive-r1",
+          "enabled": false,
+          "allowed_origin_forum_ids": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ],
+          "category_id": "5",
+          "bridge_user_id": "2",
+          "representation_policy": "full_only",
+          "local_discussion_enabled": false,
+          "advertise_related_discussion": false
+        }
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N10_negative_reply_count",
+      "profile": "v2_network",
+      "type": "NetworkDiscussionPage",
+      "input": {
+        "publication_id": "22222222-2222-4222-8222-222222222222",
+        "origin": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "topic_id": "8"
+        },
+        "items": [
+          {
+            "publication_id": "22222222-2222-4222-8222-222222222222",
+            "origin": {
+              "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "topic_id": "8"
+            },
+            "post_id": "9",
+            "post_number": 2,
+            "reply_to_post_id": null,
+            "post_revision": "post-r1",
+            "discussion_sequence": 1,
+            "author": {
+              "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "user_id": "4",
+              "name": "Source Author",
+              "profile_url": "https://source.example/u/source-author"
+            },
+            "created_at": "2026-10-10T18:00:00.000Z",
+            "updated_at": "2026-10-10T18:00:00.000Z",
+            "original_post_url": "https://source.example/t/example/8/2",
+            "content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "content_bytes": 39
+          }
+        ],
+        "known_reply_count": -1,
+        "next_cursor": null,
+        "checkpoint_cursor": "synthetic-discussion-checkpoint-r1",
+        "checked_at": "2026-10-10T18:00:00.000Z",
+        "authority_expires_at": "2026-10-10T18:05:00.000Z"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N11_missing_proof_member",
+      "profile": "v2_network",
+      "type": "NetworkWithdrawAck",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "authority": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": null,
+          "grant_generation": 1,
+          "policy_revision": "policy-r1"
+        },
+        "action": "withdraw",
+        "stage": "verified",
+        "withdrawal": {
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "kind": "origin_retraction",
+          "origin_event_id": "11111111-1111-4111-8111-111111111111",
+          "origin_event_sequence": 2,
+          "grant_generation": 1,
+          "reason": "source_unpublished"
+        },
+        "remaining_authorized_route": false,
+        "remaining_route_verification": null
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N12_reply_write_action",
+      "profile": "v2_network",
+      "type": "NetworkAck",
+      "input": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "authority": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "grant_generation": 1,
+          "policy_revision": "policy-r1"
+        },
+        "action": "reply_at_source",
+        "stage": "synchronized",
+        "receipt": {
+          "local_resource_id": "55555555-5555-4555-8555-555555555555",
+          "local_topic_id": "80",
+          "local_first_post_id": "90",
+          "local_topic_url": "https://recipient.example/t/example/80",
+          "native_revision": "native-r1",
+          "native_receipt_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "representation": {
+            "kind": "full_only",
+            "source_raw_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "source_cooked_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "native_raw_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "native_cooked_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "native_limit_bytes": null,
+            "native_constraint_code": null,
+            "read_more_url": null
+          },
+          "synchronized_at": "2026-10-10T18:00:00.000Z"
+        }
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N13_null_optional_cursor",
+      "profile": "v2_network",
+      "type": "NetworkFeedQuery",
+      "input": {
+        "stream": "initial",
+        "cursor": null
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    },
+    {
+      "id": "NET-N14_invalid_date",
+      "profile": "v2_network",
+      "type": "NetworkManifest",
+      "input": {
+        "revision": {
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "origin_event_id": "11111111-1111-4111-8111-111111111111",
+          "origin_event_sequence": 1,
+          "source_revision": "source-r1",
+          "title": "Example publication",
+          "canonical_url": "https://source.example/t/example/8",
+          "source_created_at": "2026-10-10T18:00:00.000Z",
+          "source_updated_at": "2026-10-10T18:00:00.000Z",
+          "source_authors": [
+            {
+              "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "user_id": "4",
+              "name": "Source Author",
+              "profile_url": "https://source.example/u/source-author"
+            }
+          ],
+          "native_origin": null,
+          "blobs": [
+            {
+              "kind": "raw_discourse",
+              "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+              "bytes": 39
+            },
+            {
+              "kind": "cooked_html",
+              "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+              "bytes": 39
+            }
+          ],
+          "features": [
+            "markdown"
+          ],
+          "origin_category_id": "5",
+          "origin_tag_ids": []
+        },
+        "grant": {
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "grant_revision": "grant-r1",
+          "grant_generation": 1,
+          "recipient_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+          ],
+          "relay_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+          ],
+          "local_discussion_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+          ]
+        },
+        "provenance": {
+          "immediate_source": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "origin": "https://source.example/",
+            "forum_name": "Source Forum",
+            "identity_revision": "identity-r1"
+          },
+          "recipient": {
+            "forum_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "origin": "https://recipient.example/",
+            "forum_name": "Recipient Forum",
+            "identity_revision": "identity-r1"
+          },
+          "path": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ]
+        },
+        "source_scope_revision": "revision-r1",
+        "server_time": "2026-10-10T18:00:00.000Z",
+        "authority_expires_at": "2026-02-30T18:05:00.000Z",
+        "asset_revision": "assets-r1"
+      },
+      "expected": {
+        "http": 422,
+        "code": "invalid_field"
+      },
+      "check_level": "TYPE_SHAPE"
+    }
+  ],
+  "raw_json_cases": [
+    {
+      "id": "J01",
+      "profile": "v2",
+      "raw": "{\"mutation_id\":\"11111111-1111-4111-8111-000000000014\",\"mutation_id\":\"11111111-1111-4111-8111-000000000015\"}",
+      "expected": {
+        "http": 400,
+        "code": "invalid_json"
+      }
+    },
+    {
+      "id": "J02",
+      "profile": "v2",
+      "raw": "{\"mutation_id\":\"11111111-1111-4111-8111-000000000014\"} true",
+      "expected": {
+        "http": 400,
+        "code": "invalid_json"
+      }
+    }
+  ],
+  "semantic_cases": [
+    {
+      "id": "C01",
+      "proposal": "P01",
+      "area": "BASELINE_V1",
+      "setup": "Replay all six exact Alpha.20 fixtures and existing auth/inventory/detail semantics without new headers.",
+      "expected": "Existing v1 behavior unchanged; no v2 body/schema imposed.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C02",
+      "proposal": "P02",
+      "area": "AUTH_SCOPE",
+      "setup": "Authenticate a scoped connection, then send forged adapter labels, profile, or unauthorized origin/lane.",
+      "expected": "No scope expansion; reject scope_denied or unknown_field before mutation.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C03",
+      "proposal": "P02",
+      "area": "AUTH_SCOPE",
+      "setup": "Rotate secret/disable/revoke connection, then replay a saved successful mutation and renew an old lease.",
+      "expected": "Old credential/authority rejected; no native create or saved-receipt authority.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C04",
+      "proposal": "P03",
+      "area": "REVISION",
+      "setup": "Normal edit and wiki edit replace source revision while keeping source/resource/topic/native identities.",
+      "expected": "Only actual source times and desired revision change; no incidental source topic-body rewrite.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C05",
+      "proposal": "P03",
+      "area": "REVISION",
+      "setup": "Repeated revision delivers changed source bytes/title/hash with same revision ID.",
+      "expected": "revision_conflict; old managed state unchanged.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C06",
+      "proposal": "P04",
+      "area": "CONTENT",
+      "setup": "From-Discourse cooked body exceeds 262144 bytes; resume chunks across multibyte boundaries.",
+      "expected": "Complete bytes/hash before render; full native publication unless real native limit.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C07",
+      "proposal": "P04",
+      "area": "CONTENT",
+      "setup": "One chunk missing, mismatched offset/hash/count, invalid base64 or final UTF-8.",
+      "expected": "content_hash_mismatch or invalid_field; no partial publication/excerpt fallback.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C08",
+      "proposal": "P04",
+      "area": "CONTENT",
+      "setup": "To-Discourse complete source is 49152 bytes, then 49153 bytes.",
+      "expected": "Full at bound; valid <=49152 bounded_excerpt plus Read More above bound.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C09",
+      "proposal": "P04",
+      "area": "CONTENT",
+      "setup": "Worker calls native_excerpt because one JSON page was too large.",
+      "expected": "Reject that justification; only measured real native destination limit permits excerpt.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C10",
+      "proposal": "P05",
+      "area": "FEED",
+      "setup": "Concurrent edits during initial snapshot; complete pages then changes checkpoint.",
+      "expected": "No skipped revision; pinned H transition, replay harmless and new events remain pending.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C11",
+      "proposal": "P05",
+      "area": "FEED",
+      "setup": "Interrupt after receiving a page but before/after durable checkpoint commit.",
+      "expected": "Replay exact events safely; no duplicate native identity.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C12",
+      "proposal": "P05",
+      "area": "FEED",
+      "setup": "Cursor malformed, expired, scope/policy changed, or event retention lost.",
+      "expected": "Explicit respective cursor error; fresh initial plus mapping reconciliation, no silent rewind.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C13",
+      "proposal": "P05",
+      "area": "FEED",
+      "setup": "Topic becomes private/unpublished after snapshot, before body fetch/ack.",
+      "expected": "No private body; explicit revocation for known mapping; stale publication refused.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C14",
+      "proposal": "P06",
+      "area": "IDENTITY",
+      "setup": "Same source enabled on two independently authorized destinations.",
+      "expected": "Independent mapping/resource/native IDs/credentials; no cross-destination mutation.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C15",
+      "proposal": "P06",
+      "area": "IDENTITY",
+      "setup": "Existing Alpha.30 resource adoption absent or outside exact admin allowlist.",
+      "expected": "Fail closed; no record conversion or arbitrary topic ownership.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C16",
+      "proposal": "P06",
+      "area": "IDENTITY",
+      "setup": "Native file/post found unowned, symlinked, locally edited, or ambiguous.",
+      "expected": "native_ownership_conflict/attention; no overwrite, delete, or replacement create.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C17",
+      "proposal": "P06",
+      "area": "URL_MOVE",
+      "setup": "Presentation URL move prepares, native move completes, finalize response is lost.",
+      "expected": "Recover same transaction; same native/resource/topic IDs, old URL retired/reserved.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C18",
+      "proposal": "P06",
+      "area": "URL_MOVE",
+      "setup": "Native source URL move interrupted or concurrent source revision arrives.",
+      "expected": "Revision/ancestry checks fail stale proof; retain reservations, reconcile without rebind.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C19",
+      "proposal": "P06",
+      "area": "URL_MOVE",
+      "setup": "Another connection requests an active/prepared/retired reserved URL.",
+      "expected": "url_collision without other owner's identity; no capture of old discussion.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C20",
+      "proposal": "P07",
+      "area": "WORK",
+      "setup": "Concurrent claims, renewed lease, expired stale worker tries sync/finalize.",
+      "expected": "One live lease/mapping; stale generation cannot overwrite native/receiver state.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C21",
+      "proposal": "P07",
+      "area": "WORK",
+      "setup": "Lease expires after native create before receiver sync receipt.",
+      "expected": "Reconcile durable native receipt and same native ID; no blind duplicate create.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C22",
+      "proposal": "P07",
+      "area": "WORK",
+      "setup": "Same mutation replay, altered payload same ID, lost HTTP result.",
+      "expected": "Exact original receipt or mutation_conflict; no duplicate side effect.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C23",
+      "proposal": "P08",
+      "area": "RETRY",
+      "setup": "Three transient claimed attempts, including expired/no-op claims.",
+      "expected": "Delays30/120; attempt3 failure/expiry reaches attention; no automatic cycle reset.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C24",
+      "proposal": "P08",
+      "area": "RETRY",
+      "setup": "Permanent ownership/hash/mode/native-limit error or retry-after above3600.",
+      "expected": "No transient coercion; explicit attention or invalid_field.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C25",
+      "proposal": "P08",
+      "area": "RETRY",
+      "setup": "Explicit admin/provider retry while attention but native state unreconciled.",
+      "expected": "native_restore_required; no new cycle until safe reconciliation.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C26",
+      "proposal": "P09",
+      "area": "COMPLETION",
+      "setup": "Dynamic publish synchronized then actual credential-free public proof.",
+      "expected": "Verified only after actual expected native content/mode/identity is observed.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C27",
+      "proposal": "P09",
+      "area": "COMPLETION",
+      "setup": "Static prepare, build/deploy, exact action-matching finalize; restart at each boundary.",
+      "expected": "Prior verified state preserved until exact new public proof; no false success.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C28",
+      "proposal": "P09",
+      "area": "WITHDRAW",
+      "setup": "Static owned withdrawal builds/deploys removal and finalizes 404/410 absence.",
+      "expected": "withdraw work verified, mapping withdrawn, identities/history retained.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C29",
+      "proposal": "P09",
+      "area": "COMPLETION",
+      "setup": "Static abort with restored prior object, then abort without proven restoration.",
+      "expected": "Both attention; unproven rollback native_restore_required and reservations retained.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C30",
+      "proposal": "P09",
+      "area": "WITHDRAW",
+      "setup": "Disable Content Connection before destination withdrawal completed.",
+      "expected": "No new remote authority; display unresolved publication/withdrawal attention, not removal.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C31",
+      "proposal": "P09",
+      "area": "WITHDRAW",
+      "setup": "Absence verifier sees401/403, redirect, unrelatedpage, timeout, or200error.",
+      "expected": "No withdrawal success; wrong-content/transport diagnosis remains explicit.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C32",
+      "proposal": "P10",
+      "area": "PRESENTATION",
+      "setup": "Exercise Simple, Full, Interactive on every native supported profile.",
+      "expected": "Actual requested discussion presentation or explicit unsupported result; no downgrade.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C33",
+      "proposal": "P11",
+      "area": "NAME",
+      "setup": "Override unset, blank, invalid/overlong, Unicode, escaped output; plugin-free profile.",
+      "expected": "Native title fallback only when unset; invalid explicit override visible; no v2 dependency solely for plugin-free rendering.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C34",
+      "proposal": "P12",
+      "area": "CATALOG",
+      "setup": "Catalog upload interruption, duplicate/page conflict, changed active snapshot.",
+      "expected": "Old snapshot remains; atomic finalize only exact unique total; bounded read cursor.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C35",
+      "proposal": "P12",
+      "area": "CATALOG",
+      "setup": "Catalog refresh removes selected author/taxonomy or advertises broader capability.",
+      "expected": "Policy unchanged; attention for unavailable selection; no scope/work creation.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C43",
+      "proposal": "P14",
+      "area": "MIGRATION",
+      "setup": "Alpha.30 install/upgrade with existing v1 records; disabled/partialmigration/restart/rollback.",
+      "expected": "Exact approved component packet preserves baseline IDs/semantics; no later migrations.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C44",
+      "proposal": "P14",
+      "area": "QUALIFICATION",
+      "setup": "Normal package install/update; identical plugin all7 nativeprofiles; sourcecorpora.",
+      "expected": "One artifact each; native ownership/build/render/pagination and set-and-forget qualification.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C01",
+      "proposal": "H01",
+      "area": "NETWORK_AUTH",
+      "setup": "Install/read identity without explicit setup, then separately approve export and receive.",
+      "expected": "No install-created peer/key/job; only matching explicitly approved directed pair runs.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C02",
+      "proposal": "H01",
+      "area": "NETWORK_AUTH",
+      "setup": "Use peer credential on native admin routes; omit native CSRF/same-origin/session guard.",
+      "expected": "Denied before configuration; Content Connection never substitutes for native admin.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C03",
+      "proposal": "H01,H02",
+      "area": "NETWORK_AUTH",
+      "setup": "Forge peer UUID/origin/role, redirect source, or imply reverse direction.",
+      "expected": "Identity/origin/scope refusal; no reverse grant or forwarded native API key.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C04",
+      "proposal": "H01,H02",
+      "area": "NETWORK_AUTH",
+      "setup": "Clone forum ID, move hostname and perform confirmed counterpart rebind/secret rotation.",
+      "expected": "Conflict until both sides explicitly reapprove exact identity/origin; no automatic redirect.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C05",
+      "proposal": "H01,H06,H09",
+      "area": "NETWORK_AUTH",
+      "setup": "Revoke/rotate between claim/read/renew/accepted replay.",
+      "expected": "Old authority rejected; known loss disables projection/new local reply; saved receipt not authority.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C06",
+      "proposal": "H02,H04",
+      "area": "NETWORK_ORIGIN",
+      "setup": "A->Hub->B, B->Hub and Hub->A; inspect public provenance.",
+      "expected": "Original source/topic/canonical remains; local forum, via path and direction visibly distinct.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C07",
+      "proposal": "H02,H12",
+      "area": "NETWORK_ORIGIN",
+      "setup": "Relay explicitly admitted CMS-imported excerpt.",
+      "expected": "Native canonical/resource origin retained; no invention of complete CMS content or ownership.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C08",
+      "proposal": "H03,H09,H10",
+      "area": "NETWORK_IDENTITY",
+      "setup": "Concurrent direct and relayed paths for same origin/event.",
+      "expected": "One local topic/first post/resource, per-route receipts and one cross-route native fence.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C09",
+      "proposal": "H02,H03,H10",
+      "area": "NETWORK_IDENTITY",
+      "setup": "Same origin event/revision with disagreeing title/hash/content/grant.",
+      "expected": "origin_event_conflict/attention; no latest-arrival overwrite or duplicate create.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C10",
+      "proposal": "H03,H09",
+      "area": "NETWORK_IDENTITY",
+      "setup": "Old event after newer commit, lost acknowledgement and crash.",
+      "expected": "Native journal/fence recovers same result; no regression/second topic.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C11",
+      "proposal": "H05",
+      "area": "NETWORK_OWNERSHIP",
+      "setup": "Normal/wiki origin edit while local users reply/moderate/move category.",
+      "expected": "Only managed publication updates; IDs/local replies/category/moderation retained.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C12",
+      "proposal": "H05",
+      "area": "NETWORK_OWNERSHIP",
+      "setup": "Local/moderator edit of managed title/first post before origin update.",
+      "expected": "native_local_edit_conflict/attention; no overwrite or silent derivative re-origin.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C13",
+      "proposal": "H08,H09",
+      "area": "NETWORK_FEED",
+      "setup": "Snapshot concurrent edit/grant/withdraw, empty completion and crash before cursor persistence.",
+      "expected": "Pinned high-water mark and durable staging; no skipped or duplicate initial-to-changes transition.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C14",
+      "proposal": "H09",
+      "area": "NETWORK_FEED",
+      "setup": "Expired cursor, source scope or local receiving policy change.",
+      "expected": "Explicit restart/error and durable mapping reconciliation; missing page entry not deletion.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C15",
+      "proposal": "H08,H09",
+      "area": "NETWORK_RETRY",
+      "setup": "Three failures/expiries, partially applied native change and worker retry beyond ceiling.",
+      "expected": "Initial included,30/120 delays, third attention; reconcile native writes; no automatic cycle bypass.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C16",
+      "proposal": "H09",
+      "area": "NETWORK_RETRY",
+      "setup": "Admin retries attention after reconciliation while old workers return.",
+      "expected": "New audited cycle; source-delivery and recipient cross-route generations never reset.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C17",
+      "proposal": "H11,H14",
+      "area": "NETWORK_COMPLETION",
+      "setup": "Fetch/sync without public proof; hub verified while spoke pending.",
+      "expected": "No false verified badge; independent native per-hop evidence and downstream status.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C18",
+      "proposal": "H12,P04",
+      "area": "NETWORK_CONTENT",
+      "setup": "Full native network source over48KiB/256KiB with UTF-8 split across chunks.",
+      "expected": "Complete bytes/hash/native cooking; no publication transport cap; CMS resolve48KiB preserved.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C19",
+      "proposal": "H12",
+      "area": "NETWORK_CONTENT",
+      "setup": "Real native post limit with full_only then selected native_limit_excerpt.",
+      "expected": "Attention first; exact native constraint plus canonical Read More second; no full-copy claim.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C20",
+      "proposal": "H12",
+      "area": "NETWORK_ASSET",
+      "setup": "Public native upload, private/signed/external URL, redirect, >8MiB asset and hostile MIME.",
+      "expected": "Only scoped admitted public native chunks copied; no SSRF/key leak; unsupported/oversized attention.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C21",
+      "proposal": "H12,P10",
+      "area": "NETWORK_RICH",
+      "setup": "Tables/code/Mermaid/math/links/images through normal native import/cooking.",
+      "expected": "Faithful supported render; unsupported explicit attention; no peer cooked HTML directly stored as local post.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C22",
+      "proposal": "H06,H14",
+      "area": "NETWORK_DISCUSSION",
+      "setup": "Source latest20/older history, author profiles and local stream in one topic.",
+      "expected": "Forum ownership/IDs/counts/notifications distinct; foreign replies are not native local posts.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C23",
+      "proposal": "H06,H14",
+      "area": "NETWORK_DISCUSSION",
+      "setup": "Source reply, local reply/quote, equal usernames and foreign reply parent.",
+      "expected": "Clear source new-tab vs local composer; no account merge or foreign native parent.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C24",
+      "proposal": "H06,H09,H13",
+      "area": "NETWORK_DISCUSSION",
+      "setup": "Source edit/delete/moderation/privacy, relayed read projection and restart.",
+      "expected": "Ordered scoped update/tombstone; no private body leak or local source-post conversion.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C25",
+      "proposal": "H06,H08",
+      "area": "NETWORK_DISCUSSION",
+      "setup": "Many readers/topics with one connection-wide feed and scoped older reads.",
+      "expected": "Shared cache and bounded native scheduling; no per-reader/topic polling/publication loop.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C26",
+      "proposal": "H06,H13",
+      "area": "NETWORK_DISCUSSION",
+      "setup": "Outage inside300s authority then beyond expiry; known revocation/privacy.",
+      "expected": "Authorized cached stale only inside lifetime; after expiry hide source projection/deny new local replies; known loss immediate.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C27",
+      "proposal": "H06",
+      "area": "NETWORK_CONSENT",
+      "setup": "Four source-allow x recipient-enable combinations, topic overrides and native user rights.",
+      "expected": "Both defaults off; only both consent and native rights permit new local replies.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C28",
+      "proposal": "H06,H10",
+      "area": "NETWORK_CONSENT",
+      "setup": "Origin-specific/topic-narrowed grant through relay, hub tries broader permission.",
+      "expected": "Origin ceiling unchanged; relay cannot enable receiver or broaden grant.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C29",
+      "proposal": "H06",
+      "area": "NETWORK_CONSENT",
+      "setup": "Remove source discussion permission/disable receiver after local replies exist.",
+      "expected": "Server denies new local replies; existing native replies and local moderation retained.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C30",
+      "proposal": "H06",
+      "area": "NETWORK_CONSENT",
+      "setup": "Expired grant while user posts through native API bypassing hidden button.",
+      "expected": "Native server guard rejects; button hiding not sufficient.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C31",
+      "proposal": "H13",
+      "area": "NETWORK_WITHDRAW",
+      "setup": "Delete/privacy/unpublish/retraction with source quotes in local replies and offline peer.",
+      "expected": "Minimal durable tombstone; entire topic/replies/projection hidden with read/search/feed proof; offline remains attention.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C32",
+      "proposal": "H03,H10,H13",
+      "area": "NETWORK_WITHDRAW",
+      "setup": "Remove one route with another current route, then last route.",
+      "expected": "Same topic stays only with other current authorization/public proof; last-route hidden proof; no native post deletion.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C33",
+      "proposal": "H13",
+      "area": "NETWORK_WITHDRAW",
+      "setup": "Revoke before removal complete, then replay old receipt.",
+      "expected": "No renewed authority or global-erasure claim; separately authorized native attention.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C34",
+      "proposal": "H10,H13",
+      "area": "NETWORK_WITHDRAW",
+      "setup": "Hub removes relay policy before downstream receipt; restart.",
+      "expected": "Dependency retained for durable removal; hub success not downstream proof.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C35",
+      "proposal": "H10",
+      "area": "NETWORK_RELAY",
+      "setup": "Recipient/repeated forum in path, ninth forum, unapproved origin/destination.",
+      "expected": "Loop/path/relay error before native writes; origin/event dedup independently enforced.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C36",
+      "proposal": "H06,H10",
+      "area": "NETWORK_RELAY",
+      "setup": "Origin recipient/grant generation changes during old delivery.",
+      "expected": "Current ceiling wins; stale grant cannot authorize delivery/discussion; removal/attention explicit.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C37",
+      "proposal": "H07,H14",
+      "area": "NETWORK_RELATED",
+      "setup": "Public opted-in verified links versus private/unadvertised/stale target.",
+      "expected": "Only admitted public advertised links; no new panel/federation/credential disclosure.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C38",
+      "proposal": "H14",
+      "area": "NETWORK_UI",
+      "setup": "Preview, badges, retry, pause/withdraw/revoke with queued/synchronized/verified work.",
+      "expected": "Read-only preview, truthful stages/native admin controls; no Operator Service.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C39",
+      "proposal": "H01,H08,P14",
+      "area": "NETWORK_PACKAGE",
+      "setup": "One normal plugin install/update on hub/two spokes with existing Alpha30 records.",
+      "expected": "One artifact/default-off; baseline semantics retained; no separate addon or later migration chain.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C40",
+      "proposal": "P14",
+      "area": "NETWORK_QUALIFICATION",
+      "setup": "Seven CMS profiles plus separate hub/two-spoke every-origin/every-direction corpus.",
+      "expected": "One contract/plugin; one artifact per adapter; network separate from CMS two-scale acceptance.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C41",
+      "proposal": "H01",
+      "area": "NETWORK_SECURITY",
+      "setup": "Inspect public/native/asset output, errors/logs/support bundles and URLs.",
+      "expected": "No actual secrets, lease tokens, admin keys or private body data.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C42",
+      "proposal": "H03,H09,P14",
+      "area": "NETWORK_RECOVERY",
+      "setup": "Native locks, crash after write/before report, partial migration and rollback.",
+      "expected": "Exact later component packet proves journal/fence/IDs/backups/rollback; no trash implementation.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "NET-C43",
+      "proposal": "H06,H14",
+      "area": "NETWORK_NATIVE_READER",
+      "setup": "Read NET-30/31 as permitted anonymous/member, forbidden topic reader, expired authority and forged foreign post/cache binding.",
+      "expected": "Only guarded sanitized shared-cache data; no browser peer credential/direct fetch or private/expired body; warming/unavailable not false empty conversation.",
+      "status": "NOT_RUN"
+    }
+  ],
+  "limitation": "Type-shape fixtures are checked as documents separately. Runtime/native/API/visibility/asset/migration/package/scale cases are NOT_RUN; no formal code-review or conformance disposition is issued.",
+  "revision": 7
+}

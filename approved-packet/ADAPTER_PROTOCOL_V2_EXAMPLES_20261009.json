@@ -1,0 +1,2350 @@
+{
+  "status": "CMS_AND_NETWORK_SHAPE_FIXTURES_EXACT_CONTRACT_APPROVAL_PENDING",
+  "scope_notice": "CF01 approved proposal directions. Independent synthetic field-shape fixtures, not a delivery sequence, executable validator, runtime proof or frozen release.",
+  "revision": 7,
+  "synthetic_data_notice": "Independent shape fixtures, not a stateful delivery sequence. Synthetic lease tokens/secrets are not active/random credentials; true proof flags/hashes are illustrative reports, not performed native/public verification.",
+  "content": {
+    "html": "<p>A deterministic source revision.</p>",
+    "utf8_bytes": 39,
+    "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+    "base64": "PHA+QSBkZXRlcm1pbmlzdGljIHNvdXJjZSByZXZpc2lvbi48L3A+"
+  },
+  "v2_examples": [
+    {
+      "id": "connection",
+      "type": "Connection",
+      "value": {
+        "connection_id": "dbc_111111111111111111111111",
+        "profile": "ghost",
+        "destination_origin": "https://publisher.example/",
+        "scope_revision": "scope-r1",
+        "forum_name": "Example Forum",
+        "directions": [
+          "to_discourse",
+          "from_discourse"
+        ],
+        "policy": {
+          "policy_revision": "policy-r1",
+          "enabled": true,
+          "selection": "categories",
+          "category_ids": [
+            "5"
+          ],
+          "include_topic_ids": [],
+          "exclude_topic_ids": [],
+          "include_unlisted": false,
+          "publication_kind": "dynamic",
+          "presentation_mode": "full",
+          "author_ids": [],
+          "taxonomy_ids": [],
+          "existing_record_adoption": "disabled",
+          "adoptable_resource_ids": []
+        },
+        "publication_lane": "default",
+        "native_capabilities": {
+          "native_revision": "capability-r1",
+          "supported_presentations": [
+            "simple",
+            "full",
+            "interactive"
+          ],
+          "publication_kind": "dynamic",
+          "complete_content_supported": true
+        }
+      }
+    },
+    {
+      "id": "to_resolve",
+      "type": "ToResolve",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000010",
+        "bridge_record": {
+          "direction": "to_discourse",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "title": "Roadmap",
+          "content_html": "<p>A deterministic source revision.</p>",
+          "published": true,
+          "source_revision": "native-source-r1",
+          "expected_source_revision": null,
+          "source_created_at": "2026-10-01T12:00:00.000Z",
+          "source_updated_at": "2026-10-09T17:58:00.000Z",
+          "representation": {
+            "kind": "full"
+          },
+          "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "source_content_bytes": 39
+        }
+      }
+    },
+    {
+      "id": "resolve_created",
+      "type": "ResolveResult",
+      "value": {
+        "outcome": "created",
+        "reason": "record_created",
+        "resource_id": "11111111-1111-4111-8111-000000000002",
+        "topic_id": "8",
+        "topic_url": "https://forum.example/t/roadmap/8",
+        "direction": "to_discourse",
+        "source_revision": "native-source-r1",
+        "synchronized_at": "2026-10-09T18:00:00.000Z",
+        "core_fallback": false
+      }
+    },
+    {
+      "id": "record",
+      "type": "Record",
+      "value": {
+        "resource_id": "11111111-1111-4111-8111-000000000002",
+        "direction": "to_discourse",
+        "state": "active",
+        "topic_id": "8",
+        "topic_url": "https://forum.example/t/roadmap/8",
+        "external_id": "page:site-7:roadmap",
+        "canonical_url": "https://publisher.example/roadmap/",
+        "source_revision": "source-r1",
+        "source_created_at": "2026-10-01T12:00:00.000Z",
+        "source_updated_at": "2026-10-09T17:58:00.000Z",
+        "synchronized_at": "2026-10-09T18:00:00.000Z",
+        "mapping_id": null
+      }
+    },
+    {
+      "id": "record_page",
+      "type": "RecordPage",
+      "value": {
+        "items": [
+          {
+            "resource_id": "11111111-1111-4111-8111-000000000002",
+            "direction": "to_discourse",
+            "state": "active",
+            "topic_id": "8",
+            "topic_url": "https://forum.example/t/roadmap/8",
+            "external_id": "page:site-7:roadmap",
+            "canonical_url": "https://publisher.example/roadmap/",
+            "source_revision": "source-r1",
+            "source_created_at": "2026-10-01T12:00:00.000Z",
+            "source_updated_at": "2026-10-09T17:58:00.000Z",
+            "synchronized_at": "2026-10-09T18:00:00.000Z",
+            "mapping_id": null
+          }
+        ],
+        "next_cursor": null
+      }
+    },
+    {
+      "id": "withdraw_record",
+      "type": "WithdrawInput",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000011",
+        "expected_source_revision": "source-r1",
+        "reason": "source_unpublished"
+      }
+    },
+    {
+      "id": "initial_feed",
+      "type": "SourceFeed",
+      "value": {
+        "stream": "initial",
+        "items": [
+          {
+            "event_type": "publication",
+            "event_id": "11111111-1111-4111-8111-000000000005",
+            "event_sequence": "101",
+            "source": {
+              "source_id": "topic:8",
+              "source_revision": "source-r1",
+              "topic_id": "8",
+              "topic_url": "https://forum.example/t/roadmap/8",
+              "title": "Roadmap",
+              "content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+              "content_bytes": 39,
+              "source_created_at": "2026-10-01T12:00:00.000Z",
+              "source_updated_at": "2026-10-09T17:58:00.000Z",
+              "source_authors": [
+                {
+                  "id": "user:8",
+                  "name": "Example Author"
+                }
+              ]
+            }
+          }
+        ],
+        "next_cursor": null,
+        "checkpoint_cursor": "ZXhhbXBsZS1jaGVja3BvaW50"
+      }
+    },
+    {
+      "id": "changes_feed",
+      "type": "SourceFeed",
+      "value": {
+        "stream": "changes",
+        "items": [
+          {
+            "event_type": "revocation",
+            "event_id": "11111111-1111-4111-8111-000000000006",
+            "event_sequence": "102",
+            "source_id": "topic:8",
+            "last_source_revision": "source-r1",
+            "reason": "source_unpublished"
+          }
+        ],
+        "next_cursor": null,
+        "checkpoint_cursor": "ZXhhbXBsZS1jaGVja3BvaW50LTI"
+      }
+    },
+    {
+      "id": "content_chunk",
+      "type": "ContentChunk",
+      "value": {
+        "source_id": "topic:8",
+        "source_revision": "source-r1",
+        "content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "content_bytes": 39,
+        "offset": 0,
+        "next_offset": null,
+        "content_base64": "PHA+QSBkZXRlcm1pbmlzdGljIHNvdXJjZSByZXZpc2lvbi48L3A+"
+      }
+    },
+    {
+      "id": "policy",
+      "type": "Policy",
+      "value": {
+        "policy_revision": "policy-r1",
+        "enabled": true,
+        "selection": "categories",
+        "category_ids": [
+          "5"
+        ],
+        "include_topic_ids": [],
+        "exclude_topic_ids": [],
+        "include_unlisted": false,
+        "publication_kind": "dynamic",
+        "presentation_mode": "full",
+        "author_ids": [],
+        "taxonomy_ids": [],
+        "existing_record_adoption": "disabled",
+        "adoptable_resource_ids": []
+      }
+    },
+    {
+      "id": "mapping",
+      "type": "Mapping",
+      "value": {
+        "mapping_id": "11111111-1111-4111-8111-000000000001",
+        "resource_id": "11111111-1111-4111-8111-000000000002",
+        "connection_id": "dbc_111111111111111111111111",
+        "source_id": "topic:8",
+        "external_id": "page:site-7:roadmap",
+        "mapping_revision": "mapping-r1",
+        "destination_native_id": "native:7",
+        "canonical_url": "https://publisher.example/roadmap/",
+        "retired_url_count": 0,
+        "mapping_state": "pending",
+        "presentation_mode": "full",
+        "desired_source_revision": "source-r1",
+        "synchronized_source_revision": null,
+        "publicly_verified_source_revision": null,
+        "destination_native_revision": null,
+        "source_created_at": "2026-10-01T12:00:00.000Z",
+        "source_updated_at": "2026-10-09T17:58:00.000Z",
+        "synchronized_at": null,
+        "publicly_verified_at": null
+      }
+    },
+    {
+      "id": "mapping_page",
+      "type": "MappingPage",
+      "value": {
+        "items": [
+          {
+            "mapping_id": "11111111-1111-4111-8111-000000000001",
+            "resource_id": "11111111-1111-4111-8111-000000000002",
+            "connection_id": "dbc_111111111111111111111111",
+            "source_id": "topic:8",
+            "external_id": "page:site-7:roadmap",
+            "mapping_revision": "mapping-r1",
+            "destination_native_id": "native:7",
+            "canonical_url": "https://publisher.example/roadmap/",
+            "retired_url_count": 0,
+            "mapping_state": "pending",
+            "presentation_mode": "full",
+            "desired_source_revision": "source-r1",
+            "synchronized_source_revision": null,
+            "publicly_verified_source_revision": null,
+            "destination_native_revision": null,
+            "source_created_at": "2026-10-01T12:00:00.000Z",
+            "source_updated_at": "2026-10-09T17:58:00.000Z",
+            "synchronized_at": null,
+            "publicly_verified_at": null
+          }
+        ],
+        "next_cursor": null
+      }
+    },
+    {
+      "id": "mapping_prepare",
+      "type": "MappingPrepare",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000012",
+        "source_id": "topic:8",
+        "source_revision": "source-r1",
+        "policy_revision": "policy-r1",
+        "external_id": "page:site-7:roadmap",
+        "canonical_url": "https://publisher.example/roadmap/"
+      }
+    },
+    {
+      "id": "mapping_adopt",
+      "type": "MappingAdopt",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000013",
+        "resource_id": "11111111-1111-4111-8111-000000000002",
+        "source_id": "topic:8",
+        "expected_topic_id": "8",
+        "ownership": {
+          "resource_id": "11111111-1111-4111-8111-000000000002",
+          "external_id": "page:site-7:roadmap",
+          "native_id": "native:7",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "source_revision": "source-r1",
+          "ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    {
+      "id": "claim",
+      "type": "Claim",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000014"
+      }
+    },
+    {
+      "id": "lease",
+      "type": "Lease",
+      "value": {
+        "work": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "mapping_id": "11111111-1111-4111-8111-000000000001",
+          "source_id": "topic:8",
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1",
+          "action": "publish_revision",
+          "state": "leased",
+          "attempt_cycle": "11111111-1111-4111-8111-000000000004",
+          "attempt": 1,
+          "lease_generation": 1,
+          "retry_at": null,
+          "last_failure_code": null
+        },
+        "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "lease_generation": 1,
+        "expires_at": "2026-10-09T18:05:00.000Z",
+        "server_time": "2026-10-09T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "work_status",
+      "type": "WorkQueryResponse",
+      "value": {
+        "work": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "mapping_id": "11111111-1111-4111-8111-000000000001",
+          "source_id": "topic:8",
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1",
+          "action": "publish_revision",
+          "state": "leased",
+          "attempt_cycle": "11111111-1111-4111-8111-000000000004",
+          "attempt": 1,
+          "lease_generation": 1,
+          "retry_at": null,
+          "last_failure_code": null
+        },
+        "mapping": {
+          "mapping_id": "11111111-1111-4111-8111-000000000001",
+          "resource_id": "11111111-1111-4111-8111-000000000002",
+          "connection_id": "dbc_111111111111111111111111",
+          "source_id": "topic:8",
+          "external_id": "page:site-7:roadmap",
+          "mapping_revision": "mapping-r1",
+          "destination_native_id": "native:7",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "retired_url_count": 0,
+          "mapping_state": "pending",
+          "presentation_mode": "full",
+          "desired_source_revision": "source-r1",
+          "synchronized_source_revision": null,
+          "publicly_verified_source_revision": null,
+          "destination_native_revision": null,
+          "source_created_at": "2026-10-01T12:00:00.000Z",
+          "source_updated_at": "2026-10-09T17:58:00.000Z",
+          "synchronized_at": null,
+          "publicly_verified_at": null
+        },
+        "lease_expires_at": "2026-10-09T18:05:00.000Z"
+      }
+    },
+    {
+      "id": "renew",
+      "type": "Renew",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000015",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        }
+      }
+    },
+    {
+      "id": "sync_ack",
+      "type": "Ack",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000016",
+        "stage": "synchronized",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "native_result": {
+          "kind": "publish_revision",
+          "native_id": "native:7",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "native_revision": "native-r1",
+          "ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "representation": {
+            "kind": "full",
+            "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa"
+          }
+        }
+      }
+    },
+    {
+      "id": "deploy_ack",
+      "type": "Ack",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000017",
+        "stage": "deployed",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "deployment_id": "deploy:1",
+        "deployed_at": "2026-10-09T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "verify_ack",
+      "type": "Ack",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000018",
+        "stage": "verified",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "verification": {
+          "kind": "published",
+          "url": "https://publisher.example/roadmap/",
+          "native_id": "native:7",
+          "source_revision": "source-r1",
+          "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "native_publication_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "verification_profile": "example-owned-html-v1",
+          "checked_at": "2026-10-09T18:00:00.000Z",
+          "representation": {
+            "kind": "full",
+            "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa"
+          }
+        }
+      }
+    },
+    {
+      "id": "failure",
+      "type": "Failure",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000019",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "code": "native_service_unavailable",
+        "native_change_applied": false,
+        "safe_detail": "Native service temporarily unavailable",
+        "retry_after_seconds": 60
+      }
+    },
+    {
+      "id": "static_prepare",
+      "type": "StaticPreparation",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000020",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "transaction_id": "11111111-1111-4111-8111-000000000007",
+        "native_result": {
+          "kind": "publish_revision",
+          "native_id": "native:7",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "native_revision": "native-r1",
+          "ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "representation": {
+            "kind": "full",
+            "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa"
+          }
+        },
+        "prepared_at": "2026-10-09T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "static_finalize",
+      "type": "StaticFinalize",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000021",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "transaction_id": "11111111-1111-4111-8111-000000000007",
+        "deployment_id": "deploy:1",
+        "deployed_at": "2026-10-09T18:00:00.000Z",
+        "verification": {
+          "kind": "published",
+          "url": "https://publisher.example/roadmap/",
+          "native_id": "native:7",
+          "source_revision": "source-r1",
+          "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "native_publication_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "verification_profile": "example-owned-html-v1",
+          "checked_at": "2026-10-09T18:00:00.000Z",
+          "representation": {
+            "kind": "full",
+            "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa"
+          }
+        }
+      }
+    },
+    {
+      "id": "static_abort",
+      "type": "StaticAbort",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000022",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "transaction_id": "11111111-1111-4111-8111-000000000007",
+        "native_restored": true,
+        "safe_detail": "Prior native revision restored"
+      }
+    },
+    {
+      "id": "url_move_prepare",
+      "type": "UrlMovePrepare",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000023",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "expected_mapping_revision": "mapping-r1",
+        "old_url": "https://publisher.example/roadmap/",
+        "new_url": "https://publisher.example/new-roadmap/",
+        "ownership": {
+          "resource_id": "11111111-1111-4111-8111-000000000002",
+          "external_id": "page:site-7:roadmap",
+          "native_id": "native:7",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "source_revision": "source-r1",
+          "ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    {
+      "id": "url_move",
+      "type": "UrlMove",
+      "value": {
+        "move_id": "11111111-1111-4111-8111-000000000008",
+        "mapping_id": "11111111-1111-4111-8111-000000000001",
+        "expected_mapping_revision": "mapping-r1",
+        "old_url": "https://publisher.example/roadmap/",
+        "new_url": "https://publisher.example/new-roadmap/",
+        "proof_nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "state": "prepared",
+        "prepared_at": "2026-10-09T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "url_move_finalize",
+      "type": "UrlMoveFinalize",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000024",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "move_id": "11111111-1111-4111-8111-000000000008",
+        "proof_nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "ownership": {
+          "resource_id": "11111111-1111-4111-8111-000000000002",
+          "external_id": "page:site-7:roadmap",
+          "native_id": "native:7",
+          "canonical_url": "https://publisher.example/new-roadmap/",
+          "source_revision": "source-r1",
+          "ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "verification": {
+          "kind": "published",
+          "url": "https://publisher.example/new-roadmap/",
+          "native_id": "native:7",
+          "source_revision": "source-r1",
+          "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "native_publication_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "verification_profile": "example-owned-html-v1",
+          "checked_at": "2026-10-09T18:00:00.000Z",
+          "representation": {
+            "kind": "full",
+            "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa"
+          }
+        }
+      }
+    },
+    {
+      "id": "url_move_abort",
+      "type": "UrlMoveAbort",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000025",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "policy_revision": "policy-r1"
+        },
+        "move_id": "11111111-1111-4111-8111-000000000008",
+        "native_change_applied": false,
+        "ownership": {
+          "resource_id": "11111111-1111-4111-8111-000000000002",
+          "external_id": "page:site-7:roadmap",
+          "native_id": "native:7",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "source_revision": "source-r1",
+          "ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    {
+      "id": "url_history",
+      "type": "UrlHistoryPage",
+      "value": {
+        "items": [
+          {
+            "url": "https://publisher.example/roadmap/",
+            "retired_at": "2026-10-09T18:00:00.000Z",
+            "move_id": "11111111-1111-4111-8111-000000000008"
+          }
+        ],
+        "next_cursor": null
+      }
+    },
+    {
+      "id": "catalog_begin",
+      "type": "CatalogBegin",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000026",
+        "kind": "authors",
+        "native_revision": "catalog-native-r1",
+        "total_items": 1
+      }
+    },
+    {
+      "id": "catalog_upload",
+      "type": "CatalogUpload",
+      "value": {
+        "upload_id": "11111111-1111-4111-8111-000000000009",
+        "kind": "authors",
+        "native_revision": "catalog-native-r1",
+        "total_items": 1,
+        "received_items": 0,
+        "next_page": 0,
+        "expires_at": "2026-10-10T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "catalog_page",
+      "type": "CatalogPageInput",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000027",
+        "page": 0,
+        "items": [
+          {
+            "id": "author:8",
+            "label": "Example Author",
+            "available": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "catalog_finalize",
+      "type": "CatalogFinalize",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000028",
+        "upload_id": "11111111-1111-4111-8111-000000000009",
+        "expected_total_items": 1
+      }
+    },
+    {
+      "id": "catalog_response",
+      "type": "CatalogResponse",
+      "value": {
+        "kind": "authors",
+        "catalog_revision": "catalog-r1",
+        "native_revision": "catalog-native-r1",
+        "total_items": 1,
+        "items": [
+          {
+            "id": "author:8",
+            "label": "Example Author",
+            "available": true
+          }
+        ],
+        "next_cursor": null
+      }
+    },
+    {
+      "id": "source_url_move_prepare",
+      "type": "SourceUrlMovePrepare",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000029",
+        "expected_source_revision": "source-r1",
+        "old_url": "https://publisher.example/roadmap/",
+        "new_url": "https://publisher.example/new-roadmap/",
+        "external_id": "page:site-7:roadmap"
+      }
+    },
+    {
+      "id": "source_url_move",
+      "type": "SourceUrlMove",
+      "value": {
+        "move_id": "11111111-1111-4111-8111-000000000008",
+        "resource_id": "11111111-1111-4111-8111-000000000002",
+        "expected_source_revision": "source-r1",
+        "old_url": "https://publisher.example/roadmap/",
+        "new_url": "https://publisher.example/new-roadmap/",
+        "proof_nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "state": "prepared",
+        "prepared_at": "2026-10-09T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "source_url_move_finalize",
+      "type": "SourceUrlMoveFinalize",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000030",
+        "move_id": "11111111-1111-4111-8111-000000000008",
+        "proof_nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "expected_source_revision": "source-r1",
+        "verification": {
+          "url": "https://publisher.example/new-roadmap/",
+          "external_id": "page:site-7:roadmap",
+          "source_revision": "source-url-r2",
+          "source_content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "native_ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "native_publication_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "verification_profile": "example-owned-html-v1",
+          "checked_at": "2026-10-09T18:00:00.000Z"
+        },
+        "new_source_revision": "source-url-r2",
+        "source_updated_at": "2026-10-09T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "source_url_move_abort",
+      "type": "SourceUrlMoveAbort",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000031",
+        "move_id": "11111111-1111-4111-8111-000000000008",
+        "expected_source_revision": "source-r1",
+        "native_change_applied": false,
+        "old_url": "https://publisher.example/roadmap/",
+        "native_ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "id": "native_ownership_receipt",
+      "type": "NativeOwnershipReceipt",
+      "value": {
+        "schema_version": "db-native-ownership-1",
+        "forum_origin": "https://forum.example/",
+        "connection_id": "dbc_111111111111111111111111",
+        "mapping_id": "11111111-1111-4111-8111-000000000001",
+        "resource_id": "11111111-1111-4111-8111-000000000002",
+        "source_id": "topic:8",
+        "external_id": "page:site-7:roadmap",
+        "native_id": "native:7",
+        "canonical_url": "https://publisher.example/roadmap/",
+        "source_revision": "source-r1",
+        "last_lease_generation": 1,
+        "move_id": null,
+        "proof_nonce": null
+      }
+    },
+    {
+      "id": "error",
+      "type": "Error",
+      "value": {
+        "outcome": "rejected",
+        "code": "revision_conflict",
+        "retryable": false,
+        "retry_after_seconds": null,
+        "correlation_id": null,
+        "core_fallback": false
+      }
+    },
+    {
+      "id": "static_withdraw_prepare",
+      "type": "StaticPreparation",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000032",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": null,
+          "policy_revision": "policy-r1"
+        },
+        "transaction_id": "11111111-1111-4111-8111-000000000007",
+        "native_result": {
+          "kind": "withdraw",
+          "native_id": "native:7",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "native_revision": "native-r2",
+          "ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "prepared_at": "2026-10-09T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "static_withdraw_finalize",
+      "type": "StaticFinalize",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000033",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": null,
+          "policy_revision": "policy-r1"
+        },
+        "transaction_id": "11111111-1111-4111-8111-000000000007",
+        "deployment_id": "deploy:2",
+        "deployed_at": "2026-10-09T18:00:00.000Z",
+        "verification": {
+          "kind": "absent",
+          "url": "https://publisher.example/roadmap/",
+          "native_id": "native:7",
+          "checked_at": "2026-10-09T18:00:00.000Z",
+          "http_status": 404
+        }
+      }
+    },
+    {
+      "id": "dynamic_withdraw_sync",
+      "type": "Ack",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000034",
+        "stage": "synchronized",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": null,
+          "policy_revision": "policy-r1"
+        },
+        "native_result": {
+          "kind": "withdraw",
+          "native_id": "native:7",
+          "external_id": "page:site-7:roadmap",
+          "canonical_url": "https://publisher.example/roadmap/",
+          "native_revision": "native-r2",
+          "ownership_receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    {
+      "id": "dynamic_withdraw_verified",
+      "type": "Ack",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-000000000035",
+        "stage": "verified",
+        "authority": {
+          "work_id": "11111111-1111-4111-8111-000000000003",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": null,
+          "policy_revision": "policy-r1"
+        },
+        "verification": {
+          "kind": "absent",
+          "url": "https://publisher.example/roadmap/",
+          "native_id": "native:7",
+          "checked_at": "2026-10-09T18:00:00.000Z",
+          "http_status": 404
+        }
+      }
+    },
+    {
+      "id": "wire_CursorQuery",
+      "type": "CursorQuery",
+      "check_level": "TYPE_SHAPE",
+      "value": {}
+    },
+    {
+      "id": "wire_SourceFeedQuery",
+      "type": "SourceFeedQuery",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "stream": "initial"
+      }
+    },
+    {
+      "id": "wire_ContentQuery",
+      "type": "ContentQuery",
+      "check_level": "TYPE_SHAPE",
+      "value": {}
+    },
+    {
+      "id": "wire_CatalogReadQuery",
+      "type": "CatalogReadQuery",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "kind": "authors"
+      }
+    },
+    {
+      "id": "wire_NetworkIdentity",
+      "type": "NetworkIdentity",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "peer": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "https://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "created_at": "2026-10-10T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "wire_NetworkIdentityCreate",
+      "type": "NetworkIdentityCreate",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "confirm_setup": true
+      }
+    },
+    {
+      "id": "wire_NetworkPeerApprove",
+      "type": "NetworkPeerApprove",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "peer": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "https://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "identity_confirmed": true
+      }
+    },
+    {
+      "id": "wire_NetworkPeer",
+      "type": "NetworkPeer",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "origin": "https://source.example/",
+        "forum_name": "Source Forum",
+        "identity_revision": "identity-r1"
+      }
+    },
+    {
+      "id": "wire_NetworkExportCreate",
+      "type": "NetworkExportCreate",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "connection_id": "dbc_111111111111111111111111",
+        "recipient": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "https://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "policy": {
+          "policy_revision": "policy-r1",
+          "enabled": false,
+          "selection": "categories",
+          "category_ids": [
+            "5"
+          ],
+          "include_topic_ids": [],
+          "exclude_topic_ids": [],
+          "allowed_origin_forum_ids": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ],
+          "allowed_recipient_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+          ],
+          "allowed_relay_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+          ],
+          "allow_local_discussion": false,
+          "local_discussion_denied_topic_ids": [],
+          "relay_enabled": false,
+          "required_tag_ids": [],
+          "excluded_tag_ids": []
+        }
+      }
+    },
+    {
+      "id": "wire_NetworkConnection",
+      "type": "NetworkConnection",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "connection_id": "dbc_111111111111111111111111",
+        "source": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "https://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "recipient": {
+          "forum_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "origin": "https://recipient.example/",
+          "forum_name": "Recipient Forum",
+          "identity_revision": "identity-r1"
+        },
+        "scope_revision": "scope-r1",
+        "policy": {
+          "policy_revision": "policy-r1",
+          "enabled": false,
+          "selection": "categories",
+          "category_ids": [
+            "5"
+          ],
+          "include_topic_ids": [],
+          "exclude_topic_ids": [],
+          "allowed_origin_forum_ids": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ],
+          "allowed_recipient_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+          ],
+          "allowed_relay_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+          ],
+          "allow_local_discussion": false,
+          "local_discussion_denied_topic_ids": [],
+          "relay_enabled": false,
+          "required_tag_ids": [],
+          "excluded_tag_ids": []
+        }
+      }
+    },
+    {
+      "id": "wire_NetworkReceivingCreate",
+      "type": "NetworkReceivingCreate",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "connection_id": "dbc_111111111111111111111111",
+        "source": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "https://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "connection_secret": "synthetic-secret-not-a-real-credential",
+        "policy": {
+          "policy_revision": "receive-r1",
+          "enabled": false,
+          "allowed_origin_forum_ids": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ],
+          "category_id": "5",
+          "bridge_user_id": "2",
+          "representation_policy": "full_only",
+          "local_discussion_enabled": false,
+          "advertise_related_discussion": false
+        }
+      }
+    },
+    {
+      "id": "wire_NetworkReceivingConnection",
+      "type": "NetworkReceivingConnection",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "receiving_id": "11111111-1111-4111-8111-111111111111",
+        "connection_id": "dbc_111111111111111111111111",
+        "source": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "https://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "recipient": {
+          "forum_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "origin": "https://recipient.example/",
+          "forum_name": "Recipient Forum",
+          "identity_revision": "identity-r1"
+        },
+        "observed_scope_revision": "scope-r1",
+        "policy": {
+          "policy_revision": "receive-r1",
+          "enabled": false,
+          "allowed_origin_forum_ids": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ],
+          "category_id": "5",
+          "bridge_user_id": "2",
+          "representation_policy": "full_only",
+          "local_discussion_enabled": false,
+          "advertise_related_discussion": false
+        },
+        "last_authority_check_at": "2026-10-10T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "wire_NetworkSourcePolicyWrite",
+      "type": "NetworkSourcePolicyWrite",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "connection_id": "dbc_111111111111111111111111",
+        "expected_policy_revision": "revision-r1",
+        "policy": {
+          "policy_revision": "policy-r1",
+          "enabled": false,
+          "selection": "categories",
+          "category_ids": [
+            "5"
+          ],
+          "include_topic_ids": [],
+          "exclude_topic_ids": [],
+          "allowed_origin_forum_ids": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ],
+          "allowed_recipient_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+          ],
+          "allowed_relay_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+          ],
+          "allow_local_discussion": false,
+          "local_discussion_denied_topic_ids": [],
+          "relay_enabled": false,
+          "required_tag_ids": [],
+          "excluded_tag_ids": []
+        }
+      }
+    },
+    {
+      "id": "wire_NetworkReceivePolicyWrite",
+      "type": "NetworkReceivePolicyWrite",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "receiving_id": "11111111-1111-4111-8111-111111111111",
+        "expected_policy_revision": "revision-r1",
+        "policy": {
+          "policy_revision": "receive-r1",
+          "enabled": false,
+          "allowed_origin_forum_ids": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ],
+          "category_id": "5",
+          "bridge_user_id": "2",
+          "representation_policy": "full_only",
+          "local_discussion_enabled": false,
+          "advertise_related_discussion": false
+        }
+      }
+    },
+    {
+      "id": "wire_NetworkPeerRebind",
+      "type": "NetworkPeerRebind",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "forum_id": "11111111-1111-4111-8111-111111111111",
+        "expected_identity_revision": "revision-r1",
+        "new_origin": "https://recipient.example/example",
+        "new_identity_revision": "revision-r1",
+        "identity_confirmed": true
+      }
+    },
+    {
+      "id": "wire_NetworkFeedQuery",
+      "type": "NetworkFeedQuery",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "stream": "initial"
+      }
+    },
+    {
+      "id": "wire_NetworkFeed",
+      "type": "NetworkFeed",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "stream": "initial",
+        "items": [
+          {
+            "kind": "publication",
+            "delivery_event_id": "11111111-1111-4111-8111-111111111111",
+            "delivery_sequence": 1,
+            "manifest": {
+              "revision": {
+                "publication_id": "22222222-2222-4222-8222-222222222222",
+                "origin": {
+                  "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "topic_id": "8"
+                },
+                "origin_event_id": "11111111-1111-4111-8111-111111111111",
+                "origin_event_sequence": 1,
+                "source_revision": "source-r1",
+                "title": "Example publication",
+                "canonical_url": "https://source.example/t/example/8",
+                "source_created_at": "2026-10-10T18:00:00.000Z",
+                "source_updated_at": "2026-10-10T18:00:00.000Z",
+                "source_authors": [
+                  {
+                    "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                    "user_id": "4",
+                    "name": "Source Author",
+                    "profile_url": "https://source.example/u/source-author"
+                  }
+                ],
+                "native_origin": null,
+                "blobs": [
+                  {
+                    "kind": "raw_discourse",
+                    "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+                    "bytes": 39
+                  },
+                  {
+                    "kind": "cooked_html",
+                    "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+                    "bytes": 39
+                  }
+                ],
+                "features": [
+                  "markdown"
+                ],
+                "origin_category_id": "5",
+                "origin_tag_ids": []
+              },
+              "grant": {
+                "publication_id": "22222222-2222-4222-8222-222222222222",
+                "origin": {
+                  "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "topic_id": "8"
+                },
+                "grant_revision": "grant-r1",
+                "grant_generation": 1,
+                "recipient_forum_ids": [
+                  "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                  "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+                ],
+                "relay_forum_ids": [
+                  "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+                ],
+                "local_discussion_forum_ids": [
+                  "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                  "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+                ]
+              },
+              "provenance": {
+                "immediate_source": {
+                  "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "origin": "https://source.example/",
+                  "forum_name": "Source Forum",
+                  "identity_revision": "identity-r1"
+                },
+                "recipient": {
+                  "forum_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                  "origin": "https://recipient.example/",
+                  "forum_name": "Recipient Forum",
+                  "identity_revision": "identity-r1"
+                },
+                "path": [
+                  "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+                ]
+              },
+              "source_scope_revision": "revision-r1",
+              "server_time": "2026-10-10T18:00:00.000Z",
+              "authority_expires_at": "2026-10-10T18:05:00.000Z",
+              "asset_revision": "assets-r1"
+            }
+          }
+        ],
+        "next_cursor": null,
+        "checkpoint_cursor": "synthetic-publication-checkpoint-r1"
+      }
+    },
+    {
+      "id": "wire_NetworkManifest",
+      "type": "NetworkManifest",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "revision": {
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "origin_event_id": "11111111-1111-4111-8111-111111111111",
+          "origin_event_sequence": 1,
+          "source_revision": "source-r1",
+          "title": "Example publication",
+          "canonical_url": "https://source.example/t/example/8",
+          "source_created_at": "2026-10-10T18:00:00.000Z",
+          "source_updated_at": "2026-10-10T18:00:00.000Z",
+          "source_authors": [
+            {
+              "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "user_id": "4",
+              "name": "Source Author",
+              "profile_url": "https://source.example/u/source-author"
+            }
+          ],
+          "native_origin": null,
+          "blobs": [
+            {
+              "kind": "raw_discourse",
+              "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+              "bytes": 39
+            },
+            {
+              "kind": "cooked_html",
+              "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+              "bytes": 39
+            }
+          ],
+          "features": [
+            "markdown"
+          ],
+          "origin_category_id": "5",
+          "origin_tag_ids": []
+        },
+        "grant": {
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "grant_revision": "grant-r1",
+          "grant_generation": 1,
+          "recipient_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+          ],
+          "relay_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+          ],
+          "local_discussion_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+          ]
+        },
+        "provenance": {
+          "immediate_source": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "origin": "https://source.example/",
+            "forum_name": "Source Forum",
+            "identity_revision": "identity-r1"
+          },
+          "recipient": {
+            "forum_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "origin": "https://recipient.example/",
+            "forum_name": "Recipient Forum",
+            "identity_revision": "identity-r1"
+          },
+          "path": [
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          ]
+        },
+        "source_scope_revision": "revision-r1",
+        "server_time": "2026-10-10T18:00:00.000Z",
+        "authority_expires_at": "2026-10-10T18:05:00.000Z",
+        "asset_revision": "assets-r1"
+      }
+    },
+    {
+      "id": "wire_NetworkContentQuery",
+      "type": "NetworkContentQuery",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "kind": "raw_discourse"
+      }
+    },
+    {
+      "id": "wire_NetworkContentChunk",
+      "type": "NetworkContentChunk",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "publication_id": "22222222-2222-4222-8222-222222222222",
+        "source_revision": "source-r1",
+        "kind": "raw_discourse",
+        "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "bytes": 39,
+        "offset": 0,
+        "next_offset": null,
+        "content_base64": "PHA+QSBkZXRlcm1pbmlzdGljIHNvdXJjZSByZXZpc2lvbi48L3A+"
+      }
+    },
+    {
+      "id": "wire_NetworkAssetPage",
+      "type": "NetworkAssetPage",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "publication_id": "11111111-1111-4111-8111-111111111111",
+        "source_revision": "revision-r1",
+        "asset_revision": "revision-r1",
+        "items": [],
+        "next_cursor": null
+      }
+    },
+    {
+      "id": "wire_NetworkAssetChunk",
+      "type": "NetworkAssetChunk",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "publication_id": "22222222-2222-4222-8222-222222222222",
+        "source_revision": "source-r1",
+        "asset_id": "11111111-1111-4111-8111-111111111111",
+        "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "bytes": 39,
+        "offset": 0,
+        "next_offset": null,
+        "content_base64": "PHA+QSBkZXRlcm1pbmlzdGljIHNvdXJjZSByZXZpc2lvbi48L3A+"
+      }
+    },
+    {
+      "id": "wire_NetworkClaim",
+      "type": "NetworkClaim",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111"
+      }
+    },
+    {
+      "id": "wire_NetworkLease",
+      "type": "NetworkLease",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "work": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "action": "publish_revision",
+          "source_revision": "source-r1",
+          "origin_event_sequence": 1,
+          "grant_generation": 1,
+          "policy_revision": "policy-r1",
+          "state": "leased",
+          "attempt_cycle": "11111111-1111-4111-8111-111111111111",
+          "attempt": 1,
+          "lease_generation": 1,
+          "retry_at": null,
+          "last_failure_code": null
+        },
+        "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "expires_at": "2026-10-10T18:05:00.000Z",
+        "server_time": "2026-10-10T18:00:00.000Z"
+      }
+    },
+    {
+      "id": "wire_NetworkWorkStatus",
+      "type": "NetworkWorkStatus",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "work": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "action": "publish_revision",
+          "source_revision": "source-r1",
+          "origin_event_sequence": 1,
+          "grant_generation": 1,
+          "policy_revision": "policy-r1",
+          "state": "leased",
+          "attempt_cycle": "11111111-1111-4111-8111-111111111111",
+          "attempt": 1,
+          "lease_generation": 1,
+          "retry_at": null,
+          "last_failure_code": null
+        },
+        "delivery": {
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "connection_id": "dbc_111111111111111111111111",
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "desired_source_revision": "source-r1",
+          "synchronized_source_revision": null,
+          "publicly_verified_source_revision": null,
+          "grant_generation": 1,
+          "local_resource_id": null,
+          "local_topic_id": null,
+          "local_first_post_id": null,
+          "local_topic_url": null,
+          "state": "pending",
+          "synchronized_at": null,
+          "publicly_verified_at": null
+        }
+      }
+    },
+    {
+      "id": "wire_NetworkRenew",
+      "type": "NetworkRenew",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "authority": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "grant_generation": 1,
+          "policy_revision": "policy-r1"
+        }
+      }
+    },
+    {
+      "id": "wire_NetworkAck",
+      "type": "NetworkAck",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "authority": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "grant_generation": 1,
+          "policy_revision": "policy-r1"
+        },
+        "action": "publish_revision",
+        "stage": "synchronized",
+        "receipt": {
+          "local_resource_id": "55555555-5555-4555-8555-555555555555",
+          "local_topic_id": "80",
+          "local_first_post_id": "90",
+          "local_topic_url": "https://recipient.example/t/example/80",
+          "native_revision": "native-r1",
+          "native_receipt_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "representation": {
+            "kind": "full_only",
+            "source_raw_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "source_cooked_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "native_raw_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "native_cooked_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "native_limit_bytes": null,
+            "native_constraint_code": null,
+            "read_more_url": null
+          },
+          "synchronized_at": "2026-10-10T18:00:00.000Z",
+          "native_fence_generation": 1
+        }
+      }
+    },
+    {
+      "id": "wire_NetworkFailure",
+      "type": "NetworkFailure",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "authority": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "grant_generation": 1,
+          "policy_revision": "policy-r1"
+        },
+        "code": "invalid_json",
+        "native_change_applied": false,
+        "safe_detail": null,
+        "retry_after_seconds": null
+      }
+    },
+    {
+      "id": "wire_NetworkDeliveryPage",
+      "type": "NetworkDeliveryPage",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "items": [],
+        "next_cursor": null
+      }
+    },
+    {
+      "id": "wire_NetworkDelivery",
+      "type": "NetworkDelivery",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "delivery_id": "33333333-3333-4333-8333-333333333333",
+        "connection_id": "dbc_111111111111111111111111",
+        "publication_id": "22222222-2222-4222-8222-222222222222",
+        "origin": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "topic_id": "8"
+        },
+        "desired_source_revision": "source-r1",
+        "synchronized_source_revision": null,
+        "publicly_verified_source_revision": null,
+        "grant_generation": 1,
+        "local_resource_id": null,
+        "local_topic_id": null,
+        "local_first_post_id": null,
+        "local_topic_url": null,
+        "state": "pending",
+        "synchronized_at": null,
+        "publicly_verified_at": null
+      }
+    },
+    {
+      "id": "wire_NetworkRetry",
+      "type": "NetworkRetry",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "work_id": "11111111-1111-4111-8111-111111111111",
+        "native_reconciled": true
+      }
+    },
+    {
+      "id": "wire_NetworkLocalMappingPage",
+      "type": "NetworkLocalMappingPage",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "items": [],
+        "next_cursor": null
+      }
+    },
+    {
+      "id": "wire_NetworkLocalPolicyWrite",
+      "type": "NetworkLocalPolicyWrite",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "local_resource_id": "11111111-1111-4111-8111-111111111111",
+        "expected_local_policy_revision": "revision-r1",
+        "topic_override": "inherit"
+      }
+    },
+    {
+      "id": "wire_NetworkLocalMapping",
+      "type": "NetworkLocalMapping",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "local_resource_id": "55555555-5555-4555-8555-555555555555",
+        "origin": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "topic_id": "8"
+        },
+        "publication_id": "22222222-2222-4222-8222-222222222222",
+        "local_topic_id": "80",
+        "local_first_post_id": "90",
+        "local_topic_url": "https://recipient.example/t/example/80",
+        "native_revision": "native-r1",
+        "desired_source_revision": "source-r1",
+        "synchronized_source_revision": null,
+        "publicly_verified_source_revision": null,
+        "grant_generation": 1,
+        "mapping_state": "pending",
+        "discussion_policy": {
+          "local_policy_revision": "local-policy-r1",
+          "topic_override": "inherit",
+          "effective_local_discussion": false,
+          "source_permission_checked_at": "2026-10-10T18:00:00.000Z",
+          "source_permission_expires_at": "2026-10-10T18:05:00.000Z"
+        },
+        "route_count": 1,
+        "native_fence_generation": 0
+      }
+    },
+    {
+      "id": "wire_NetworkDiscussionQuery",
+      "type": "NetworkDiscussionQuery",
+      "check_level": "TYPE_SHAPE",
+      "value": {}
+    },
+    {
+      "id": "wire_NetworkDiscussionPage",
+      "type": "NetworkDiscussionPage",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "publication_id": "22222222-2222-4222-8222-222222222222",
+        "origin": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "topic_id": "8"
+        },
+        "items": [
+          {
+            "publication_id": "22222222-2222-4222-8222-222222222222",
+            "origin": {
+              "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "topic_id": "8"
+            },
+            "post_id": "9",
+            "post_number": 2,
+            "reply_to_post_id": null,
+            "post_revision": "post-r1",
+            "discussion_sequence": 1,
+            "author": {
+              "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "user_id": "4",
+              "name": "Source Author",
+              "profile_url": "https://source.example/u/source-author"
+            },
+            "created_at": "2026-10-10T18:00:00.000Z",
+            "updated_at": "2026-10-10T18:00:00.000Z",
+            "original_post_url": "https://source.example/t/example/8/2",
+            "content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "content_bytes": 39
+          }
+        ],
+        "known_reply_count": 1,
+        "next_cursor": null,
+        "checkpoint_cursor": "synthetic-discussion-checkpoint-r1",
+        "checked_at": "2026-10-10T18:00:00.000Z",
+        "authority_expires_at": "2026-10-10T18:05:00.000Z"
+      }
+    },
+    {
+      "id": "wire_NetworkDiscussionFeed",
+      "type": "NetworkDiscussionFeed",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "stream": "initial",
+        "items": [
+          {
+            "kind": "post_upsert",
+            "delivery_sequence": 1,
+            "event_id": "11111111-1111-4111-8111-111111111111",
+            "post": {
+              "publication_id": "22222222-2222-4222-8222-222222222222",
+              "origin": {
+                "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "topic_id": "8"
+              },
+              "post_id": "9",
+              "post_number": 2,
+              "reply_to_post_id": null,
+              "post_revision": "post-r1",
+              "discussion_sequence": 1,
+              "author": {
+                "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "user_id": "4",
+                "name": "Source Author",
+                "profile_url": "https://source.example/u/source-author"
+              },
+              "created_at": "2026-10-10T18:00:00.000Z",
+              "updated_at": "2026-10-10T18:00:00.000Z",
+              "original_post_url": "https://source.example/t/example/8/2",
+              "content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+              "content_bytes": 39
+            }
+          }
+        ],
+        "next_cursor": null,
+        "checkpoint_cursor": "synthetic-discussion-checkpoint-r1",
+        "checked_at": "2026-10-10T18:00:00.000Z",
+        "authority_expires_at": "2026-10-10T18:05:00.000Z"
+      }
+    },
+    {
+      "id": "wire_NetworkDiscussionChunk",
+      "type": "NetworkDiscussionChunk",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "publication_id": "22222222-2222-4222-8222-222222222222",
+        "post_id": "9",
+        "post_revision": "post-r1",
+        "content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "content_bytes": 39,
+        "offset": 0,
+        "next_offset": null,
+        "content_base64": "PHA+QSBkZXRlcm1pbmlzdGljIHNvdXJjZSByZXZpc2lvbi48L3A+"
+      }
+    },
+    {
+      "id": "wire_NetworkRelatedPage",
+      "type": "NetworkRelatedPage",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "publication_id": "11111111-1111-4111-8111-111111111111",
+        "items": [],
+        "next_cursor": null
+      }
+    },
+    {
+      "id": "wire_NetworkWithdrawInput",
+      "type": "NetworkWithdrawInput",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "publication_id": "11111111-1111-4111-8111-111111111111",
+        "expected_grant_generation": 1,
+        "kind": "origin_retraction",
+        "reason": "source_unpublished"
+      }
+    },
+    {
+      "id": "wire_NetworkWithdrawalStatus",
+      "type": "NetworkWithdrawalStatus",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "withdrawal": {
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "kind": "origin_retraction",
+          "origin_event_id": "11111111-1111-4111-8111-111111111111",
+          "origin_event_sequence": 2,
+          "grant_generation": 1,
+          "reason": "source_unpublished"
+        },
+        "delivery": {
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "connection_id": "dbc_111111111111111111111111",
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "desired_source_revision": "source-r1",
+          "synchronized_source_revision": null,
+          "publicly_verified_source_revision": null,
+          "grant_generation": 1,
+          "local_resource_id": null,
+          "local_topic_id": null,
+          "local_first_post_id": null,
+          "local_topic_url": null,
+          "state": "pending",
+          "synchronized_at": null,
+          "publicly_verified_at": null
+        }
+      }
+    },
+    {
+      "id": "network_branch_NetworkPublishVerifyAck",
+      "type": "NetworkPublishVerifyAck",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "authority": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": "source-r1",
+          "grant_generation": 1,
+          "policy_revision": "policy-r1"
+        },
+        "action": "publish_revision",
+        "stage": "verified",
+        "receipt": {
+          "local_resource_id": "55555555-5555-4555-8555-555555555555",
+          "local_topic_id": "80",
+          "local_first_post_id": "90",
+          "local_topic_url": "https://recipient.example/t/example/80",
+          "native_revision": "native-r1",
+          "native_receipt_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "representation": {
+            "kind": "full_only",
+            "source_raw_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "source_cooked_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "native_raw_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "native_cooked_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "native_limit_bytes": null,
+            "native_constraint_code": null,
+            "read_more_url": null
+          },
+          "synchronized_at": "2026-10-10T18:00:00.000Z",
+          "native_fence_generation": 1
+        },
+        "verification": {
+          "local_topic_url": "https://recipient.example/t/example/80",
+          "native_revision": "native-r1",
+          "verification_profile": "db-discourse-network-public-1",
+          "expected_rendered_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "observed_rendered_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "ordinary_reader_visible": true,
+          "discussion_controls_verified": true,
+          "checked_at": "2026-10-10T18:00:00.000Z"
+        }
+      }
+    },
+    {
+      "id": "network_branch_NetworkWithdrawAck",
+      "type": "NetworkWithdrawAck",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "authority": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": null,
+          "grant_generation": 1,
+          "policy_revision": "policy-r1"
+        },
+        "action": "withdraw",
+        "stage": "verified",
+        "withdrawal": {
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "kind": "origin_retraction",
+          "origin_event_id": "11111111-1111-4111-8111-111111111111",
+          "origin_event_sequence": 2,
+          "grant_generation": 1,
+          "reason": "source_unpublished"
+        },
+        "verification": {
+          "local_topic_url": "https://recipient.example/example",
+          "verification_profile": "db-discourse-network-hidden-1",
+          "anonymous_denied": true,
+          "ordinary_member_denied": true,
+          "local_posts_retained": true,
+          "local_moderation_available": true,
+          "ordinary_search_and_feed_removed": true,
+          "checked_at": "2026-10-10T18:00:00.000Z"
+        },
+        "remaining_authorized_route": false,
+        "remaining_route_verification": null
+      }
+    },
+    {
+      "id": "network_branch_NetworkConsentAck",
+      "type": "NetworkConsentAck",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "authority": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": null,
+          "grant_generation": 1,
+          "policy_revision": "policy-r1"
+        },
+        "action": "apply_consent",
+        "stage": "verified",
+        "verification": {
+          "local_resource_id": "55555555-5555-4555-8555-555555555555",
+          "grant_generation": 1,
+          "local_policy_revision": "local-policy-r1",
+          "effective_local_discussion": false,
+          "server_enforcement_checked": true,
+          "existing_local_posts_retained": true,
+          "checked_at": "2026-10-10T18:00:00.000Z"
+        }
+      }
+    },
+    {
+      "id": "network_branch_NetworkGrantEvent",
+      "type": "NetworkGrantEvent",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "kind": "grant_update",
+        "delivery_event_id": "11111111-1111-4111-8111-111111111111",
+        "delivery_sequence": 1,
+        "grant": {
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "grant_revision": "grant-r1",
+          "grant_generation": 1,
+          "recipient_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+          ],
+          "relay_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+          ],
+          "local_discussion_forum_ids": [
+            "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+          ]
+        }
+      }
+    },
+    {
+      "id": "network_branch_NetworkWithdrawEvent",
+      "type": "NetworkWithdrawEvent",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "kind": "withdrawal",
+        "delivery_event_id": "11111111-1111-4111-8111-111111111111",
+        "delivery_sequence": 1,
+        "withdrawal": {
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "kind": "origin_retraction",
+          "origin_event_id": "11111111-1111-4111-8111-111111111111",
+          "origin_event_sequence": 2,
+          "grant_generation": 1,
+          "reason": "source_unpublished"
+        }
+      }
+    },
+    {
+      "id": "network_branch_NetworkDiscussionRemove",
+      "type": "NetworkDiscussionRemove",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "kind": "post_tombstone",
+        "delivery_sequence": 1,
+        "event_id": "11111111-1111-4111-8111-111111111111",
+        "publication_id": "11111111-1111-4111-8111-111111111111",
+        "origin": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "topic_id": "8"
+        },
+        "post_id": "8",
+        "discussion_sequence": 1,
+        "reason": "source_unpublished"
+      }
+    },
+    {
+      "id": "network_NetworkOrigin",
+      "type": "NetworkOrigin",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "topic_id": "8"
+      }
+    },
+    {
+      "id": "network_NetworkProvenance",
+      "type": "NetworkProvenance",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "immediate_source": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "https://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "recipient": {
+          "forum_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "origin": "https://recipient.example/",
+          "forum_name": "Recipient Forum",
+          "identity_revision": "identity-r1"
+        },
+        "path": [
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        ]
+      }
+    },
+    {
+      "id": "network_native_receipt",
+      "type": "NetworkNativeReceipt",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "version": "db-network-native-ownership-1",
+        "local_forum_id": "11111111-1111-4111-8111-111111111111",
+        "local_resource_id": "11111111-1111-4111-8111-111111111111",
+        "origin_forum_id": "11111111-1111-4111-8111-111111111111",
+        "origin_topic_id": "8",
+        "publication_id": "11111111-1111-4111-8111-111111111111",
+        "local_topic_id": "8",
+        "local_first_post_id": "8",
+        "source_revision": "revision-r1",
+        "origin_event_sequence": 1,
+        "grant_generation": 1,
+        "native_fence_generation": 1,
+        "native_revision": "revision-r1",
+        "native_raw_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "native_cooked_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa"
+      }
+    },
+    {
+      "id": "network_cooked_chunk",
+      "type": "NetworkContentChunk",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "publication_id": "22222222-2222-4222-8222-222222222222",
+        "source_revision": "source-r1",
+        "kind": "cooked_html",
+        "sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "bytes": 39,
+        "offset": 0,
+        "next_offset": null,
+        "content_base64": "PHA+QSBkZXRlcm1pbmlzdGljIHNvdXJjZSByZXZpc2lvbi48L3A+"
+      }
+    },
+    {
+      "id": "network_native_excerpt",
+      "type": "NetworkRepresentation",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "kind": "native_limit_excerpt",
+        "source_raw_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "source_cooked_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "native_raw_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "native_cooked_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "native_limit_bytes": 32,
+        "native_constraint_code": "recipient_native_post_limit",
+        "read_more_url": "https://source.example/t/example/8"
+      }
+    },
+    {
+      "id": "network_route_removed_copy_retained",
+      "type": "NetworkWithdrawAck",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "mutation_id": "11111111-1111-4111-8111-111111111111",
+        "authority": {
+          "work_id": "44444444-4444-4444-8444-444444444444",
+          "delivery_id": "33333333-3333-4333-8333-333333333333",
+          "lease_token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "lease_generation": 1,
+          "source_revision": null,
+          "grant_generation": 1,
+          "policy_revision": "policy-r1"
+        },
+        "action": "withdraw",
+        "stage": "verified",
+        "withdrawal": {
+          "publication_id": "22222222-2222-4222-8222-222222222222",
+          "origin": {
+            "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "topic_id": "8"
+          },
+          "kind": "route_removal",
+          "origin_event_id": null,
+          "origin_event_sequence": null,
+          "grant_generation": 1,
+          "reason": "source_unpublished"
+        },
+        "verification": null,
+        "remaining_authorized_route": true,
+        "remaining_route_verification": {
+          "local_topic_url": "https://recipient.example/t/example/80",
+          "native_revision": "native-r1",
+          "verification_profile": "db-discourse-network-public-1",
+          "expected_rendered_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "observed_rendered_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+          "ordinary_reader_visible": true,
+          "discussion_controls_verified": true,
+          "checked_at": "2026-10-10T18:00:00.000Z"
+        }
+      }
+    },
+    {
+      "id": "network_discussion_tombstone_feed",
+      "type": "NetworkDiscussionFeed",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "stream": "changes",
+        "items": [
+          {
+            "kind": "post_tombstone",
+            "delivery_sequence": 1,
+            "event_id": "11111111-1111-4111-8111-111111111111",
+            "publication_id": "22222222-2222-4222-8222-222222222222",
+            "origin": {
+              "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "topic_id": "8"
+            },
+            "post_id": "9",
+            "discussion_sequence": 1,
+            "reason": "source_unpublished"
+          }
+        ],
+        "next_cursor": null,
+        "checkpoint_cursor": "synthetic-discussion-checkpoint-r1",
+        "checked_at": "2026-10-10T18:00:00.000Z",
+        "authority_expires_at": "2026-10-10T18:05:00.000Z"
+      }
+    },
+    {
+      "id": "network_local_policy_enabled",
+      "type": "NetworkLocalPolicy",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "local_policy_revision": "local-policy-r1",
+        "topic_override": "enabled",
+        "effective_local_discussion": true,
+        "source_permission_checked_at": "2026-10-10T18:00:00.000Z",
+        "source_permission_expires_at": "2026-10-10T18:05:00.000Z"
+      }
+    },
+    {
+      "id": "network_retained_cms_origin",
+      "type": "NetworkNativeOrigin",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "profile": "ghost",
+        "native_origin": "https://publisher.example/",
+        "external_id": "page:site-7:roadmap",
+        "bridge_resource_id": "55555555-5555-4555-8555-555555555555",
+        "canonical_url": "https://publisher.example/roadmap/",
+        "available_representation": "bounded_excerpt",
+        "source_authors": [
+          {
+            "id": "native-author-4",
+            "name": "Native author"
+          }
+        ],
+        "source_created_at": null,
+        "source_updated_at": null
+      }
+    },
+    {
+      "id": "network_native_reader_projection",
+      "type": "NetworkReaderProjection",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "publication_id": "22222222-2222-4222-8222-222222222222",
+        "local_topic_id": "80",
+        "source_forum": {
+          "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "origin": "https://source.example/",
+          "forum_name": "Source Forum",
+          "identity_revision": "identity-r1"
+        },
+        "local_forum": {
+          "forum_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "origin": "https://recipient.example/",
+          "forum_name": "Recipient Forum",
+          "identity_revision": "identity-r1"
+        },
+        "state": "ready",
+        "items": [
+          {
+            "source_post": {
+              "publication_id": "22222222-2222-4222-8222-222222222222",
+              "origin": {
+                "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "topic_id": "8"
+              },
+              "post_id": "9",
+              "post_number": 2,
+              "reply_to_post_id": null,
+              "post_revision": "post-r1",
+              "discussion_sequence": 1,
+              "author": {
+                "forum_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "user_id": "4",
+                "name": "Source Author",
+                "profile_url": "https://source.example/u/source-author"
+              },
+              "created_at": "2026-10-10T18:00:00.000Z",
+              "updated_at": "2026-10-10T18:00:00.000Z",
+              "original_post_url": "https://source.example/t/example/8/2",
+              "content_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+              "content_bytes": 39
+            },
+            "cache_revision": "cache-r1",
+            "rendered_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+            "rendered_bytes": 39,
+            "profile": "db-source-discussion-html-1"
+          }
+        ],
+        "known_reply_count": 1,
+        "next_cursor": null,
+        "source_checked_at": "2026-10-10T18:00:00.000Z",
+        "authority_expires_at": "2026-10-10T18:05:00.000Z",
+        "local_discussion_enabled": false,
+        "viewer_can_reply": false
+      }
+    },
+    {
+      "id": "network_native_reader_rendered_chunk",
+      "type": "NetworkRenderedChunk",
+      "check_level": "TYPE_SHAPE",
+      "value": {
+        "local_topic_id": "80",
+        "post_id": "9",
+        "post_revision": "post-r1",
+        "cache_revision": "cache-r1",
+        "rendered_sha256": "05cdd1137e7eda4c7c0f67a5a744c1351139d7faa3c6e52b407b214f3136b8aa",
+        "rendered_bytes": 39,
+        "offset": 0,
+        "next_offset": null,
+        "content_base64": "PHA+QSBkZXRlcm1pbmlzdGljIHNvdXJjZSByZXZpc2lvbi48L3A+"
+      }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# Preserve the approved packet's exact bytes in Git and future checkouts.
+approved-packet/** -text -filter -ident -working-tree-encoding
+release.json text eol=lf -filter -ident
+RELEASE.md text eol=lf -filter -ident
+.gitattributes text eol=lf -filter -ident
