@@ -1,0 +1,14 @@
+{
+  "contract": "discussionbridge-core-publication",
+  "version": "0.3.0-alpha.1",
+  "status": "build_candidate",
+  "base": "contract.json",
+  "extension": "core-publication-extension.json",
+  "historical_release_manifest": "release.json",
+  "historical_release_is_current_implementation_authority": true,
+  "implementation_authority_scope": "Phil's October 13 confirmation: preserved Alpha.23 CMS types and semantics, V2-01 through V2-32 only; Operator Service, Network, Workspace and Federation excluded",
+  "cms_candidate": "cms-publication-candidate.json",
+  "extension_scope": "Inherited v1 build-candidate surface retained separately; it is not replacement authority for the approved CMS coordinator",
+  "publishing_scope": "Existing core component work list only",
+  "operator_integration": "Explicit selection, with existing choices preserved"
+}

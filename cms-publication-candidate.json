@@ -1,0 +1,17 @@
+{
+  "contract": "discussionbridge-cms-publication",
+  "implementation_version": "0.3.0-alpha.1",
+  "status": "build_candidate",
+  "wire_version": "v2",
+  "authority": "Phil's October13 confirmation of preserved Alpha.23 CMS specification for publication work, leases, acknowledgements and static prepare/finalize/abort within existing Work Lists",
+  "normative_types_routes": "approved-packet/ADAPTER_PROTOCOL_V2_WIRE_PROPOSAL_20261009.json",
+  "normative_semantics": "approved-packet/ADAPTER_PROTOCOL_V2_WIRE_SPECIFICATION_20261009.md",
+  "executable_validator": "src/cms-contract.mjs",
+  "portable_runtime": "src/cms-runtime.mjs",
+  "portable_schema": "src/cms-schema.json",
+  "portable_schema_sha256": "b5ce03ac60379a60e9adc3b4193b9f49e9f6c0687010a91a138577d4cbf95760",
+  "excluded": ["Operator Service", "Network", "Workspace", "Federation", "unfrozen URL transport amendment"],
+  "compatibility": "Preserved v1 and inherited core-publication-extension candidate surfaces remain distinct; neither is silently reinterpreted as v2",
+  "fixture_notice": "All49 reachable CMS frozen positive examples validate unchanged. Build-candidate fixtures retain exact parsed values and source-artifact identities; frozen bytes remain unchanged",
+  "limitation": "Typed validation and author fixtures do not establish receiver authority, native locks/ownership, public verification, qualification, review, release or deployment approval"
+}

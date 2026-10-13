@@ -6,6 +6,47 @@ Discourse** is the runtime authority. The contract and conformance fixtures in
 this repository describe its current public adapter boundary; they do not
 introduce a broker, installer, control plane, or shared runtime.
 
+The current local build candidate is **0.3.0-alpha.1**, identified by
+[`CURRENT_CORE_CONTRACT.json`](CURRENT_CORE_CONTRACT.json) and
+[`core-publication-extension.json`](core-publication-extension.json). It adds
+coherent native source editions, truthful source dates/forum names, explicit
+presentation choices, verified complete-content chunks, source withdrawal and
+compare-and-swap source updates. Read that extension alongside the preserved
+Alpha.20 base below. Historical Alpha.23 release records do not identify this
+changed candidate, and no approved immutable release or runtime qualification is
+claimed by these candidate declarations.
+
+Phil confirmed use of the preserved Alpha.23 CMS specification on October13.
+The additive [`cms-publication-candidate.json`](cms-publication-candidate.json)
+binds that confirmed CMS subset to the same unreleased build candidate.
+[`src/cms-contract.mjs`](src/cms-contract.mjs) validates the exact normative
+grammar for32CMS routes, strict JSON/query/transport shapes, local receipt
+constraints, ownership fingerprints and work transition/retry values. It checks
+the exact unchanged normative artifact identities before loading. The v1
+extension above remains a distinct compatibility surface. Operator Service,
+Network, Workspace, Federation and the unfrozen URL transport amendment are
+excluded from this implementation.
+
+Run `node --test tests/*.test.mjs` for compatibility, UTF8 golden-edition and
+CMS conformance author fixtures. Build the deterministic local contract ZIP
+with `pwsh -File scripts/build-release.ps1`. The archive includes the preserved
+base, current declarations/extensions, executable CMS validator, conformance
+fixtures, unchanged approved source packet and a member-hash manifest. The
+packet's network shapes remain immutable source metadata; the validator exposes
+only V2-01 through V2-32 and their138reachable CMS types. No version/tag is
+selected by this build. All49frozen CMS positive examples validate unchanged;
+build-candidate fixture copies retain exact parsed values and source provenance.
+
+Typed validation does not establish current connection/policy/lease authority,
+actual native ownership/locking, public verification, qualification or a review
+disposition. Those checks belong to the receiver and each native adapter.
+
+Downstream Node adapters may vendor [`src/cms-runtime.mjs`](src/cms-runtime.mjs)
+and [`src/cms-schema.json`](src/cms-schema.json) together byte-for-byte with
+recorded provenance. That portable runtime verifies the exact138type CMS
+extraction hash and does not require another checkout or the full source packet.
+The source-checkout wrapper additionally verifies the frozen normative files.
+
 ## Connection authentication
 
 Every request uses one independently issued Content Connection:

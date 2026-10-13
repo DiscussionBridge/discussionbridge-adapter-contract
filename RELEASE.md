@@ -1,20 +1,40 @@
 # DiscussionBridge Adapter Protocol 0.2.0-alpha.23
 
-This is the locally frozen, Phil-approved specification for preserved v1 and
-the new v2 CMS and same-plugin Discourse network contract. It is not an
-implemented or runtime-qualified product. The annotated local tag
+This is the historical locally frozen specification for preserved v1 and
+the proposed v2 CMS and same-plugin Discourse network contract. Its approval
+claims record the predecessor task; Phil has warned that inherited records
+contain errors and do not authorize current work. It is not an implemented or
+runtime-qualified product. The annotated local tag
 `v0.2.0-alpha.23` identifies the immutable release commit; no GitHub push is
 authorized by this freeze.
 
 ## Release identity and approval
 
 [release.json](release.json) is the release identity and portable binding index.
-Phil approved the exact seven-file packet on October 10, 2026 (EP01), then
-delegated version selection and authorized the local commit/tag freeze (EF01).
-The version was selected after a read-only GitHub tag inventory found Alpha.19
-through Alpha.22 and no Alpha.23. No old tag or discarded implementation is used.
+The predecessor manifest records approval of the exact seven-file packet on
+October 10, 2026 (EP01), version selection and local commit/tag freeze (EF01).
+Those are retained provenance claims, not fresh authorization. It records a
+read-only GitHub tag inventory of Alpha.19 through Alpha.22 before selecting
+Alpha.23. Existing frozen identities are preserved during current cleanup.
 
 ## Contract files
+
+The immutable tag retains the specification indexed below. The predecessor
+working tree also contains the separate
+[URL transmission amendment](amendments/url-transport-20261010/README.md).
+That working amendment requires encoded v2 URLs, preserves readable
+presentation and native identities, and reports oversized URLs clearly.
+It is not part of the existing tag or release manifest and has not been
+assigned a new immutable release identity.
+
+On October 12, 2026, Phil directed cleanup and completion of the existing core
+work list. Network will be a separate optional add-on requiring DiscussionBridge;
+Federation will be an independent plugin. Network/Workspace setup and protocol
+scaffolding have been removed from the current deployable core source. The
+untracked Workspace amendment is preserved outside this component in the
+product workspace's `_trash/cleanup-20261012/adapter-contract` quarantine, with
+SHA-256 records. The frozen packet and tag remain unchanged historical records.
+No Network/Workspace API implementation is established by this release index.
 
 | Role | Local member |
 | --- | --- |

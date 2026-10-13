@@ -1,0 +1,37 @@
+{
+  "amendment_format": 1,
+  "amendment_id": "UA01",
+  "base_contract_version": "0.2.0-alpha.23",
+  "base_contract_commit": "d9b55809440482ea5ef563d521bb624b9ff26569",
+  "base_types_sha256": "5ee46f7190308914dd88c27cfad499709a899b517ac11ac6fe362de1f9f8cd8f",
+  "approval": {
+    "approved_by": "Phil",
+    "date": "2026-10-10",
+    "conversation": "Bridge Builder",
+    "reply": "do that",
+    "scope": "Encoded URLs between components, readable presentation for people; automatic adapter encoding without changing native page addresses, slugs or stored identities.",
+    "length_reporting_reply": "thanks, re 2,048-byte transmission limit sooner. We must report that clearly: agreed"
+  },
+  "status": "approved_local_implementation_amendment_not_release_frozen",
+  "type_overrides": {
+    "Url": {
+      "kind": "string",
+      "format": "absolute ASCII HTTPS URI without userinfo or fragment",
+      "utf8_maximum_bytes": 2048,
+      "ascii_only": true,
+      "pattern": "^[Hh][Tt][Tt][Pp][Ss]://(?:[A-Za-z0-9._~-]+|\\[[0-9A-Fa-f:.]+\\])(?::[0-9]+)?(?:/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*)?(?:\\?[A-Za-z0-9._~!$&'()*+,;=:@%/?-]*)?$",
+      "reject_dot_path_segments": true
+    }
+  },
+  "semantics": {
+    "scope": "All v2 fields whose named type is Url, including CMS and same-plugin network fields. Preserved v1 is unchanged.",
+    "sender": "The native platform/adapter supplies its authoritative URL in ASCII URI form before constructing a typed payload: international domains use IDNA A-labels and international path/query characters use UTF-8 percent-encoding.",
+    "receiver": "Validate the supplied representation and preserve accepted bytes exactly. Do not repair malformed authority, encode, decode, reserialize, case-fold or Unicode-normalize the payload URL.",
+    "existing_encoding": "Do not double-encode existing percent escapes, decode reserved characters, reorder query parameters or use whole-URL percent-encoding.",
+    "display": "Human-readable titles, labels and safe display of international characters remain supported; display does not replace the actual link target or authorize a different address.",
+    "identity": "No native URL, slug, external/native/resource/topic identity, ownership receipt, mutation replay tree or URL ancestry is migrated by this amendment.",
+    "limits_and_security": "The unchanged 2048-byte maximum applies to the transmitted ASCII string. Require nonempty authority, valid percent triplets and port 1..65535; reject controls, spaces, backslashes, userinfo, fragments and literal or once-percent-encoded dot path segments. Current origin/scope/collision/native-alias checks remain separate and mandatory.",
+    "length_reporting": "An over-limit encoded URL fails without shortening or renaming. The local adapter/plugin reports the affected field and the 2,048-byte transmission limit after encoding, without exposing the supplied URL or sensitive query data. The protocol code remains invalid_field; no response field or wire error code is added.",
+    "freeze": "The base Alpha.23 tag, release manifest and approved-packet bytes remain immutable. This amendment is a separate local working member; a subsequent immutable release identity is not assigned or frozen here."
+  }
+}

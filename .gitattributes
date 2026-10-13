@@ -3,3 +3,7 @@ approved-packet/** -text -filter -ident -working-tree-encoding
 release.json text eol=lf -filter -ident
 RELEASE.md text eol=lf -filter -ident
 .gitattributes text eol=lf -filter -ident
+amendments/**/*.json -text -filter -ident -working-tree-encoding
+amendments/**/*.md text eol=lf -filter -ident
+src/cms-schema.json -text -filter -ident -working-tree-encoding
+src/cms-runtime.mjs text eol=lf -filter -ident

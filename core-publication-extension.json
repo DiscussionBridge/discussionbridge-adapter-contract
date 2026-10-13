@@ -1,0 +1,131 @@
+{
+  "contract": "discussionbridge-core-publication",
+  "version": "0.3.0-alpha.1",
+  "base_contract": "contract.json",
+  "base_version": "0.2.0-alpha.20",
+  "status": "build_candidate",
+  "scope": "Existing authorized core publishing work; no Network, Federation, ActivityPub or platform-core installation authority",
+  "authority": "Phil's October 12 direction to implement the existing component work list and build, with no new platform-core integration enabled by default",
+  "authentication": {
+    "connection_header": "X-DiscussionBridge-Connection",
+    "secret_header": "X-DiscussionBridge-Secret",
+    "authority": "Authenticated Content Connection and native permissions; descriptive adapter labels never grant scope",
+    "new_identity_headers": false
+  },
+  "compatibility": {
+    "legacy_source_revision": "post:<post_id>:version:<post_version>",
+    "legacy_resolve_without_source_publication": "Identity resolution only; never rewrite the topic as an incidental retry",
+    "negotiation_query": "publication_contract",
+    "negotiation_value": "0.3.0-alpha.1",
+    "negotiated_operations": ["inventory", "detail"],
+    "legacy_inline_content": "Unnegotiated eligible-source inventory and detail retain their existing inline body",
+    "privacy": "Native source eligibility is enforced regardless of client version"
+  },
+  "from_discourse": {
+    "index_path": "/discussion-bridge/v1/bridge-records.json",
+    "detail_path": "/discussion-bridge/v1/bridge-records/{resource_id}.json",
+    "negotiated_content_html": null,
+    "metadata_response_maximum_bytes": 2097152,
+    "source_status": ["active", "withdrawn"],
+    "active_source": {
+      "created_at": "Native first-post creation time, ISO8601 with timezone; never mapping or synchronization time",
+      "updated_at": "Native first-post edit time, including title edits saved by native PostRevisor, ISO8601 with timezone; unrelated replies, bumps or topic saves never move source-modified Latest",
+      "forum_name": "Effective DISCUSSIONBRIDGE_FORUM_NAME/native DiscussionBridge setting; absent override falls back to the native forum title",
+      "forum_name_maximum_utf8_bytes": 200,
+      "forum_name_validation": "Nonempty after trimming; valid UTF8; no control characters; always escaped by the rendering destination",
+      "revision": "Legacy post:<post_id>:version:<post_version> value remains unchanged",
+      "edition": "Lowercase 64-character SHA256 of one coherent native source edition; includes title, raw/cooked content, native identity/dates, source author and effective forum name",
+      "edition_encoding": "UTF8 JSON array in the declared order; dates UTC ISO8601(6); missing values remain explicit null; hash lowercase SHA256",
+      "edition_array": ["platform", "origin", "forum_name", "topic_id", "topic_url", "title", "topic_created_at", "post_id", "post_number", "post_version", "post_created_at", "post_updated_at", "raw", "cooked", "author_username", "author_username_lower", "effective_author_name"],
+      "edition_authority": "Native coherent source read; source edition is descriptive freshness evidence, not authorization",
+      "content": {
+        "bytes": "Positive safe integer: exact UTF8 byte length of the complete cooked source",
+        "sha256": "Lowercase SHA256 of complete cooked-source UTF8 bytes before destination sanitization",
+        "path": "/discussion-bridge/v1/bridge-records/{resource_id}/content.json",
+        "chunk_bytes": 32768
+      }
+    },
+    "withdrawn_source": {
+      "title": "Source publication withdrawn",
+      "content_html": null,
+      "status": "withdrawn",
+      "reason": "source_unavailable",
+      "edition": "SHA256 of the withdrawal identity/state edition; private title, body and author are excluded",
+      "retained": ["resource_id", "topic_id", "bindings"],
+      "omitted": ["private title", "body", "author", "content descriptor"],
+      "source_rules": "Private/PM/deleted/unavailable sources and known externally derived To-Discourse first posts cannot be publicly materialized as original forum content; negotiated inventory carries withdrawal for already scoped records. Ordinary quotes do not establish foreign ownership",
+      "destination_rules": "Withdraw only an exactly owned native materialization from public rendering; retain its native identity and recovery state",
+      "failure_rules": "Missing records, authentication failures and network failures do not themselves authorize withdrawal",
+      "static_completion": "A local edit is pending until the configured build/deployment and public verification confirm withdrawal"
+    },
+    "content_transport": {
+      "method": "GET",
+      "path": "/discussion-bridge/v1/bridge-records/{resource_id}/content.json",
+      "query": {
+        "edition": "Required lowercase 64-character SHA256 source edition",
+        "offset": "Required integer UTF8 byte offset, zero or positive and less than total bytes"
+      },
+      "maximum_raw_chunk_bytes": 32768,
+      "maximum_json_response_bytes": 65536,
+      "response_fields": ["resource_id", "edition", "offset", "total_bytes", "content_sha256", "chunk_base64", "next_offset"],
+      "next_offset": "Exact following byte offset, or null only when total_bytes has been consumed",
+      "success": 200,
+      "edition_changed": 409,
+      "unavailable": "Fail closed without a content body",
+      "validation": "Exact resource/edition/offset, strict base64, declared chunk and total lengths, complete-content SHA256 and final valid UTF8",
+      "redirects": "Refuse redirects; derive and verify the exact same authenticated forum origin and resource path",
+      "source_change_restart_maximum_attempts": 3,
+      "publication_size": "Chunk and metadata bounds are transport bounds, never a universal publication-size cap; destination-native limitations govern any required excerpt"
+    },
+    "presentation_binding": {
+      "presentation_mode": ["simple", "full", "interactive", null],
+      "absent_or_null": "Use the destination's existing operator selection",
+      "existing_native_selection": "Preserve an existing explicit operator selection across source revisions",
+      "direction": "From Discourse is a direction, not a discussion presentation mode"
+    }
+  },
+  "to_discourse": {
+    "path": "/discussion-bridge/v1/bridge-records/resolve.json",
+    "content_html_maximum_bytes": 49152,
+    "request_json_maximum_bytes": 65536,
+    "optional_request_field": "source_publication",
+    "source_publication": {
+      "revision": "Required lowercase SHA256 source-edition identity",
+      "previous_revision": "Required null for first claim/adoption or lowercase SHA256 of the last accepted source publication",
+      "created_at": "Required key: authoritative native source creation time with timezone, or explicit null where no native timestamp exists; never substitute checkout, binding or synchronization time",
+      "updated_at": "Required key: authoritative native source edit time with timezone, or explicit null where unavailable; validate no earlier than creation only when both times are known",
+      "content_sha256": "Required lowercase SHA256 of complete portable source HTML before excerpting",
+      "content_bytes": "Required positive safe integer giving complete portable source UTF8 bytes",
+      "excerpted": "Required boolean; false requires payload body length/hash equality, true describes a valid HTML excerpt with canonical Read More"
+    },
+    "revision_identity": "A change to source title/content/authorship/native dates produces a new SHA256 edition; exact identical source editions retain their revision",
+    "initial_claim": "Create only within the existing authenticated source connection and native authorization; persist exact source publication and managed-native fingerprint",
+    "exact_retry": "Same accepted source revision returns resolved without rewriting native content; conflicting metadata for that revision is rejected",
+    "update": "A different source revision requires previous_revision to equal stored revision and the current managed-native fingerprint to match; native PostRevisor updates the same owned first post/topic",
+    "stale_update": "Return reconciliation_required; never overwrite a later accepted publication",
+    "legacy_adoption": "With no stored publication metadata, initialize only when source title, decorated raw content and author exactly match the owned native topic/post; adoption changes no body bytes. Other cases require explicit reconciliation",
+    "managed_native_sha256": "SHA256 of canonical UTF8 JSON array [topic.id, topic.title, first_post.id, first_post.raw, first_post.user_id]; cooked/rebake output is excluded",
+    "request_sha256": "Internal receipt only: SHA256 of canonical UTF8 JSON array [request.title, request.content_html, ordered normalized author arrays [id,name,profile_url-or-null], primary_source_author_id]; previous_revision is a precondition, not edition metadata",
+    "response_optional_fields": {
+      "source_revision": "Exact accepted source revision",
+      "source_publication_outcome": ["created", "adopted", "updated", "unchanged"]
+    },
+    "legacy_outcomes": "Keep created/201, resolved/200 and reconciliation_required/409",
+    "oversized_content": "Preserve complete native source; send a valid HTML excerpt within 48KiB with Read More to its canonical platform source; digest/length describe the complete source"
+  },
+  "destination_state": {
+    "source_created_at": "Authoritative source creation, retained independently",
+    "source_updated_at": "Authoritative source edit, retained independently",
+    "synchronized_at": "Actual successful native synchronization time",
+    "publicly_verified_at": "Actual successful public verification time; never inferred from a save/build",
+    "failure": "Specific bounded reason, preserved retry/recovery state, no success after failed identity persistence",
+    "identity": "Resource, topic, native object and canonical platform/binding URL remain stable across source editions, retries, withdrawal and restoration",
+    "native_topic_url": "Native Discourse slug URL may change with title edits; accept only a strict same-origin topic path identifying the same authoritative topic ID. Updating this location does not migrate the canonical platform/binding URL"
+  },
+  "installation": {
+    "activation": "Inert/default-off until the operator configures and authorizes publication",
+    "templates_and_rich_assets": "Explicit operator selection; no automatic insertion into platform core, theme, layout or default build",
+    "upgrades": "Preserve existing working renderer/template choices, native content and custom operator assets; absence of a new option is not deliberate disablement",
+    "new_features": "No Network, Federation, ActivityPub, catalog-based grants or unrelated publication authority"
+  }
+}
