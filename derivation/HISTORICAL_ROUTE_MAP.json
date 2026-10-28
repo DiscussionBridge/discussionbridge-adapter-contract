@@ -1,0 +1,160 @@
+{
+  "role": "derivation trace only; old routes are not accepted",
+  "routes": [
+    {
+      "historical_id": "V2-01",
+      "current_id": "V4-01",
+      "path": "/discussion-bridge/v4/connection.json"
+    },
+    {
+      "historical_id": "V2-02",
+      "current_id": "V4-02",
+      "path": "/discussion-bridge/v4/bridge-records/resolve.json"
+    },
+    {
+      "historical_id": "V2-03",
+      "current_id": "V4-03",
+      "path": "/discussion-bridge/v4/bridge-records.json"
+    },
+    {
+      "historical_id": "V2-04",
+      "current_id": "V4-04",
+      "path": "/discussion-bridge/v4/bridge-records/{resource_id}.json"
+    },
+    {
+      "historical_id": "V2-05",
+      "current_id": "V4-05",
+      "path": "/discussion-bridge/v4/bridge-records/{resource_id}/withdraw.json"
+    },
+    {
+      "historical_id": "V2-06",
+      "current_id": "V4-06",
+      "path": "/discussion-bridge/v4/sources.json"
+    },
+    {
+      "historical_id": "V2-07",
+      "current_id": "V4-07",
+      "path": "/discussion-bridge/v4/sources/{source_id}/revisions/{source_revision}/content.json"
+    },
+    {
+      "historical_id": "V2-08",
+      "current_id": "V4-08",
+      "path": "/discussion-bridge/v4/policy.json"
+    },
+    {
+      "historical_id": "V2-09",
+      "current_id": "V4-09",
+      "path": "/discussion-bridge/v4/mappings/prepare.json"
+    },
+    {
+      "historical_id": "V2-11",
+      "current_id": "V4-10",
+      "path": "/discussion-bridge/v4/mappings.json"
+    },
+    {
+      "historical_id": "V2-12",
+      "current_id": "V4-11",
+      "path": "/discussion-bridge/v4/mappings/{mapping_id}.json"
+    },
+    {
+      "historical_id": "V2-13",
+      "current_id": "V4-12",
+      "path": "/discussion-bridge/v4/mappings/{mapping_id}/url-history.json"
+    },
+    {
+      "historical_id": "V2-14",
+      "current_id": "V4-13",
+      "path": "/discussion-bridge/v4/work/claim.json"
+    },
+    {
+      "historical_id": "V2-15",
+      "current_id": "V4-14",
+      "path": "/discussion-bridge/v4/work/{work_id}.json"
+    },
+    {
+      "historical_id": "V2-16",
+      "current_id": "V4-15",
+      "path": "/discussion-bridge/v4/work/{work_id}/renew.json"
+    },
+    {
+      "historical_id": "V2-17",
+      "current_id": "V4-16",
+      "path": "/discussion-bridge/v4/work/{work_id}/acknowledge.json"
+    },
+    {
+      "historical_id": "V2-18",
+      "current_id": "V4-17",
+      "path": "/discussion-bridge/v4/work/{work_id}/fail.json"
+    },
+    {
+      "historical_id": "V2-19",
+      "current_id": "V4-18",
+      "path": "/discussion-bridge/v4/work/{work_id}/prepare.json"
+    },
+    {
+      "historical_id": "V2-20",
+      "current_id": "V4-19",
+      "path": "/discussion-bridge/v4/work/{work_id}/finalize.json"
+    },
+    {
+      "historical_id": "V2-21",
+      "current_id": "V4-20",
+      "path": "/discussion-bridge/v4/work/{work_id}/abort.json"
+    },
+    {
+      "historical_id": "V2-22",
+      "current_id": "V4-21",
+      "path": "/discussion-bridge/v4/mappings/{mapping_id}/url-moves.json"
+    },
+    {
+      "historical_id": "V2-23",
+      "current_id": "V4-22",
+      "path": "/discussion-bridge/v4/mappings/{mapping_id}/url-moves/{move_id}/finalize.json"
+    },
+    {
+      "historical_id": "V2-24",
+      "current_id": "V4-23",
+      "path": "/discussion-bridge/v4/mappings/{mapping_id}/url-moves/{move_id}/abort.json"
+    },
+    {
+      "historical_id": "V2-25",
+      "current_id": "V4-24",
+      "path": "/discussion-bridge/v4/catalog/uploads.json"
+    },
+    {
+      "historical_id": "V2-26",
+      "current_id": "V4-25",
+      "path": "/discussion-bridge/v4/catalog/uploads/{upload_id}/pages.json"
+    },
+    {
+      "historical_id": "V2-27",
+      "current_id": "V4-26",
+      "path": "/discussion-bridge/v4/catalog/uploads/{upload_id}/finalize.json"
+    },
+    {
+      "historical_id": "V2-28",
+      "current_id": "V4-27",
+      "path": "/discussion-bridge/v4/catalog.json"
+    },
+    {
+      "historical_id": "V2-29",
+      "current_id": "V4-28",
+      "path": "/discussion-bridge/v4/bridge-records/{resource_id}/source-url-moves.json"
+    },
+    {
+      "historical_id": "V2-30",
+      "current_id": "V4-29",
+      "path": "/discussion-bridge/v4/bridge-records/{resource_id}/source-url-moves/{move_id}/finalize.json"
+    },
+    {
+      "historical_id": "V2-31",
+      "current_id": "V4-30",
+      "path": "/discussion-bridge/v4/bridge-records/{resource_id}/source-url-moves/{move_id}/abort.json"
+    },
+    {
+      "historical_id": "V2-32",
+      "current_id": "V4-31",
+      "path": "/discussion-bridge/v4/bridge-records/{resource_id}/url-history.json"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "fixture_format": 1,
+  "authority": "Unchanged Alpha.23 CMS integer/numeric-enum semantics; author vectors, not a new wire type or specification",
+  "valid": [
+    { "id": "integer", "lexeme": "1", "value": 1 },
+    { "id": "decimal_equivalent", "lexeme": "1.0", "value": 1 },
+    { "id": "exponent_equivalent", "lexeme": "1e0", "value": 1 },
+    { "id": "exponent_leading_zeros", "lexeme": "1E+000", "value": 1 },
+    { "id": "exact_decimal_zero_tail", "lexeme": "1.00000000000000000", "value": 1 },
+    { "id": "fraction_scaled_to_integer", "lexeme": "1.2e1", "value": 12 },
+    { "id": "coefficient_scaled_to_integer", "lexeme": "100e-2", "value": 1 },
+    { "id": "positive_zero", "lexeme": "0", "value": 0 },
+    { "id": "positive_decimal_zero", "lexeme": "0.000e-999", "value": 0 },
+    { "id": "positive_zero_huge_exponent", "lexeme": "0e999999999999999999999999999999999999", "value": 0 },
+    { "id": "safe_max", "lexeme": "9007199254740991", "value": 9007199254740991 },
+    { "id": "safe_max_scientific", "lexeme": "9.007199254740991e15", "value": 9007199254740991 },
+    { "id": "safe_max_scaled_coefficient", "lexeme": "90071992547409910e-1", "value": 9007199254740991 }
+  ],
+  "invalid": [
+    { "id": "fraction_rounded_to_one", "lexeme": "1.00000000000000001", "js_number": 1 },
+    { "id": "fraction_rounded_up_to_one", "lexeme": "0.99999999999999999", "js_number": 1 },
+    { "id": "fraction_rounded_to_safe_max", "lexeme": "9007199254740991.4", "js_number": 9007199254740991 },
+    { "id": "fraction_rounded_to_near_safe_max", "lexeme": "9007199254740990.4", "js_number": 9007199254740990 },
+    { "id": "nonzero_underflow", "lexeme": "1e-999", "js_number": 0 },
+    { "id": "fraction_below_safe_min", "lexeme": "5e-324" },
+    { "id": "ordinary_fraction", "lexeme": "1.25" },
+    { "id": "safe_max_plus_one", "lexeme": "9007199254740992" },
+    { "id": "unsafe_decimal_integer", "lexeme": "9007199254740992.0" },
+    { "id": "unsafe_scientific_integer", "lexeme": "9007199254740993e0" },
+    { "id": "huge_nonzero_exponent", "lexeme": "1e999999999999999999999999999999999999" },
+    { "id": "huge_nonzero_negative_exponent", "lexeme": "1e-999999999999999999999999999999999999" },
+    { "id": "negative_zero", "lexeme": "-0" },
+    { "id": "negative_decimal_zero", "lexeme": "-0.0" },
+    { "id": "negative_zero_positive_exponent", "lexeme": "-0e999999999999999999999999999999999999" },
+    { "id": "negative_zero_negative_exponent", "lexeme": "-0.000e-999999999999999999999999999999999999" },
+    { "id": "negative_underflow", "lexeme": "-1e-999" },
+    { "id": "negative_integer", "lexeme": "-1" },
+    { "id": "negative_scientific_integer", "lexeme": "-1e0" },
+    { "id": "negative_decimal_integer", "lexeme": "-1.00" }
+  ],
+  "syntax_errors": [
+    { "id": "rounded_fraction_then_trailing_comma", "raw": "{\"offset\":1.00000000000000001,}" },
+    { "id": "underflow_then_missing_value", "raw": "{\"offset\":1e-999,\"other\":}" },
+    { "id": "negative_zero_then_trailing_json", "raw": "{\"offset\":-0}{\"other\":1}" },
+    { "id": "fraction_then_decoded_duplicate", "raw": "{\"offset\":1.00000000000000001,\"off\\u0073et\":1}" },
+    { "id": "out_of_range_then_unclosed_body", "raw": "{\"offset\":1e999999999999999999999999999999999999" }
+  ]
+}
