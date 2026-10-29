@@ -53,4 +53,5 @@ jobs:
         with:
           name: contract-node${{ matrix.node }}-php${{ matrix.php }}
           path: .artifacts/*.zip
+          include-hidden-files: true
           if-no-files-found: error
