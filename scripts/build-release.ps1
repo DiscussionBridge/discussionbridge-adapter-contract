@@ -19,7 +19,9 @@ $paths = @(
   'src/php/CmsCodec.php','src/php/README.md','src/php/conformance.php',
   'tests/cms-conformance.test.mjs','tests/v4-behavior.test.mjs','tests/php-generated.php',
   'tests/attention-recovery.test.mjs','tests/php-attention.php','tests/php-runtime.mjs',
+  'tests/php-url-parity.test.mjs','tests/php-urls.php',
   'fixtures/positive-examples.json','fixtures/rejection-cases.json','fixtures/numeric-lexemes.json',
+  'fixtures/url-numeric-hosts.json',
   'fixtures/attention-recovery-regressions.json'
 )
 $paths = @($paths | Sort-Object -CaseSensitive)

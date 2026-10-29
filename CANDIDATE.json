@@ -59,8 +59,8 @@
   },
   "php": {
     "path": "src/php/CmsCodec.php",
-    "bytes": 51502,
-    "sha256": "6eece074e1268d2d90890afd0215da80c06c23961b497a4df190f7876af0fc19",
+    "bytes": 52965,
+    "sha256": "9fa6d1207a6c512bc33189757a34743da3c92a54caba77e5ab0b523f4e3222c7",
     "namespace": "DiscussionBridge\\CmsV4"
   },
   "native_interfaces": [

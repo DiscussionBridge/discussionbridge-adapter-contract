@@ -136,10 +136,54 @@ final class Codec
         }
     }
 
+    /** WHATWG IPv4 number syntax, bounded before arithmetic can overflow. */
+    private function ipv4Number(string $value): ?int
+    {
+        if ($value === '') return null;
+        $radix = 10;
+        if (strlen($value) >= 2 && strtolower(substr($value, 0, 2)) === '0x') {
+            $value = substr($value, 2);
+            $radix = 16;
+        } elseif (strlen($value) >= 2 && $value[0] === '0') {
+            $value = substr($value, 1);
+            $radix = 8;
+        }
+        if ($value === '') return 0;
+        $pattern = match ($radix) { 16 => '~^[a-fA-F0-9]+$~D', 8 => '~^[0-7]+$~D', default => '~^[0-9]+$~D' };
+        if (preg_match($pattern, $value) !== 1) return null;
+        $number = 0;
+        foreach (str_split(strtolower($value)) as $digit) {
+            $ordinal = ord($digit);
+            $integer = $ordinal >= 97 ? $ordinal - 87 : $ordinal - 48;
+            // All accepted IPv4 numbers are <= 2^32 - 1. Preserve an overflow
+            // sentinel for rejection, never float/cast/wrap a caller's input.
+            if ($number > intdiv(4294967295 - $integer, $radix)) return 4294967296;
+            $number = $number * $radix + $integer;
+        }
+        return $number;
+    }
+
+    /** Validate numeric hosts without replacing the original URL/identity bytes. */
+    private function ipv4Host(string $host, string $path): void
+    {
+        // https://url.spec.whatwg.org/#ends-in-a-number and #concept-ipv4-parser
+        // Remove only one terminal empty part; multiple dots can be a DNS host.
+        $parts = explode('.', $host);
+        if (end($parts) === '') array_pop($parts);
+        $last = end($parts);
+        if ($last === false || (preg_match('~^[0-9]+$~D', $last) !== 1 && $this->ipv4Number($last) === null)) return;
+        if (count($parts) > 4) $this->fail($path);
+        foreach ($parts as $index => $part) {
+            $number = $this->ipv4Number($part);
+            $maximum = $index === count($parts) - 1 ? 256 ** (5 - count($parts)) - 1 : 255;
+            if ($number === null || $number > $maximum) $this->fail($path);
+        }
+    }
+
     /**
-     * Native PHP has no core WHATWG/IDNA URL parser. Ordinary ASCII DNS names,
-     * canonical IPv4 and bracketed IPv6 are checked without normalization.
-     * Other host processing is explicitly unsupported, never accepted loosely.
+     * Native PHP has no core WHATWG/IDNA URL parser. ASCII DNS names, WHATWG
+     * numeric IPv4 and bracketed IPv6 are checked without normalization.
+     * IDNA processing remains explicitly unsupported, never accepted loosely.
      */
     private function url(string $value, string $path): array
     {
@@ -153,7 +197,7 @@ final class Codec
         }
         $parsed = parse_url($value);
         if ($parsed === false || strtolower($parsed['scheme'] ?? '') !== 'https'
-            || empty($parsed['host']) || isset($parsed['user']) || isset($parsed['pass']) || isset($parsed['fragment'])) {
+            || !isset($parsed['host']) || $parsed['host'] === '' || isset($parsed['user']) || isset($parsed['pass']) || isset($parsed['fragment'])) {
             $this->fail($path);
         }
         foreach (explode('/', $parts[2]) as $part) {
@@ -177,18 +221,7 @@ final class Codec
                 || preg_match('~(?:^|\.)xn--~i', $host) === 1) {
                 throw new UnsupportedBehaviorException('CMS IDNA or non-ASCII host processing is unsupported');
             }
-            $numericHost = rtrim($host, '.');
-            if (preg_match('~(?:^|\.)(?:[0-9]+|0[xX][a-fA-F0-9]+)$~D', $numericHost) === 1) {
-                $octets = explode('.', $numericHost);
-                if (count($octets) !== 4) {
-                    throw new UnsupportedBehaviorException('CMS noncanonical IPv4 host processing is unsupported');
-                }
-                foreach ($octets as $octet) {
-                    if (preg_match('~^(?:0|[1-9][0-9]{0,2})$~D', $octet) !== 1 || (int) $octet > 255) {
-                        throw new UnsupportedBehaviorException('CMS noncanonical IPv4 host processing is unsupported');
-                    }
-                }
-            }
+            $this->ipv4Host($host, $path);
         }
         return $parsed;
     }

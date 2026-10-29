@@ -23,8 +23,8 @@
     },
     {
       "path": "implementation/CmsCodec.php.in",
-      "bytes": 51442,
-      "sha256": "b6917208269cc91dca494cefb771d175f8049cc5e3503ed7e4641f2d66eca124"
+      "bytes": 52905,
+      "sha256": "fea20b1bfbdc91d9c2d7d69f44edbc1925d322fe5366e831aa2eecf91ba2db70"
     }
   ],
   "members": [
@@ -40,8 +40,8 @@
     },
     {
       "path": "src/php/CmsCodec.php",
-      "bytes": 51502,
-      "sha256": "6eece074e1268d2d90890afd0215da80c06c23961b497a4df190f7876af0fc19"
+      "bytes": 52965,
+      "sha256": "9fa6d1207a6c512bc33189757a34743da3c92a54caba77e5ab0b523f4e3222c7"
     },
     {
       "path": "src/cms-contract.mjs",
@@ -51,7 +51,7 @@
     {
       "path": "CANDIDATE.json",
       "bytes": 8423,
-      "sha256": "60ee5c27c4cc358f79e8961e0e0f7408b0081cba041bd6258c33b414ce3d797b"
+      "sha256": "ebef490bb3521c0ece682c16a7fc17f35f7e54c9a8ced17025ed70464913e38d"
     },
     {
       "path": "ROUTES.md",

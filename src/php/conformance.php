@@ -305,9 +305,15 @@ $run('raw backslash URL processing is refused including hidden dot segments', fu
     ] as $url) $check($codec->validate('Url', $url) === $url, 'encoded URL bytes changed');
 });
 $run('unsupported URL processing is explicit', function () use ($codec, $unsupported): void {
-    foreach (['https://é.example/', 'https://xn--9ca.example/', 'https://127.1/', 'https://0x7f.0.0.1/', 'https://example.test\path'] as $url) {
+    foreach (['https://é.example/', 'https://xn--9ca.example/', 'https://example.test\path'] as $url) {
         $unsupported(fn() => $codec->validate('Url', $url));
     }
+});
+$run('numeric IPv4 hosts preserve identity and reject invalid or overflowing numbers', function () use ($codec, $read, $reject, $check): void {
+    $cases = $read('fixtures/url-numeric-hosts.json');
+    foreach ($cases->valid as $url) $check($codec->validate('Url', $url) === $url, 'URL identity rewritten');
+    foreach ($cases->invalid as $url) $reject(fn() => $codec->validate('Url', $url));
+    $reject(fn() => $codec->validate('Url', 'https://' . str_repeat('9', 1800) . '/'));
 });
 $run('query decoded key duplication and field/type bounds', function () use ($codec, $reject, $check): void {
     $check($codec->parseQuery('SourceFeedQuery', 'stream=initial')->stream === 'initial');

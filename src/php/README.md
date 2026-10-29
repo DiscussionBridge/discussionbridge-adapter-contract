@@ -35,8 +35,9 @@ is value-local, not a move/lease/proof/transaction execution grant.
 
 ValidationException has validationCode/path/httpStatus without untrusted values in
 message text. UnsupportedBehaviorException is a local implementation limitation,
-not a new wire error. Explicit unsupported processing: 32-bit PHP, IDNA/Unicode or
-ACE host conversion, noncanonical numeric/IPv4 URL normalization, backslash WHATWG
+not a new wire error. Numeric IPv4 hosts use WHATWG radix/part/range validation
+without rewriting the original URL. Explicit unsupported processing: 32-bit PHP,
+IDNA/Unicode or ACE host conversion, backslash WHATWG
 URL processing, JSON depth above 512, object keys beginning NUL, and generic
 Unicode-key canonicalization outside declared ASCII CMS field names. Unsupported
 cases are not silently accepted with weaker grammar. Native owners must expose

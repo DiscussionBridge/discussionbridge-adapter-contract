@@ -1,0 +1,40 @@
+{
+  "valid": [
+    "https://0/",
+    "https://00/",
+    "https://127.1/",
+    "https://0x7f000001/",
+    "https://0x7f.0.0.1/",
+    "https://0177.0.0.1/",
+    "https://4294967295/",
+    "https://0xffffffff/",
+    "https://037777777777/",
+    "https://1.16777215/",
+    "https://1.2.65535/path?q=unchanged",
+    "https://255.255.255.255/",
+    "https://0x/",
+    "https://0X0.00.0.0/",
+    "https://%30x7f.0.0.1/",
+    "https://1.2.3.04:443/a%2Fb?x=1&x=2",
+    "https://127.1./",
+    "https://127.1../",
+    "https://0xgg/",
+    "https://publisher.example/"
+  ],
+  "invalid": [
+    "https://4294967296/",
+    "https://0x100000000/",
+    "https://040000000000/",
+    "https://1.16777216/",
+    "https://1.2.65536/",
+    "https://1.2.3.256/",
+    "https://256.1/",
+    "https://0x100.0.0.1/",
+    "https://1.2.3.4.5/",
+    "https://1..2/",
+    "https://09/",
+    "https://1.2.3.08/",
+    "https://example.123/",
+    "https://example.0x/"
+  ]
+}
