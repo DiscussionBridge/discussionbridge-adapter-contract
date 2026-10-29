@@ -745,24 +745,19 @@ var DiscussionBridgeIdnaPrivate = (() => {
           }
         }
         if (checkJoiners) {
-          let last = 0;
+          let previousJoinerEnd = 0;
           for (const [i2, ch] of codePoints.entries()) {
-            if (ch === "\u200C" || ch === "\u200D") {
-              if (i2 > 0) {
-                if (regexes.combiningClassVirama.test(codePoints[i2 - 1])) {
-                  continue;
-                }
-                if (ch === "\u200C") {
-                  const next = codePoints.indexOf("\u200C", i2 + 1);
-                  const test = next < 0 ? codePoints.slice(last) : codePoints.slice(last, next);
-                  if (regexes.validZWNJ.test(test.join(""))) {
-                    last = i2 + 1;
-                    continue;
-                  }
-                }
-              }
-              return false;
+            if (ch !== "\u200C" && ch !== "\u200D") continue;
+            const searchFrom = previousJoinerEnd;
+            previousJoinerEnd = i2 + 1;
+            if (i2 > 0 && regexes.combiningClassVirama.test(codePoints[i2 - 1])) continue;
+            if (i2 > 0 && ch === "\u200C") {
+              const test = codePoints.slice(searchFrom).join("");
+              const currentOffset = codePoints.slice(searchFrom, i2).join("").length;
+              const match = regexes.validZWNJ.exec(test);
+              if (match && match.index + match[0].indexOf("\u200C") === currentOffset) continue;
             }
+            return false;
           }
         }
         if (checkBidi && isBidi) {

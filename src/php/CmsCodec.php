@@ -33,7 +33,7 @@ final class InvalidNumericValue {}
 final class Codec
 {
     public const SCHEMA_SHA256 = 'e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0';
-    public const IDNA_SHA256 = '7994b7b90276e52c2bf05fbbd7b6ae13564f796cf026df71a0ba953520944657';
+    public const IDNA_SHA256 = '5f9b6bf922e65ed4fee1c7ebad807d266140a2fc262fdd452da607f0cfd40e1e';
     public const IMPLEMENTATION_VERSION = '0.4.0-alpha.1';
     public const CANDIDATE_ID = 'discussionbridge-v4-core-20261029-r7';
     public const WIRE_VERSION = 'v4';
@@ -476,7 +476,7 @@ final class Codec
         }
         if ($name === 'Connection') {
             $url = $this->url($value->destination_origin, $path . '.destination_origin');
-            if (($url['path'] ?? '/') !== '/' || isset($url['query']) || strpbrk($value->destination_origin, '?#') !== false) {
+            if (!in_array($url['path'] ?? '', ['', '/'], true) || isset($url['query']) || strpbrk($value->destination_origin, '?#') !== false) {
                 $this->fail($path . '.destination_origin');
             }
         }

@@ -1,0 +1,23 @@
+    protected function isValidContextJ(string $label, array $codePoints): bool
+    {
+        $byteOffset = 0;
+        $previousJoinerEnd = 0;
+        foreach ($codePoints as $i => $codePoint) {
+            $currentOffset = $byteOffset;
+            $byteOffset += \strlen(CodePoint::encode($codePoint));
+            if ($codePoint !== 0x200C && $codePoint !== 0x200D) continue;
+            $searchFrom = $previousJoinerEnd;
+            // Advance even when the immediately preceding virama is sufficient.
+            $previousJoinerEnd = $byteOffset;
+            if ($i > 0 && isset(self::$virama[$codePoints[$i - 1]])) continue;
+            if ($i > 0 && $codePoint === 0x200C
+                && \preg_match(Regex::ZWNJ, $label, $matches, PREG_OFFSET_CAPTURE, $searchFrom) === 1) {
+                $matchJoiner = \strpos($matches[1][0], "\u{200C}");
+                // preg_match offsets and currentOffset are exact UTF8 bytes,
+                // not character counts or an incremented relative match size.
+                if ($matchJoiner !== false && $matches[1][1] + $matchJoiner === $currentOffset) continue;
+            }
+            return false;
+        }
+        return true;
+    }

@@ -476,7 +476,7 @@ final class Codec
         }
         if ($name === 'Connection') {
             $url = $this->url($value->destination_origin, $path . '.destination_origin');
-            if (($url['path'] ?? '/') !== '/' || isset($url['query']) || strpbrk($value->destination_origin, '?#') !== false) {
+            if (!in_array($url['path'] ?? '', ['', '/'], true) || isset($url['query']) || strpbrk($value->destination_origin, '?#') !== false) {
                 $this->fail($path . '.destination_origin');
             }
         }

@@ -67,6 +67,10 @@ const result = await esbuild.build({
         if (contents.split(original).length !== 2) throw new Error('Unexpected tr46 NFC binding count');
         contents = contents.replace(original, 'normalizeNfc(' + name + ')');
       }
+      const start = contents.indexOf('  if (checkJoiners) {');
+      const end = contents.indexOf('\n\n  // "9. If CheckBidi', start);
+      if (start < 0 || end <= start || contents.indexOf('  if (checkJoiners) {', start + 1) !== -1) throw new Error('Unexpected tr46 ContextJ boundary');
+      contents = contents.slice(0, start) + readFileSync(join(root, 'implementation/js-contextj.js.in'), 'utf8').trimEnd() + contents.slice(end);
       return { contents: 'const { normalizeNfc } = require("discussionbridge-private-nfc");\n' + contents, loader: 'js' };
     });
   } }],
@@ -85,11 +89,12 @@ const manifest = {
   unicode_version: '17.0.0', runtime_packages: packages,
   build_only_tool: { name: 'esbuild', version: esbuild.version, integrity: toolLock.packages['node_modules/esbuild'].integrity },
   inputs: ['js-dependencies/package.json', 'js-dependencies/package-lock.json', 'js-dependencies/entry.mjs', 'js-dependencies/nfc.mjs',
-    'tools/js-idna/package.json', 'tools/js-idna/package-lock.json', 'scripts/build-js-idna.mjs'].map(path => {
+    'tools/js-idna/package.json', 'tools/js-idna/package-lock.json', 'scripts/build-js-idna.mjs', 'implementation/js-contextj.js.in'].map(path => {
     const bytes = readFileSync(join(root, path)); return { path, bytes: bytes.length, sha256: hash(bytes) };
   }),
   transformations: ['private self-contained IIFE; ES2022 target; no external require/import/runtime dependency',
     'bind exactly two source-hashed tr46 NFC calls to published standalone Unicode17 nf.min.js; no ENS name policy or global prototype patch',
+    'replace exactly one source-hashed ContextJ block with occurrence-anchored validation; advance after every joiner, including virama success',
     'complete MIT notices embedded for unchanged portable-runtime byte copies; original upstream file hashes retained'],
   upstream_members: upstream,
   members: Object.entries(outputs).map(([path, bytes]) => ({ path, bytes: bytes.length, sha256: hash(bytes) })),

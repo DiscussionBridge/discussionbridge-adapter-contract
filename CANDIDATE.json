@@ -54,25 +54,25 @@
   },
   "javascript": {
     "path": "src/cms-runtime.mjs",
-    "bytes": 338586,
-    "sha256": "360d3ab75a23f14d947154f071b4997b68fb375ef2660a22b42097a96e0ec87b"
+    "bytes": 338600,
+    "sha256": "acdfddf574910fb7e6cf2e2fe6837b3d266e8d93f1d96cee5e7699122d779076"
   },
   "php": {
     "path": "src/php/CmsCodec.php",
-    "bytes": 56178,
-    "sha256": "af63a129a54fc50ff11fadd20d57a040187fd1f18ecafc2b217cc54e4eac2a7b",
+    "bytes": 56195,
+    "sha256": "9ff58c7e9547167bc8f546483c040daa0232cad171ddd48c15f8b9c821294ed7",
     "namespace": "DiscussionBridge\\CmsV4"
   },
   "php_dependencies": {
     "path": "src/php/idna/DEPENDENCIES.json",
-    "bytes": 57185,
-    "sha256": "7994b7b90276e52c2bf05fbbd7b6ae13564f796cf026df71a0ba953520944657",
+    "bytes": 57494,
+    "sha256": "5f9b6bf922e65ed4fee1c7ebad807d266140a2fc262fdd452da607f0cfd40e1e",
     "namespace": "DiscussionBridge\\CmsV4\\IdnaVendor"
   },
   "javascript_dependencies": {
     "path": "src/js-idna/DEPENDENCIES.json",
-    "bytes": 8125,
-    "sha256": "b4bc0cafcf235db6185f1f2006ea56a3337c7afa8c0e7514283a823b72338766",
+    "bytes": 8437,
+    "sha256": "2f2a7bce6697e9ed73d2dacd29e244467e3162066d012b7801939032d0847d1e",
     "namespace": "DiscussionBridgeIdnaPrivate",
     "unicode_version": "17.0.0",
     "embedded_in": "src/cms-runtime.mjs"

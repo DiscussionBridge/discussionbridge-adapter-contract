@@ -98,8 +98,8 @@
     },
     {
       "path": "tools/php-idna/scoper.inc.php",
-      "bytes": 2394,
-      "sha256": "c199b9536a3565c064a5f2acd7245babf448731994382a3cffa09b89f2a0d474"
+      "bytes": 3073,
+      "sha256": "321a471658db551a20fd542be284875eda209e736367f3741bb8a18c9ff2f2a4"
     },
     {
       "path": "implementation/php-idna-bridge.php.in",
@@ -108,8 +108,8 @@
     },
     {
       "path": "scripts/build-php-idna.mjs",
-      "bytes": 9897,
-      "sha256": "bebd4d6c084bd300c8737806a21de1632b2513e00239f2cb517caa71f12474d6"
+      "bytes": 10279,
+      "sha256": "82f01421e243dd0b7becca90e3b26a1bf2daff46e80055888dbda96ba91c08e6"
     },
     {
       "path": "tools/unicode17/INPUTS.json",
@@ -150,11 +150,17 @@
       "path": "fixtures/unicode17/LICENSE.txt",
       "bytes": 1995,
       "sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+    },
+    {
+      "path": "implementation/php-contextj.php.in",
+      "bytes": 1190,
+      "sha256": "1e84c8040161451fdb961b2c156cc3934e8ebd7066aadf2d4ddab5f8d8caad4d"
     }
   ],
   "transformations": [
     "fixed private namespace; PHP-8.1 parser/printer target",
     "bind Rowbot Normalizer and two UTF8 functions privately; suppress ambient Normalizer alias",
+    "replace exactly one source-hashed ContextJ method with current-occurrence UTF8 byte-offset validation, including virama advancement",
     "disable package-global polyfill bootstrap; add two explicit-UTF8 private bridges",
     "regenerate six private NFC/data maps with unchanged pinned Symfony compiler and official Unicode17 inputs; preserve both licenses",
     "regenerate ordinary authoritative Composer autoload from scoped package metadata"
@@ -1029,8 +1035,8 @@
     },
     {
       "path": "vendor/rowbot/idna/src/LabelValidator.php",
-      "bytes": 8748,
-      "sha256": "fb72d976214c41b3a62f44fee6211a300877e4c43014c40774acdaa0937e6722"
+      "bytes": 8843,
+      "sha256": "a902452adb3a7ae14156d31a7ef3899f33ec53186dad469c5b82fa2372065f6b"
     },
     {
       "path": "vendor/rowbot/idna/tests/IdnaV2Test.php",

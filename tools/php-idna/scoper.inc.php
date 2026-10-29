@@ -26,6 +26,13 @@ return [
                     if ($count !== 1) throw new RuntimeException('Unexpected IDNA UTF-8 binding');
                 }
             }
+            if (str_ends_with($filePath, '/rowbot/idna/src/LabelValidator.php')) {
+                $replacement = file_get_contents(__DIR__ . '/../../implementation/php-contextj.php.in');
+                if ($replacement === false) throw new RuntimeException('Missing private ContextJ source');
+                $contents = preg_replace_callback('~    protected function isValidContextJ\(string \$label, array \$codePoints\): bool\n    \{.*?\n    \}(?=\n    /\*\*)~s',
+                    static fn(): string => rtrim($replacement, "\r\n"), $contents, -1, $count);
+                if ($count !== 1) throw new RuntimeException('Unexpected ContextJ source boundary');
+            }
             if (str_ends_with($filePath, '/symfony/polyfill-intl-normalizer/Normalizer.php')) {
                 $contents = preg_replace_callback('~(?<![A-Za-z0-9_\\\\])\\\\Normalizer::~', static fn(): string => '\\' . $prefix . '\\Normalizer::', $contents, -1, $count);
                 if ($count !== 9) throw new RuntimeException('Unexpected normalization constant bindings');

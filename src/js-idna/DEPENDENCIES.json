@@ -64,13 +64,19 @@
     },
     {
       "path": "scripts/build-js-idna.mjs",
-      "bytes": 7768,
-      "sha256": "b4413fcc051cf4798764f3bf27a32978275ed48139b5b6dcceaaa4e538e10092"
+      "bytes": 8385,
+      "sha256": "fc8a928daa87b5038821c745368d01a36739560387ed0a604da5b65216fad34a"
+    },
+    {
+      "path": "implementation/js-contextj.js.in",
+      "bytes": 898,
+      "sha256": "70ddcf2b88ea6732e4326b5c7604173f69d667ebc49b98e86feadc3fe763ba2e"
     }
   ],
   "transformations": [
     "private self-contained IIFE; ES2022 target; no external require/import/runtime dependency",
     "bind exactly two source-hashed tr46 NFC calls to published standalone Unicode17 nf.min.js; no ENS name policy or global prototype patch",
+    "replace exactly one source-hashed ContextJ block with occurrence-anchored validation; advance after every joiner, including virama success",
     "complete MIT notices embedded for unchanged portable-runtime byte copies; original upstream file hashes retained"
   ],
   "upstream_members": [
@@ -218,8 +224,8 @@
   "members": [
     {
       "path": "runtime.js",
-      "bytes": 300246,
-      "sha256": "783a4c06df42335e84d489364f49b72e2ad8535840e389abcf2d396aa1787774"
+      "bytes": 300260,
+      "sha256": "5af6abaf5838a4e8ed7bc883e061560f5c11324f3a5f6f90fd488fbb06fb482b"
     },
     {
       "path": "LICENSES.txt",

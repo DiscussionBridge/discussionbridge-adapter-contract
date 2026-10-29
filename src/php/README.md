@@ -63,7 +63,11 @@ with plugins/scripts disabled. Set DISCUSSIONBRIDGE_PHP_BUILD_BINARY and
 DISCUSSIONBRIDGE_COMPOSER_PHAR explicitly, then run node scripts/build-php-idna.mjs.
 The separately locked PHP-Scoper needs development PHP>=8.2, not customer PHP.
 Its fixed private scope and narrow bootstrap bindings do not introduce a new IDNA
-algorithm. Before a deliberate dependency/data refresh, import hash-pinned
+policy. The declared source-hashed ContextJ method replacement in
+implementation/php-contextj.php.in corrects upstream occurrence-offset handling:
+every joiner is checked at its own UTF8 byte position, including virama paths.
+It is applied by the maintainer refresh and recorded in the dependency manifest,
+not hand-edited into generated vendor output. Before a deliberate dependency/data refresh, import hash-pinned
 normalization inputs with node scripts/import-normalization-inputs.mjs --download.
 The builder runs unchanged upstream Symfony Compiler::unicodeMaps in an isolated
 staging directory against Unicode17 inputs and replaces only six private data

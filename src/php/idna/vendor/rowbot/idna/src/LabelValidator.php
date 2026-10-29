@@ -36,29 +36,26 @@ class LabelValidator
      */
     protected function isValidContextJ(string $label, array $codePoints): bool
     {
-        $offset = 0;
+        $byteOffset = 0;
+        $previousJoinerEnd = 0;
         foreach ($codePoints as $i => $codePoint) {
-            if ($codePoint !== 0x200c && $codePoint !== 0x200d) {
-                continue;
+            $currentOffset = $byteOffset;
+            $byteOffset += \strlen(CodePoint::encode($codePoint));
+            if ($codePoint !== 0x200C && $codePoint !== 0x200D) continue;
+            $searchFrom = $previousJoinerEnd;
+            // Advance even when the immediately preceding virama is sufficient.
+            $previousJoinerEnd = $byteOffset;
+            if ($i > 0 && isset(self::$virama[$codePoints[$i - 1]])) continue;
+            if ($i > 0 && $codePoint === 0x200C
+                && \preg_match(Regex::ZWNJ, $label, $matches, PREG_OFFSET_CAPTURE, $searchFrom) === 1) {
+                $matchJoiner = \strpos($matches[1][0], "\u{200C}");
+                // preg_match offsets and currentOffset are exact UTF8 bytes,
+                // not character counts or an incremented relative match size.
+                if ($matchJoiner !== false && $matches[1][1] + $matchJoiner === $currentOffset) continue;
             }
-            $prev = $i - 1;
-            if (!isset($codePoints[$prev])) {
-                return \false;
-            }
-            // If Canonical_Combining_Class(Before(cp)) .eq. Virama Then True;
-            if (isset(self::$virama[$codePoints[$prev]])) {
-                continue;
-            }
-            // If RegExpMatch((Joining_Type:{L,D})(Joining_Type:T)*\u200C(Joining_Type:T)*(Joining_Type:{R,D})) Then
-            // True;
-            // Generated RegExp = ([Joining_Type:{L,D}][Joining_Type:T]*\u200C[Joining_Type:T]*)[Joining_Type:{R,D}]
-            if ($codePoint === 0x200c && preg_match(Regex::ZWNJ, $label, $matches, PREG_OFFSET_CAPTURE, $offset) === 1) {
-                $offset += strlen($matches[1][0]);
-                continue;
-            }
-            return \false;
+            return false;
         }
-        return \true;
+        return true;
     }
     /**
      * @see https://www.unicode.org/reports/tr46/#Validity_Criteria

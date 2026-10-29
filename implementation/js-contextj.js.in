@@ -1,0 +1,19 @@
+  if (checkJoiners) {
+    let previousJoinerEnd = 0;
+    for (const [i, ch] of codePoints.entries()) {
+      if (ch !== "\u200C" && ch !== "\u200D") continue;
+      const searchFrom = previousJoinerEnd;
+      // Advance for every occurrence, including the virama-success path.
+      previousJoinerEnd = i + 1;
+      if (i > 0 && regexes.combiningClassVirama.test(codePoints[i - 1])) continue;
+      if (i > 0 && ch === "\u200C") {
+        const test = codePoints.slice(searchFrom).join("");
+        const currentOffset = codePoints.slice(searchFrom, i).join("").length;
+        const match = regexes.validZWNJ.exec(test);
+        // A different valid occurrence may not excuse this joiner. Both
+        // offsets here are UTF16 positions in this exact same substring.
+        if (match && match.index + match[0].indexOf("\u200C") === currentOffset) continue;
+      }
+      return false;
+    }
+  }

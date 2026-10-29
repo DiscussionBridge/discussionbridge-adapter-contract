@@ -61,6 +61,21 @@ mandatory hosting extension, runtime Composer/npm or network lookup is required.
 See src/js-idna/DEPENDENCIES.json, src/php/idna/DEPENDENCIES.json and the PHP README.
 Normal builds verify committed bytes offline; dependency refresh is explicit.
 
+The private dependency integrations carry declared ContextJ corrections, not
+unchanged upstream validation code. Exactly one source-hashed block/method in
+each maintainer refresh is replaced from implementation/js-contextj.js.in and
+implementation/php-contextj.php.in. Each current joiner is bound to its own
+position, including the virama-success path; valid earlier/later matches cannot
+stand in for it. The fixed Unicode17 property data and policy stay unchanged.
+The committed source/provenance exposes these transformations so a normal
+refresh cannot silently discard them. Connection origins accept no path or
+only `/` without rewriting the input; actual paths/query/fragment stay invalid.
+tests/url-regressions.test.mjs includes 1,116 independent ContextJ label cases in
+both Unicode/ACE forms, typed URL and real V4-01 Connection/JSON validation, plus
+slashless/slash-only origin controls. Fixture derivation is an explicit maintainer
+action via scripts/derive-contextj-regressions.mjs with pinned Punycode used only
+for encoding, never as the admission oracle.
+
 tests/unicode-corpus.test.mjs exercises all 6,391 official17 ToASCII cases and all
 100,170 NFC column checks, including a JS realm where native normalize throws.
 PHP checks 6,389 IDNA scalar-string cases plus the two ill-formed-surrogate cases

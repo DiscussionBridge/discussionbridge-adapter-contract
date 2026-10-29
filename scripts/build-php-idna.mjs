@@ -61,6 +61,7 @@ mkdirSync(stagingBase, { recursive: true });
 if (lstatSync(stagingBase).isSymbolicLink()) throw new Error('Unexpected build boundary');
 const staging = mkdtempSync(join(stagingBase, 'compile-'));
 const scoped = join(staging, 'scoped');
+if (hash(readFileSync(join(input, 'vendor/rowbot/idna/src/LabelValidator.php'))) !== '7b34a298511b45a1217c272595abd349164fce77464973e5ea35725cdf2e6ee0') throw new Error('Unexpected upstream ContextJ source');
 run([join(tools, 'vendor/bin/php-scoper'), 'add-prefix', `--config=${join(tools, 'scoper.inc.php')}`, `--output-dir=${scoped}`, '--no-interaction'], input);
 
 // Regenerate only the private normalizer's data using the unchanged upstream
@@ -117,11 +118,11 @@ const provenance = {
   runtime_packages: lock.packages.map(({ name, version, source, license }) => ({ name, version, source, license })),
   build_only_tool: { name: scoper.name, version: scoper.version, source: scoper.source },
   inputs: ['php-dependencies/composer.json', 'php-dependencies/composer.lock', 'tools/php-idna/composer.json', 'tools/php-idna/composer.lock', 'tools/php-idna/scoper.inc.php', 'implementation/php-idna-bridge.php.in', 'scripts/build-php-idna.mjs',
-    'tools/unicode17/INPUTS.json', ...nfcInputs.members.map(item => item.path), 'fixtures/unicode17/LICENSE.txt'].map(path => {
+    'tools/unicode17/INPUTS.json', ...nfcInputs.members.map(item => item.path), 'fixtures/unicode17/LICENSE.txt', 'implementation/php-contextj.php.in'].map(path => {
     const bytes = readFileSync(join(root, path));
     return { path, bytes: bytes.length, sha256: hash(bytes) };
   }),
-  transformations: ['fixed private namespace; PHP-8.1 parser/printer target', 'bind Rowbot Normalizer and two UTF8 functions privately; suppress ambient Normalizer alias', 'disable package-global polyfill bootstrap; add two explicit-UTF8 private bridges', 'regenerate six private NFC/data maps with unchanged pinned Symfony compiler and official Unicode17 inputs; preserve both licenses', 'regenerate ordinary authoritative Composer autoload from scoped package metadata'],
+  transformations: ['fixed private namespace; PHP-8.1 parser/printer target', 'bind Rowbot Normalizer and two UTF8 functions privately; suppress ambient Normalizer alias', 'replace exactly one source-hashed ContextJ method with current-occurrence UTF8 byte-offset validation, including virama advancement', 'disable package-global polyfill bootstrap; add two explicit-UTF8 private bridges', 'regenerate six private NFC/data maps with unchanged pinned Symfony compiler and official Unicode17 inputs; preserve both licenses', 'regenerate ordinary authoritative Composer autoload from scoped package metadata'],
   upstream_members: upstream,
   members: runtimeMembers,
 };
