@@ -3,6 +3,9 @@
   "authority": "Unchanged Alpha.23 CMS integer/numeric-enum semantics; author vectors, not a new wire type or specification",
   "valid": [
     { "id": "integer", "lexeme": "1", "value": 1 },
+    { "id": "positive_without_exponent", "lexeme": "49152", "value": 49152 },
+    { "id": "trailing_zero_without_exponent", "lexeme": "100", "value": 100 },
+    { "id": "decimal_trailing_zero_without_exponent", "lexeme": "100.00", "value": 100 },
     { "id": "decimal_equivalent", "lexeme": "1.0", "value": 1 },
     { "id": "exponent_equivalent", "lexeme": "1e0", "value": 1 },
     { "id": "exponent_leading_zeros", "lexeme": "1E+000", "value": 1 },

@@ -1,0 +1,17 @@
+{
+  "name": "discussionbridge/cms-v4-idna-build-tools",
+  "description": "Development-only private dependency build tools; never shipped as customer runtime requirements.",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.2",
+    "humbug/php-scoper": "0.18.20"
+  },
+  "config": {
+    "allow-plugins": {},
+    "platform": {
+      "php": "8.3.12"
+    },
+    "sort-packages": true
+  }
+}

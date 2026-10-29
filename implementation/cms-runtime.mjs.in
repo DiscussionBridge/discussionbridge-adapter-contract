@@ -2,6 +2,8 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
+%JS_IDNA_BUNDLE%
+
 // Portable build-candidate runtime. Vendor this file and cms-schema.json
 // byte-exact together; no sibling checkout or full frozen packet is required.
 // Typed checks do not establish actual authority/native ownership/public proof.
@@ -55,19 +57,87 @@ const utf8Bytes = (value, path) => {
   if (bytes.toString('utf8') !== value) fail(path);
   return bytes;
 };
-const validUrl = (value, path) => {
+const ipv4Number = (value) => {
+  if (value === '') return null;
+  let radix = 10;
+  if (/^0x/i.test(value)) { value = value.slice(2); radix = 16; }
+  else if (value.length >= 2 && value[0] === '0') { value = value.slice(1); radix = 8; }
+  if (value === '') return 0;
+  if (!(radix === 16 ? /^[a-f0-9]+$/i : radix === 8 ? /^[0-7]+$/ : /^[0-9]+$/).test(value)) return null;
+  let number = 0;
+  for (const character of value.toLowerCase()) {
+    const ordinal = character.charCodeAt(0);
+    const digit = ordinal >= 97 ? ordinal - 87 : ordinal - 48;
+    if (number > Math.floor((4294967295 - digit) / radix)) return 4294967296;
+    number = number * radix + digit;
+  }
+  return number;
+};
+const validIpv4Host = (host, path) => {
+  const parts = host.split('.');
+  if (parts.at(-1) === '') parts.pop();
+  const last = parts.at(-1);
+  if (last === undefined || (!/^[0-9]+$/.test(last) && ipv4Number(last) === null)) return;
+  if (parts.length > 4) fail(path);
+  for (const [index, part] of parts.entries()) {
+    const number = ipv4Number(part);
+    const maximum = index === parts.length - 1 ? 256 ** (5 - parts.length) - 1 : 255;
+    if (number === null || number > maximum) fail(path);
+  }
+};
+const analyzeUrl = (value, path) => {
   const match = /^https:\/\/([^/?#]+)([^?#]*)(\?[^#]*)?$/i.exec(value);
   // WHATWG treats raw backslashes as separators, which can hide dot segments.
   // Encoded path bytes remain unchanged; PHP also refuses raw backslashes.
   if (!match || value.includes('\\') || /[\s\p{Cc}]/u.test(value) || match[1].includes('@') || /%(?![a-f\d]{2})/i.test(value)) fail(path);
-  let parsed;
-  try { parsed = new URL(value); } catch { fail(path); }
-  if (parsed.protocol !== 'https:' || !parsed.hostname || parsed.username || parsed.password || parsed.hash) fail(path);
+  // Native URL host parsing depends on its bundled Unicode version. Split the
+  // bounded authority ourselves; only the stable IPv6 literal parser below is
+  // delegated to URL. Domain admission uses the fixed bundled UTS46 data.
+  const authority = /^(\[[^\]]+\]|[^:]+)(?::([0-9]*))?$/.exec(match[1]);
+  if (!authority) fail(path);
+  const rawHost = authority[1];
+  let effectivePort = 443;
+  if (authority[2]) {
+    effectivePort = 0;
+    for (const digit of authority[2]) {
+      effectivePort = effectivePort * 10 + digit.charCodeAt(0) - 48;
+      if (effectivePort > 65535) fail(path);
+    }
+  }
+  let host;
+  try { host = decodeURIComponent(rawHost); } catch { fail(path); }
+  let asciiHost;
+  if (rawHost.startsWith('[')) {
+    if (!rawHost.endsWith(']') || rawHost.includes('%')) fail(path);
+    try { new URL(`https://${rawHost}/`); } catch { fail(path); }
+    asciiHost = rawHost.toLowerCase();
+  } else {
+    if (/[\x00-\x20\x7f%#/:<>?@\[\]\\^|]/.test(host)) fail(path);
+    const policy = cmsSchema.types.Url.domain_policy;
+    if (DiscussionBridgeIdnaPrivate.unicodeVersion !== policy.unicode_version) throw new Error('CMS IDNA policy identity mismatch');
+    asciiHost = DiscussionBridgeIdnaPrivate.toAscii(host, {
+      checkHyphens: policy.check_hyphens, checkBidi: policy.check_bidi,
+      checkJoiners: policy.check_joiners, useSTD3ASCIIRules: policy.use_std3_ascii_rules,
+      transitionalProcessing: policy.transitional_processing, verifyDNSLength: policy.verify_dns_length,
+      ignoreInvalidPunycode: policy.ignore_invalid_punycode,
+    });
+    if (!asciiHost || /[^\x21-\x7e]|[%#/:<>?@\[\]\\^|]/.test(asciiHost)) fail(path);
+    validIpv4Host(asciiHost, path);
+  }
   for (const part of match[2].split('/')) {
     const dots = part.replace(/%2e/gi, '.');
     if (dots === '.' || dots === '..') fail(path);
   }
+  return { rawHost, asciiHost, effectivePort };
 };
+const validUrl = (value, path) => { analyzeUrl(value, path); };
+
+// Local comparison facts only. Never substitute these for the original URL,
+// stored URL-lock key, receipt/hash input, native authority or ownership proof.
+export function cmsUrlAuthority(value) {
+  validateCms('Url', value);
+  return Object.freeze(analyzeUrl(value, '$'));
+}
 const validInstant = (value, path) => {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) fail(path);
   const time = Date.parse(value);
@@ -211,8 +281,8 @@ const checkSemantics = (name, value, path) => {
     if (value.include_topic_ids.some((id) => value.exclude_topic_ids.includes(id))) fail(`${path}.exclude_topic_ids`);
   }
   if (name === 'Connection') {
-    const url = new URL(value.destination_origin);
-    if (url.pathname !== '/' || url.search || /[?#]/.test(value.destination_origin)) fail(`${path}.destination_origin`);
+    const url = /^https:\/\/[^/?#]+([^?#]*)$/i.exec(value.destination_origin);
+    if (!url || (url[1] !== '' && url[1] !== '/')) fail(`${path}.destination_origin`);
   }
   if (name === 'Work' && ((value.action === 'withdraw') !== (value.source_revision === null) || value.attempt > 3)) fail(path);
   if (name === 'Work' && value.last_failure_code === 'content_preservation_unavailable') fail(`${path}.last_failure_code`);

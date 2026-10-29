@@ -1,1 +1,6 @@
 /.artifacts/
+/php-dependencies/vendor/
+/tools/php-idna/vendor/
+/.php-idna-build/
+/js-dependencies/node_modules/
+/tools/js-idna/node_modules/

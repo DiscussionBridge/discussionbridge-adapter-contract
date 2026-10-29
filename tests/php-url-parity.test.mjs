@@ -1,8 +1,65 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { validateCms } from '../src/cms-runtime.mjs';
+import { cmsSchema, cmsUrlAuthority, semanticIdentity, validateCms } from '../src/cms-runtime.mjs';
 import { runPhpFixture } from './php-runtime.mjs';
+
+test('private IDNA validates Unicode and ACE hosts without rewriting original URL bytes', () => {
+  const cases = JSON.parse(readFileSync(new URL('../fixtures/url-idna-hosts.json', import.meta.url), 'utf8'));
+  const urls = [...cases.valid, ...cases.invalid];
+  const results = runPhpFixture('php-urls.php', urls);
+  for (const [index, url] of urls.entries()) {
+    const valid = index < cases.valid.length;
+    // Phil approved the fixed UTS46 policy. Native host parsers may accept
+    // malformed ACE/Bidi inputs and are no longer the IDNA acceptance oracle.
+    if (valid) {
+      assert.equal(validateCms('Url', url), url);
+      assert.deepEqual(results[index], { accepted: true, value: url }, url);
+    } else {
+      assert.throws(() => validateCms('Url', url), error => error.code === 'invalid_field');
+      assert.deepEqual(results[index], { accepted: false, code: 'invalid_field' }, url);
+    }
+  }
+});
+
+test('one fixed domain policy and authority facts agree across JavaScript and PHP', () => {
+  const fixture = JSON.parse(readFileSync(new URL('../fixtures/url-domain-policy.json', import.meta.url), 'utf8'));
+  assert.equal(fixture.policy_id, cmsSchema.types.Url.domain_policy.id);
+  assert.equal(fixture.unicode_version, cmsSchema.types.Url.domain_policy.unicode_version);
+  assert.equal(new Set(fixture.cases.map(item => item.id)).size, fixture.cases.length);
+  const results = runPhpFixture('php-url-authority.php', fixture.cases);
+  const admitted = new Map();
+  for (const [index, item] of fixture.cases.entries()) {
+    if (item.accepted) {
+      assert.equal(validateCms('Url', item.url), item.url, item.id);
+      const facts = cmsUrlAuthority(item.url);
+      assert.deepEqual(facts, item.facts, item.id);
+      assert.ok(Object.isFrozen(facts));
+      assert.deepEqual(results[index], { id: item.id, accepted: true, value: item.url, facts: item.facts }, item.id);
+      admitted.set(item.id, item);
+    } else {
+      assert.throws(() => cmsUrlAuthority(item.url), error => error.code === 'invalid_field', item.id);
+      assert.deepEqual(results[index], { id: item.id, accepted: false, code: 'invalid_field' }, item.id);
+    }
+  }
+  for (const pair of fixture.comparisonPairs) {
+    const left = admitted.get(pair.left), right = admitted.get(pair.right);
+    assert.ok(left && right, pair.id);
+    assert.equal(left.facts.asciiHost === right.facts.asciiHost, pair.asciiHostEqual, pair.id);
+    assert.equal(left.facts.effectivePort === right.facts.effectivePort, pair.effectivePortEqual, pair.id);
+    assert.equal(left.url === right.url, pair.originalBytesEqual, pair.id);
+    assert.equal(semanticIdentity({ canonical_url: left.url }) === semanticIdentity({ canonical_url: right.url }), pair.originalBytesEqual, pair.id);
+  }
+});
+
+test('forbidden raw backslashes have the same typed refusal in JavaScript and PHP', () => {
+  const urls = ['https://example.test\\path', 'https://example.test/a\\..\\b', 'https://example.test/?q=\\value'];
+  const results = runPhpFixture('php-urls.php', urls);
+  for (const [index, url] of urls.entries()) {
+    assert.throws(() => validateCms('Url', url), error => error.code === 'invalid_field');
+    assert.deepEqual(results[index], { accepted: false, code: 'invalid_field' });
+  }
+});
 
 test('numeric URL hosts match JavaScript acceptance without changing input bytes', () => {
   const cases = JSON.parse(readFileSync(new URL('../fixtures/url-numeric-hosts.json', import.meta.url), 'utf8'));

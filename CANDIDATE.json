@@ -1,13 +1,13 @@
 {
-  "candidate_id": "discussionbridge-v4-core-20261025-r6",
+  "candidate_id": "discussionbridge-v4-core-20261029-r7",
   "implementation_version": "0.4.0-alpha.1",
   "wire_version": "v4",
   "status": "implementation_candidate_not_exact_approved_not_frozen",
   "release_version": null,
   "normative": {
     "path": "normative/CONTRACT.json",
-    "bytes": 187682,
-    "sha256": "df31c5d2fc387a8b12b388438450eccd97966de34c82b1bf417634b21a36b495"
+    "bytes": 190024,
+    "sha256": "808042688cbde88fac0acdf1187e4cb8c251e13025bfcf09cf3a3c361ca02003"
   },
   "routes": [
     "V4-01",
@@ -49,19 +49,33 @@
   ],
   "schema": {
     "path": "src/cms-schema.json",
-    "bytes": 115670,
-    "sha256": "8563a9b1346e3bf82635bd65a46bb1e25415a1003d7432f8fcb8c1c6e4f03c14"
+    "bytes": 117047,
+    "sha256": "e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0"
   },
   "javascript": {
     "path": "src/cms-runtime.mjs",
-    "bytes": 35258,
-    "sha256": "7406b94db386797255955bf39945412ceeaa4b04b209932169721f7274b0d333"
+    "bytes": 338586,
+    "sha256": "360d3ab75a23f14d947154f071b4997b68fb375ef2660a22b42097a96e0ec87b"
   },
   "php": {
     "path": "src/php/CmsCodec.php",
-    "bytes": 52965,
-    "sha256": "9fa6d1207a6c512bc33189757a34743da3c92a54caba77e5ab0b523f4e3222c7",
+    "bytes": 56178,
+    "sha256": "af63a129a54fc50ff11fadd20d57a040187fd1f18ecafc2b217cc54e4eac2a7b",
     "namespace": "DiscussionBridge\\CmsV4"
+  },
+  "php_dependencies": {
+    "path": "src/php/idna/DEPENDENCIES.json",
+    "bytes": 57185,
+    "sha256": "7994b7b90276e52c2bf05fbbd7b6ae13564f796cf026df71a0ba953520944657",
+    "namespace": "DiscussionBridge\\CmsV4\\IdnaVendor"
+  },
+  "javascript_dependencies": {
+    "path": "src/js-idna/DEPENDENCIES.json",
+    "bytes": 8125,
+    "sha256": "b4bc0cafcf235db6185f1f2006ea56a3337c7afa8c0e7514283a823b72338766",
+    "namespace": "DiscussionBridgeIdnaPrivate",
+    "unicode_version": "17.0.0",
+    "embedded_in": "src/cms-runtime.mjs"
   },
   "native_interfaces": [
     {

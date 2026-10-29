@@ -1,47 +1,66 @@
 {
   "format": 1,
-  "candidate_id": "discussionbridge-v4-core-20261025-r6",
+  "candidate_id": "discussionbridge-v4-core-20261029-r7",
   "implementation_version": "0.4.0-alpha.1",
   "wire_version": "v4",
   "status": "implementation_candidate_not_exact_approved_not_frozen",
   "release_version": null,
   "normative": {
     "path": "normative/CONTRACT.json",
-    "bytes": 187682,
-    "sha256": "df31c5d2fc387a8b12b388438450eccd97966de34c82b1bf417634b21a36b495"
+    "bytes": 190024,
+    "sha256": "808042688cbde88fac0acdf1187e4cb8c251e13025bfcf09cf3a3c361ca02003"
+  },
+  "php_dependencies": {
+    "path": "src/php/idna/DEPENDENCIES.json",
+    "bytes": 57185,
+    "sha256": "7994b7b90276e52c2bf05fbbd7b6ae13564f796cf026df71a0ba953520944657",
+    "namespace": "DiscussionBridge\\CmsV4\\IdnaVendor"
+  },
+  "javascript_dependencies": {
+    "path": "src/js-idna/DEPENDENCIES.json",
+    "bytes": 8125,
+    "sha256": "b4bc0cafcf235db6185f1f2006ea56a3337c7afa8c0e7514283a823b72338766",
+    "namespace": "DiscussionBridgeIdnaPrivate",
+    "unicode_version": "17.0.0",
+    "embedded_in": "src/cms-runtime.mjs"
   },
   "derivation_sources": [
     {
       "path": "scripts/generate.mjs",
-      "bytes": 6032,
-      "sha256": "0d5d9652dc73a48904d2b647536222373bb4f814847a60dbbffa51554f6494c8"
+      "bytes": 7049,
+      "sha256": "8de9960255d2ecf54256b3b521116c4e1a0ca02735e2fee0a4531b4c1f54af9d"
+    },
+    {
+      "path": "scripts/php-idna-bundle.mjs",
+      "bytes": 3988,
+      "sha256": "7a28efbfe1a19558583a6c6242627aec50a8cb0a675bf043ee191b7a13616706"
     },
     {
       "path": "implementation/cms-runtime.mjs.in",
-      "bytes": 35093,
-      "sha256": "fc8ad14309169f34932156c7b567a5354c08503e26fdb441a3cfc53e27427252"
+      "bytes": 38191,
+      "sha256": "e0aad1ff5dbc458d9e75f692cc41d9876c427bb737ccb6755d8a26bcfe9924fe"
     },
     {
       "path": "implementation/CmsCodec.php.in",
-      "bytes": 52905,
-      "sha256": "fea20b1bfbdc91d9c2d7d69f44edbc1925d322fe5366e831aa2eecf91ba2db70"
+      "bytes": 56067,
+      "sha256": "2590150e1a093db6103f30df13b4e332e07490e1397a5cc05a603c5a6e72c9c8"
     }
   ],
   "members": [
     {
       "path": "src/cms-schema.json",
-      "bytes": 115670,
-      "sha256": "8563a9b1346e3bf82635bd65a46bb1e25415a1003d7432f8fcb8c1c6e4f03c14"
+      "bytes": 117047,
+      "sha256": "e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0"
     },
     {
       "path": "src/cms-runtime.mjs",
-      "bytes": 35258,
-      "sha256": "7406b94db386797255955bf39945412ceeaa4b04b209932169721f7274b0d333"
+      "bytes": 338586,
+      "sha256": "360d3ab75a23f14d947154f071b4997b68fb375ef2660a22b42097a96e0ec87b"
     },
     {
       "path": "src/php/CmsCodec.php",
-      "bytes": 52965,
-      "sha256": "9fa6d1207a6c512bc33189757a34743da3c92a54caba77e5ab0b523f4e3222c7"
+      "bytes": 56178,
+      "sha256": "af63a129a54fc50ff11fadd20d57a040187fd1f18ecafc2b217cc54e4eac2a7b"
     },
     {
       "path": "src/cms-contract.mjs",
@@ -50,8 +69,8 @@
     },
     {
       "path": "CANDIDATE.json",
-      "bytes": 8423,
-      "sha256": "ebef490bb3521c0ece682c16a7fc17f35f7e54c9a8ced17025ed70464913e38d"
+      "bytes": 8960,
+      "sha256": "87e3127aafc9613e929b277bf103e01d0ffd1e9735a9448a3137f6cebc327e11"
     },
     {
       "path": "ROUTES.md",

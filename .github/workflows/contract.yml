@@ -22,7 +22,7 @@ jobs:
       max-parallel: 2
       matrix:
         node: ['22', '24']
-        php: ['8.3', '8.5']
+        php: ['8.1', '8.3', '8.5']
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -44,6 +44,8 @@ jobs:
         run: node --test --test-concurrency=1 tests/*.test.mjs
       - name: Run native PHP conformance
         run: php -n src/php/conformance.php
+      - name: Prove URL validation without optional PHP extensions
+        run: php -n -d disable_functions=iconv,iconv_strlen,iconv_strpos,iconv_strrpos,iconv_substr,iconv_mime_encode,iconv_mime_decode,iconv_mime_decode_headers,mb_ord,mb_str_split,mb_internal_encoding,idn_to_ascii,idn_to_utf8 tests/php-idna-isolation.php
       - name: Build and verify ordinary candidate package
         shell: pwsh
         run: ./scripts/build-release.ps1 -OutputName 'discussionbridge-contract-v4-${{ github.sha }}-node${{ matrix.node }}-php${{ matrix.php }}.zip'

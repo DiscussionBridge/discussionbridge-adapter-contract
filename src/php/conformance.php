@@ -283,7 +283,7 @@ $run('ordinary HTTPS URL checks without normalization', function () use ($codec,
         $reject(fn() => $codec->validate('Url', $url));
     }
 });
-$run('raw backslash URL processing is refused including hidden dot segments', function () use ($codec, $unsupported, $check): void {
+$run('raw backslash URL processing is refused including hidden dot segments', function () use ($codec, $reject, $check): void {
     foreach ([
         'https://example.test/a\\..\\b',
         'https://example.test/a\\../b',
@@ -294,8 +294,8 @@ $run('raw backslash URL processing is refused including hidden dot segments', fu
         'https://example.test\\path',
         'https://example.test/path?query=\\value',
     ] as $url) {
-        $unsupported(fn() => $codec->validate('Url', $url));
-        $unsupported(fn() => $codec->generatedReadMore($url));
+        $reject(fn() => $codec->validate('Url', $url));
+        $reject(fn() => $codec->generatedReadMore($url));
     }
     foreach ([
         'https://EXAMPLE.test:443/Content%2FOne/?x=1&x=2',
@@ -304,10 +304,10 @@ $run('raw backslash URL processing is refused including hidden dot segments', fu
         'https://example.test/%255Cpath/',
     ] as $url) $check($codec->validate('Url', $url) === $url, 'encoded URL bytes changed');
 });
-$run('unsupported URL processing is explicit', function () use ($codec, $unsupported): void {
-    foreach (['https://é.example/', 'https://xn--9ca.example/', 'https://example.test\path'] as $url) {
-        $unsupported(fn() => $codec->validate('Url', $url));
-    }
+$run('private IDNA host processing preserves exact caller identities', function () use ($codec, $read, $reject, $check): void {
+    $cases = $read('fixtures/url-idna-hosts.json');
+    foreach ($cases->valid as $url) $check($codec->validate('Url', $url) === $url, 'URL identity rewritten');
+    foreach ($cases->invalid as $url) $reject(fn() => $codec->validate('Url', $url));
 });
 $run('numeric IPv4 hosts preserve identity and reject invalid or overflowing numbers', function () use ($codec, $read, $reject, $check): void {
     $cases = $read('fixtures/url-numeric-hosts.json');

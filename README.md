@@ -1,7 +1,7 @@
 # DiscussionBridge V4 core candidate
 
 This clean candidate is one protocol: V4. Its unpublished development package
-version is 0.4.0-alpha.1, candidate discussionbridge-v4-core-20261025-r6, and
+version is 0.4.0-alpha.1, candidate discussionbridge-v4-core-20261029-r7, and
 release_version is null. Phil selected V4 and removed earlier development and
 deployment compatibility; exact candidate approval, freeze and release are separate.
 
@@ -17,8 +17,11 @@ record initialization/conversion, unmarked To excerpts or dual profile codecs ex
 Run node scripts/generate.mjs to derive one src/cms-schema.json/JS/PHP set from the
 normative source and implementation templates. Run node scripts/generate.mjs --check
 for exact derivation. src/cms-contract.mjs also binds the normative source;
-downstream native packages copy only the exact portable runtime/schema or PHP/schema
-pair and record its identity. ROUTES.md is generated from the same source.
+downstream native packages copy the exact portable runtime/schema or the PHP codec,
+schema AND complete adjacent private idna/ dependency bundle and record all identities.
+The PHP bundle is checked offline during generation and member-by-member before
+runtime loading; copying only the former PHP/schema pair fails closed.
+ROUTES.md is generated from the same source.
 Historical extraction/check-vector scripts are derivation records, not normal
 runtime/build dependencies or a route compatibility layer.
 
@@ -31,10 +34,42 @@ public content, crash recovery, qualification or code review.
 
 PHP must be on PATH, or set DISCUSSIONBRIDGE_PHP_BINARY to the installed PHP
 executable. Tests do not depend on another checkout or a private Windows tools
-directory. CI runs the complete suite with Node 22/24 and PHP 8.3/8.5, checking
+directory. CI runs the complete suite with Node 22/24 and PHP 8.1/8.3/8.5, checking
 generation and ordinary candidate packaging as well. A missing runtime fails
 qualification; it is not silently skipped. These jobs are candidate checks, not
 a release or native-adapter acceptance claim.
+
+Phil approved one fixed domain-validation policy across JavaScript, PHP and the
+receiver: db-url-uts46-17-1, Unicode 17.0.0, nontransitional UTS46, Bidi/Joiner
+checks and invalid-ACE rejection, with the declared non-strict hyphen/STD3/DNS-length
+options. Existing bounded numeric IPv4 and bracketed IPv6 rules remain. URL Unicode
+conversion is validation-local, never an identity rewrite. JS cmsUrlAuthority and
+PHP Codec::urlAuthority return only rawHost/asciiHost/effectivePort comparison
+facts; they do not serialize a replacement URL, collapse IP spellings, prove native
+ownership, or authorize rewriting stored keys/history. Url validation returns the
+unchanged original string, including case, escapes, path and query bytes.
+
+Both runtimes privately bundle pinned IDNA and Unicode17 NFC engines/data with
+complete MIT/Unicode notices and member/input provenance. JavaScript tr46's two
+NFC calls bind to the published pure standalone nf.min.js from
+@adraffy/ens-normalize, not its native-ICU xnf variant or ENS naming policy.
+The self-contained generated JS runtime/schema still need no external module.
+PHP retains a complete adjacent private idna/ directory. Its Symfony normalization
+data is regenerated with the unchanged upstream compiler against exact official17
+inputs, not the host intl extension. No prototype/global-polyfill patch, new
+mandatory hosting extension, runtime Composer/npm or network lookup is required.
+See src/js-idna/DEPENDENCIES.json, src/php/idna/DEPENDENCIES.json and the PHP README.
+Normal builds verify committed bytes offline; dependency refresh is explicit.
+
+tests/unicode-corpus.test.mjs exercises all 6,391 official17 ToASCII cases and all
+100,170 NFC column checks, including a JS realm where native normalize throws.
+PHP checks 6,389 IDNA scalar-string cases plus the two ill-formed-surrogate cases
+at its strict UTF8 URL boundary (explicitly reported, not silently skipped), and
+100,170 NFC plus 100,170 normalized-status assertions without intl/mbstring/iconv.
+The expected corpus/data and Unicode-3.0 license are committed under
+fixtures/unicode17. These are codec checks, not receiver/origin/lock or native
+installation acceptance. Consumer integration requires the same exact candidate
+and its own tests/review; older consumer copies are not silently rebound.
 
 To full content matches the complete prepared native source byte count/SHA.
 generated_excerpt is the only excerpt form: complete-source evidence stays

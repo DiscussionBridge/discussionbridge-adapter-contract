@@ -14,17 +14,35 @@ if (Test-Path -LiteralPath $output) { throw 'Preserve existing artifact: select 
 $paths = @(
   'normative/CONTRACT.json','CANDIDATE.json','ARTIFACTS.json','README.md','ROUTES.md',
   'implementation/cms-runtime.mjs.in','implementation/CmsCodec.php.in',
-  'scripts/generate.mjs','scripts/build-release.ps1',
+  'scripts/generate.mjs','scripts/build-release.ps1','scripts/php-idna-bundle.mjs','scripts/build-php-idna.mjs',
+  'php-dependencies/composer.json','php-dependencies/composer.lock',
+  'tools/php-idna/composer.json','tools/php-idna/composer.lock','tools/php-idna/scoper.inc.php',
+  'implementation/php-idna-bridge.php.in',
+  'scripts/build-js-idna.mjs','scripts/import-unicode-fixtures.mjs','scripts/import-normalization-inputs.mjs',
+  'js-dependencies/package.json','js-dependencies/package-lock.json','js-dependencies/entry.mjs','js-dependencies/nfc.mjs',
+  'tools/js-idna/package.json','tools/js-idna/package-lock.json',
+  'tools/unicode17/Compiler.php','tools/unicode17/INPUTS.json','tools/unicode17/LICENSE',
+  'src/js-idna/DEPENDENCIES.json','src/js-idna/runtime.js','src/js-idna/LICENSES.txt',
   'src/cms-contract.mjs','src/cms-runtime.mjs','src/cms-schema.json',
   'src/php/CmsCodec.php','src/php/README.md','src/php/conformance.php',
   'tests/cms-conformance.test.mjs','tests/v4-behavior.test.mjs','tests/php-generated.php',
   'tests/attention-recovery.test.mjs','tests/php-attention.php','tests/php-runtime.mjs',
   'tests/php-url-parity.test.mjs','tests/php-urls.php',
+  'tests/php-dependencies.test.mjs','tests/php-idna-isolation.php','tests/php-idna-portable.php',
+  'tests/php-url-authority.php','tests/php-unicode-corpus.php','tests/unicode-corpus.test.mjs','tests/unicode-fixtures.mjs',
   'fixtures/positive-examples.json','fixtures/rejection-cases.json','fixtures/numeric-lexemes.json',
   'fixtures/url-numeric-hosts.json',
+  'fixtures/url-idna-hosts.json',
+  'fixtures/url-domain-policy.json',
+  'fixtures/unicode17/IdnaTestV2.txt','fixtures/unicode17/NormalizationTest.txt','fixtures/unicode17/LICENSE.txt','fixtures/unicode17/PROVENANCE.json',
+  'fixtures/unicode17/UnicodeData.txt','fixtures/unicode17/CompositionExclusions.txt','fixtures/unicode17/CaseFolding.txt','fixtures/unicode17/SpecialCasing.txt',
   'fixtures/attention-recovery-regressions.json'
 )
+$idna = Get-Content -LiteralPath (Join-Path $contractRoot 'src/php/idna/DEPENDENCIES.json') -Raw | ConvertFrom-Json -Depth 100
+$paths += @('src/php/idna/DEPENDENCIES.json')
+$paths += @($idna.members | ForEach-Object { 'src/php/idna/' + $_.path })
 $paths = @($paths | Sort-Object -CaseSensitive)
+if (@($paths | Select-Object -Unique).Count -ne $paths.Count) { throw 'Duplicate candidate source member' }
 $members = foreach ($memberPath in $paths) {
   $absolute = Join-Path $contractRoot $memberPath
   $bytes = [System.IO.File]::ReadAllBytes($absolute)

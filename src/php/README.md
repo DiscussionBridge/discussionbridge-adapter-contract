@@ -1,15 +1,22 @@
 # Native PHP V4 codec
 
 DiscussionBridge\CmsV4\Codec takes one explicit exact schema path and verifies
-SCHEMA_SHA256 before use. Byte-copy CmsCodec.php and the matching cms-schema.json
-unchanged into a private native package and record CANDIDATE/ARTIFACTS descriptors.
-Only this V4 namespace/pair is active; no older namespace or profile switch.
-PHP >=8.1 syntax, 64-bit PHP required, no Node/mbstring/intl runtime dependency.
-PHP 8.3/8.5 are the prepared offline test runtimes.
+SCHEMA_SHA256 before use. Byte-copy CmsCodec.php, the matching cms-schema.json,
+and the COMPLETE adjacent idna/ directory unchanged into a private native package;
+record CANDIDATE/ARTIFACTS descriptors. The codec checks the pinned dependency
+manifest and every runtime member before loading. A missing, changed or mismatched
+bundle fails closed; no ambient library or network fallback exists.
+Only this V4 namespace/artifact set is active; no older namespace or profile switch.
+PHP >=8.1, 64-bit PHP required; no Node, runtime Composer or mandatory mbstring,
+intl or iconv extension. CI exercises PHP8.1/8.3/8.5. The IDNA runtime has private
+Rowbot IDNA/Punycode and Symfony pure-PHP normalization/UTF8 dependencies, with all
+upstream MIT licenses retained. It does not install public polyfill functions or
+an ambient Normalizer alias. See idna/DEPENDENCIES.json for exact pins, original
+source hashes, build inputs, transformations and shipped member hashes.
 
 Public API: route, hasType, validate, defaults, parseJson, parseQuery, parseRequest,
 validateRoute, validateResponse, decodeResponse, encodeJson, semanticIdentity,
-nativeOwnershipReceiptSha256; generatedReadMore, measureToFullEnvelope,
+nativeOwnershipReceiptSha256, urlAuthority; generatedReadMore, measureToFullEnvelope,
 createGeneratedExcerpt, validateGeneratedEnvelope, generatedSourceIdentity,
 validateGeneratedSelection and projectGeneratedReadMoreMove.
 
@@ -35,13 +42,35 @@ is value-local, not a move/lease/proof/transaction execution grant.
 
 ValidationException has validationCode/path/httpStatus without untrusted values in
 message text. UnsupportedBehaviorException is a local implementation limitation,
-not a new wire error. Numeric IPv4 hosts use WHATWG radix/part/range validation
-without rewriting the original URL. Explicit unsupported processing: 32-bit PHP,
-IDNA/Unicode or ACE host conversion, backslash WHATWG
-URL processing, JSON depth above 512, object keys beginning NUL, and generic
+not a new wire error. Domain hosts use the pinned db-url-uts46-17-1 Unicode17.0.0
+non-transitional UTS46 policy, with Bidi/Joiner checks and invalid-ACE rejection;
+numeric IPv4 hosts then use WHATWG radix/part/range validation. Unicode/ACE and
+percent-decoded host conversions are validation-local: the original URL bytes
+remain unchanged. Forbidden raw backslashes produce invalid_field, like JS.
+This is typed local URL validation, not an HTTP/DNS/SSRF authorization boundary.
+urlAuthority returns only rawHost/asciiHost/effectivePort. The exact raw host is
+retained; valid IP spellings are not silently reserialized. These facts are not
+replacement URLs or a stored-key migration instruction. The receiver must test
+its actual origin/lock/collision/reservation paths separately.
+Explicit unsupported processing: 32-bit PHP, JSON depth above 512, object keys beginning NUL, and generic
 Unicode-key canonicalization outside declared ASCII CMS field names. Unsupported
 cases are not silently accepted with weaker grammar. Native owners must expose
 specific attention rather than assume full portable or URL standard equivalence.
+
+Dependency maintenance is an explicit development action, not normal generation:
+install the two locked Composer projects under php-dependencies/ and tools/php-idna/
+with plugins/scripts disabled. Set DISCUSSIONBRIDGE_PHP_BUILD_BINARY and
+DISCUSSIONBRIDGE_COMPOSER_PHAR explicitly, then run node scripts/build-php-idna.mjs.
+The separately locked PHP-Scoper needs development PHP>=8.2, not customer PHP.
+Its fixed private scope and narrow bootstrap bindings do not introduce a new IDNA
+algorithm. Before a deliberate dependency/data refresh, import hash-pinned
+normalization inputs with node scripts/import-normalization-inputs.mjs --download.
+The builder runs unchanged upstream Symfony Compiler::unicodeMaps in an isolated
+staging directory against Unicode17 inputs and replaces only six private data
+maps; it never runs upstream's network-fetching update script. Both MIT and Unicode
+licenses are retained. Normal generate --check and candidate packaging verify the committed
+bundle OFFLINE. Changes require the same explicit authority, tests, exact-candidate
+review and consumer package qualification as any shared runtime change.
 
 Native ownership receipt format db-native-ownership-1 remains a local durable
 length-prefixed field-order fingerprint, not API v1, authentication or secret.

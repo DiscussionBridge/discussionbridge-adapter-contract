@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "unicode_version": "17.0.0",
+  "license": "Unicode-3.0",
+  "members": [
+    {
+      "path": "IdnaTestV2.txt",
+      "bytes": 775973,
+      "sha256": "beb5d0be20e896189b03209a82fdc34f06351502bbd4b8e2523583fc2954d9cf",
+      "upstream": "https://www.unicode.org/Public/idna/17.0.0/IdnaTestV2.txt"
+    },
+    {
+      "path": "NormalizationTest.txt",
+      "bytes": 2827429,
+      "sha256": "5019ffd530751a741900c849c0e010332f142a3612234639bd200b82138a87db",
+      "upstream": "https://www.unicode.org/Public/17.0.0/ucd/NormalizationTest.txt"
+    },
+    {
+      "path": "LICENSE.txt",
+      "bytes": 1995,
+      "sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+      "upstream": "https://www.unicode.org/license.txt"
+    }
+  ],
+  "scope": "Exact upstream test corpora, not wire/publication limits or runtime data"
+}

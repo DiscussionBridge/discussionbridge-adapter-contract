@@ -32,15 +32,17 @@ final class InvalidNumericValue {}
 
 final class Codec
 {
-    public const SCHEMA_SHA256 = '8563a9b1346e3bf82635bd65a46bb1e25415a1003d7432f8fcb8c1c6e4f03c14';
+    public const SCHEMA_SHA256 = 'e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0';
+    public const IDNA_SHA256 = '7994b7b90276e52c2bf05fbbd7b6ae13564f796cf026df71a0ba953520944657';
     public const IMPLEMENTATION_VERSION = '0.4.0-alpha.1';
-    public const CANDIDATE_ID = 'discussionbridge-v4-core-20261025-r6';
+    public const CANDIDATE_ID = 'discussionbridge-v4-core-20261029-r7';
     public const WIRE_VERSION = 'v4';
     private const SAFE_INTEGER = 9007199254740991;
     private const WHITE = '\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}';
     private array $schema;
     private array $routes = [];
     private array $errors = [];
+    private static bool $idnaVerified = false;
 
     public function __construct(string $schemaPath)
     {
@@ -52,12 +54,37 @@ final class Codec
             throw new RuntimeException('CMS extracted grammar identity mismatch');
         }
         $this->schema = json_decode($bytes, true, 512, JSON_THROW_ON_ERROR);
+        self::loadIdna();
+        if (IdnaVendor\Rowbot\Idna\Idna::UNICODE_VERSION !== $this->schema['types']['Url']['domain_policy']['unicode_version']) {
+            throw new RuntimeException('CMS IDNA policy identity mismatch');
+        }
         foreach ($this->schema['routes'] as $route) {
             $this->routes[$route['id']] = $route;
         }
         foreach ($this->schema['errors'] as $error) {
             $this->errors[$error['code']] = $error;
         }
+    }
+
+    private static function loadIdna(): void
+    {
+        if (self::$idnaVerified) return;
+        $base = __DIR__ . '/idna/';
+        $bytes = @file_get_contents($base . 'DEPENDENCIES.json');
+        if ($bytes === false || hash('sha256', $bytes) !== self::IDNA_SHA256) {
+            throw new RuntimeException('CMS private IDNA identity mismatch');
+        }
+        $manifest = json_decode($bytes, true, 512, JSON_THROW_ON_ERROR);
+        // The exact trusted manifest identifies every runtime member, including
+        // Composer's loader, classes, Unicode data and upstream licenses.
+        foreach ($manifest['members'] as $member) {
+            $content = @file_get_contents($base . $member['path']);
+            if ($content === false || strlen($content) !== $member['bytes'] || hash('sha256', $content) !== $member['sha256']) {
+                throw new RuntimeException('CMS private IDNA member mismatch');
+            }
+        }
+        require_once $base . 'vendor/autoload.php';
+        self::$idnaVerified = true;
     }
 
     public function route(string $id): array
@@ -68,6 +95,15 @@ final class Codec
     public function hasType(string $name): bool
     {
         return isset($this->schema['types'][$name]);
+    }
+
+    /** Local comparison facts; never replacement URL/identity or stored key. */
+    public function urlAuthority(mixed $value): array
+    {
+        $this->validate('Url', $value);
+        $parsed = $this->url($value, '$');
+        return ['rawHost' => $parsed['host'], 'asciiHost' => $parsed['_cms_ascii_host'],
+            'effectivePort' => $parsed['port'] ?? 443];
     }
 
     private function fail(string $path = '$', string $code = 'invalid_field'): never
@@ -181,9 +217,9 @@ final class Codec
     }
 
     /**
-     * Native PHP has no core WHATWG/IDNA URL parser. ASCII DNS names, WHATWG
-     * numeric IPv4 and bracketed IPv6 are checked without normalization.
-     * IDNA processing remains explicitly unsupported, never accepted loosely.
+     * Validate HTTPS hosts using the bundled non-transitional UTS46 algorithm
+     * with WHATWG options, then numeric IPv4 or bracketed IPv6 checks. Converted
+     * host bytes are local validation evidence only, never caller identity.
      */
     private function url(string $value, string $path): array
     {
@@ -193,13 +229,22 @@ final class Codec
             $this->fail($path);
         }
         if (str_contains($value, '\\')) {
-            throw new UnsupportedBehaviorException('CMS WHATWG backslash URL processing is unsupported');
-        }
-        $parsed = parse_url($value);
-        if ($parsed === false || strtolower($parsed['scheme'] ?? '') !== 'https'
-            || !isset($parsed['host']) || $parsed['host'] === '' || isset($parsed['user']) || isset($parsed['pass']) || isset($parsed['fragment'])) {
             $this->fail($path);
         }
+        // Native parse_url admits signed ports and rejects some long leading-
+        // zero spellings. Use the same bounded authority lexer as JavaScript;
+        // these are local components, never a reserialized caller URL.
+        if (preg_match('~^(\[[^\]]+\]|[^:]+)(?::([0-9]*))?$~D', $parts[1], $authority) !== 1) $this->fail($path);
+        $port = 443;
+        if (isset($authority[2]) && $authority[2] !== '') {
+            $port = 0;
+            for ($index = 0, $count = strlen($authority[2]); $index < $count; ++$index) {
+                $port = $port * 10 + ord($authority[2][$index]) - 48;
+                if ($port > 65535) $this->fail($path);
+            }
+        }
+        $parsed = ['scheme' => 'https', 'host' => $authority[1], 'port' => $port, 'path' => $parts[2]];
+        if (isset($parts[3])) $parsed['query'] = substr($parts[3], 1);
         foreach (explode('/', $parts[2]) as $part) {
             $dots = preg_replace('~%2e~i', '.', $part);
             if ($dots === '.' || $dots === '..') {
@@ -208,22 +253,30 @@ final class Codec
         }
         $host = rawurldecode($parsed['host']);
         $this->utf8($host, $path);
+        $ascii = strtolower($parsed['host']);
         if (str_starts_with($host, '[') && str_ends_with($host, ']')) {
+            if (!str_starts_with($parsed['host'], '[') || str_contains($parsed['host'], '%')) $this->fail($path);
             $ip = @inet_pton(substr($host, 1, -1));
             if ($ip === false || strlen($ip) !== 16) {
                 $this->fail($path);
             }
         } else {
-            if (preg_match('~[\x00-\x20#/:<>?@\[\]\\\\^|]~', $host) === 1) {
+            if (preg_match('~[\x00-\x20\x7f%#/:<>?@\[\]\\\\^|]~', $host) === 1) {
                 $this->fail($path);
             }
-            if (preg_match('~^[A-Za-z0-9_.-]+$~D', $host) !== 1
-                || preg_match('~(?:^|\.)xn--~i', $host) === 1) {
-                throw new UnsupportedBehaviorException('CMS IDNA or non-ASCII host processing is unsupported');
-            }
-            $this->ipv4Host($host, $path);
+            $policy = $this->schema['types']['Url']['domain_policy'];
+            $result = IdnaVendor\Rowbot\Idna\Idna::toAscii($host, [
+                'CheckHyphens' => $policy['check_hyphens'], 'CheckBidi' => $policy['check_bidi'],
+                'CheckJoiners' => $policy['check_joiners'], 'UseSTD3ASCIIRules' => $policy['use_std3_ascii_rules'],
+                'Transitional_Processing' => $policy['transitional_processing'],
+                'IgnoreInvalidPunycode' => $policy['ignore_invalid_punycode'], 'VerifyDnsLength' => $policy['verify_dns_length'],
+            ]);
+            $ascii = $result->getDomain();
+            if ($result->hasErrors() || $ascii === ''
+                || preg_match('~[^\x21-\x7e]|[%#/:<>?@\[\]\\\\^|]~', $ascii) === 1) $this->fail($path);
+            $this->ipv4Host($ascii, $path);
         }
-        return $parsed;
+        return $parsed + ['_cms_ascii_host' => $ascii];
     }
 
     private function string(string $name, array $spec, mixed $value, string $path): void
@@ -1078,7 +1131,10 @@ final class StrictJson
         $significant = substr($digits, $first, $end - $first);
         $limit = strlen($token) + 17;
         $exponent = 0;
-        foreach (str_split($parts[5] ?? '') as $digit) {
+        // PHP 8.1 str_split('') returns ['']; scan only actual exponent digits.
+        $exponentDigits = $parts[5] ?? '';
+        for ($index = 0, $count = strlen($exponentDigits); $index < $count; ++$index) {
+            $digit = $exponentDigits[$index];
             $exponent = min($limit, $exponent * 10 + ord($digit) - 48);
             if ($exponent === $limit) {
                 break;
