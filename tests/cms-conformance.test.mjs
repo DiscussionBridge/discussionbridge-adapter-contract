@@ -20,6 +20,38 @@ const numericLexemes = await json('fixtures/numeric-lexemes.json');
 const example = (id) => structuredClone(examples.find((item) => item.id === id).value);
 const rejects = (callback, code = 'invalid_field') => assert.throws(callback, (error) => error instanceof CmsValidationError && error.code === code);
 
+test('Connection responses retain valid international and numeric origin identities', () => {
+  for (const origin of ['https://xn--bcher-kva.example/', 'https://bücher.example/', 'https://é.example/', 'https://例え.テスト/', 'https://127.1/', 'https://0x7f000001/', 'https://0x7f.0.0.1/', 'https://0177.0.0.1/', 'https://publisher.example/', 'https://127.0.0.1/', 'https://[::1]/']) {
+    const value = example('connection');
+    value.destination_origin = origin;
+    assert.equal(validateCmsResponse('V4-01', value, 200), value);
+    assert.equal(value.destination_origin, origin);
+  }
+});
+
+for (const field of ['directions', 'category_ids', 'author_ids', 'supported_presentations']) {
+  test(`Connection sparse ${field} is rejected before and after serialization`, () => {
+    const parent = value => field === 'supported_presentations' ? value.native_capabilities : ['category_ids', 'author_ids'].includes(field) ? value.policy : value;
+    const item = field === 'directions' ? 'to_discourse' : field === 'supported_presentations' ? 'full' : '5';
+    for (const list of [Array(1), [, item], [item, ,], [null]]) {
+      const value = example('connection');
+      parent(value)[field] = list;
+      rejects(() => validateCms('Connection', value));
+      rejects(() => validateCmsResponse('V4-01', value, 200));
+      rejects(() => validateCmsResponse('V4-01', parseCmsJson(JSON.stringify(value)), 200));
+      assert.equal(parent(value)[field], list);
+    }
+    const dense = example('connection');
+    parent(dense)[field] = [item];
+    assert.equal(validateCmsResponse('V4-01', dense, 200), dense);
+    parent(dense)[field] = [item, item];
+    rejects(() => validateCmsResponse('V4-01', dense, 200));
+    parent(dense)[field] = [];
+    if (field === 'author_ids') assert.equal(validateCmsResponse('V4-01', dense, 200), dense);
+    else rejects(() => validateCmsResponse('V4-01', dense, 200));
+  });
+}
+
 
 for (const item of examples) {
   test(`derived V4 positive: ${item.id}`, () => {

@@ -29,6 +29,13 @@ strict UTF8/duplicate-key/body/query/status constraints. Typed validation does n
 prove current authentication, native ownership/locks/CAS/fences, actual rendered
 public content, crash recovery, qualification or code review.
 
+PHP must be on PATH, or set DISCUSSIONBRIDGE_PHP_BINARY to the installed PHP
+executable. Tests do not depend on another checkout or a private Windows tools
+directory. CI runs the complete suite with Node 22/24 and PHP 8.3/8.5, checking
+generation and ordinary candidate packaging as well. A missing runtime fails
+qualification; it is not silently skipped. These jobs are candidate checks, not
+a release or native-adapter acceptance claim.
+
 To full content matches the complete prepared native source byte count/SHA.
 generated_excerpt is the only excerpt form: complete-source evidence stays
 truthful, article prefix has its own exact count/SHA, and one terminal owned marker

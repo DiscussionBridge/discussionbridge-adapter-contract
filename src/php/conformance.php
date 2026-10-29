@@ -66,6 +66,14 @@ $run('single V4 identities/count', function () use ($root, $examples, $schema, $
     $check(count(get_object_vars($schema->types)) === 169);
     $check(hash_file('sha256', $root . '/src/cms-schema.json') === Codec::SCHEMA_SHA256);
 });
+foreach (['https://xn--bcher-kva.example/', 'https://bücher.example/', 'https://é.example/', 'https://例え.テスト/', 'https://127.1/', 'https://0x7f000001/', 'https://0x7f.0.0.1/', 'https://0177.0.0.1/', 'https://publisher.example/', 'https://127.0.0.1/', 'https://[::1]/'] as $origin) {
+    $run('Connection origin preserves bytes ' . $origin, function () use ($codec, $example, $check, $origin): void {
+        $value = $example('connection');
+        $value->destination_origin = $origin;
+        $check($codec->validateResponse('V4-01', $value, 200) === $value);
+        $check($value->destination_origin === $origin, 'origin identity rewritten');
+    });
+}
 foreach ($examples as $item) {
     $run('derived V4 positive ' . $item->id, function () use ($codec, $item, $check): void {
         $value = $codec->parseJson($codec->encodeJson($item->value), 262144);

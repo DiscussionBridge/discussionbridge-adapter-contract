@@ -149,7 +149,10 @@ const checkShape = (name, value, path, invalidNumeric = false) => {
     case 'enum': if (!spec.values.some((item) => Object.is(value, item))) fail(path); break;
     case 'array': {
       if (!Array.isArray(value) || value.length < (spec.minimum_items ?? 0) || value.length > (spec.maximum_items ?? Infinity)) fail(path);
-      value.forEach((item, index) => checkShape(spec.items, item, `${path}[${index}]`, numericMember(value, index)));
+      for (let index = 0; index < value.length; index++) {
+        if (!Object.hasOwn(value, index)) fail(`${path}[${index}]`);
+        checkShape(spec.items, value[index], `${path}[${index}]`, numericMember(value, index));
+      }
       if (spec.unique_items && new Set(value.map(semanticIdentity)).size !== value.length) fail(path);
       break;
     }

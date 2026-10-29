@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { runPhpFixture } from './php-runtime.mjs';
 import * as amended from '../src/cms-runtime.mjs';
 const current=amended;
 
@@ -197,7 +196,7 @@ test('strict candidate parsing retains duplicate-key, unknown-field, numeric and
   rejects(() => amended.validateCms('ToRecord', record));
 });
 
-test('PHP83/85 agree on exact produced trees, measurements, escaping and move projections', () => {
+test('configured PHP agrees on exact produced trees, measurements, escaping and move projections', () => {
   const expected = { excerpt: excerpt(),
     moved: amended.projectGeneratedReadMoreMove(excerpt(), 'https://publisher.example/new/?a=1&b="x"', 'native-source-r2', '2026-10-14T12:00:00.000Z'),
     measurement: amended.measureToFullEnvelope(input, complete),
@@ -245,20 +244,14 @@ test('PHP83/85 agree on exact produced trees, measurements, escaping and move pr
   }), expectedUrls);
   assert.deepEqual(resolve.map(({ response, status }) => ({ outcome: response.outcome, status,
     accepted: admitted(() => amended.validateCmsResponse('V4-02', response, status)) })), expectedResolve);
-  for (const runtime of ['php-8.3.12', 'php-8.5.11']) {
-    const binary = fileURLToPath(new URL('../../../.tools/' + runtime + '/php.exe', import.meta.url));
-    const script = fileURLToPath(new URL('./php-generated.php', import.meta.url));
-    const result = spawnSync(binary, ['-n', script], { input: JSON.stringify({ record: input, complete, article: authored,
-      codec_regressions: { urls: urls.map(([url]) => url), resolve } }), encoding: 'utf8' });
-    assert.equal(result.status, 0, result.stderr + result.stdout);
-    const actual = JSON.parse(result.stdout);
-    assert.deepEqual(actual.values, expected);
-    assert.deepEqual(actual.codec_regressions.urls, expectedUrls);
-    for (const method of ['validated', 'decoded']) {
-      assert.deepEqual(actual.codec_regressions.resolve.map((item) => ({ outcome: item.outcome, status: item.status,
-        accepted: item[method] })), expectedResolve);
-    }
-    assert.equal(actual.failed, 0);
-    assert.ok(actual.passed >= 20);
+  const actual = runPhpFixture('./php-generated.php', { record: input, complete, article: authored,
+    codec_regressions: { urls: urls.map(([url]) => url), resolve } });
+  assert.deepEqual(actual.values, expected);
+  assert.deepEqual(actual.codec_regressions.urls, expectedUrls);
+  for (const method of ['validated', 'decoded']) {
+    assert.deepEqual(actual.codec_regressions.resolve.map((item) => ({ outcome: item.outcome, status: item.status,
+      accepted: item[method] })), expectedResolve);
   }
+  assert.equal(actual.failed, 0);
+  assert.ok(actual.passed >= 20);
 });

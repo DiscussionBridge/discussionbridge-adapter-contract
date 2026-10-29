@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { runPhpFixture } from './php-runtime.mjs';
 import {
   assertAttentionRecoveryCapability, validateAttentionFeedPage, validateAttentionRecoveryLease,
   validateCms, validateCmsResponse, parseCmsQuery, semanticIdentity, cmsSchema,
@@ -52,13 +51,6 @@ test('exact report identity ignores key order but retains context and mutation i
   assert.notEqual(semanticIdentity(first), semanticIdentity(changed));
 });
 
-for (const version of ['8.3.12', '8.5.11']) {
-  test(`PHP ${version} exact attention codec parity`, () => {
-    const executable = process.env[`DISCUSSIONBRIDGE_PHP_${version.replaceAll('.', '_')}`] ??
-      `C:/CodeProjects/Products/DiscussionBridge/codex crap/.tools/php-${version}/php.exe`;
-    const output = spawnSync(executable, ['-n', fileURLToPath(new URL('./php-attention.php', import.meta.url))], { input: JSON.stringify(cases), encoding: 'utf8', windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
-    assert.equal(output.error, undefined, output.error?.message);
-    assert.equal(output.status, 0, output.stderr || output.stdout);
-    assert.deepEqual(JSON.parse(output.stdout), results);
-  });
-}
+test('configured PHP runtime has exact attention codec parity', () => {
+  assert.deepEqual(runPhpFixture('./php-attention.php', cases), results);
+});

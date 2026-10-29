@@ -18,7 +18,9 @@ $paths = @(
   'src/cms-contract.mjs','src/cms-runtime.mjs','src/cms-schema.json',
   'src/php/CmsCodec.php','src/php/README.md','src/php/conformance.php',
   'tests/cms-conformance.test.mjs','tests/v4-behavior.test.mjs','tests/php-generated.php',
-  'fixtures/positive-examples.json','fixtures/rejection-cases.json','fixtures/numeric-lexemes.json'
+  'tests/attention-recovery.test.mjs','tests/php-attention.php','tests/php-runtime.mjs',
+  'fixtures/positive-examples.json','fixtures/rejection-cases.json','fixtures/numeric-lexemes.json',
+  'fixtures/attention-recovery-regressions.json'
 )
 $paths = @($paths | Sort-Object -CaseSensitive)
 $members = foreach ($memberPath in $paths) {
