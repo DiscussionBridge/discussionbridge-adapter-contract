@@ -12,8 +12,8 @@
   },
   "php_dependencies": {
     "path": "src/php/idna/DEPENDENCIES.json",
-    "bytes": 57494,
-    "sha256": "5f9b6bf922e65ed4fee1c7ebad807d266140a2fc262fdd452da607f0cfd40e1e",
+    "bytes": 57885,
+    "sha256": "478d6e5c8f96255f7124e5bd0d28f79975d4b8466fea097ef2edb2fb1151c282",
     "namespace": "DiscussionBridge\\CmsV4\\IdnaVendor"
   },
   "javascript_dependencies": {
@@ -43,7 +43,7 @@
     {
       "path": "implementation/CmsCodec.php.in",
       "bytes": 56084,
-      "sha256": "84db7cbd92ca2ed9b160c6147ce1b70a26c6b30f4a0c37457796c17a2caafd7e"
+      "sha256": "3481507d9d03178b7ce0c518a0a87215b95a51765c93aff22091fbb7858bac3c"
     }
   ],
   "members": [
@@ -60,7 +60,7 @@
     {
       "path": "src/php/CmsCodec.php",
       "bytes": 56195,
-      "sha256": "9ff58c7e9547167bc8f546483c040daa0232cad171ddd48c15f8b9c821294ed7"
+      "sha256": "502df4f0324ac9b65c0068f1025d71290d149522e98a29382763816f01a20555"
     },
     {
       "path": "src/cms-contract.mjs",
@@ -70,7 +70,7 @@
     {
       "path": "CANDIDATE.json",
       "bytes": 8960,
-      "sha256": "3124519f06399a54cf445ebb0c443a7d378dfff578a27b1e041031969fe5d769"
+      "sha256": "a09f5b4433aa5867517482366a331dfae247281ba8017dea4f118baeb86acc88"
     },
     {
       "path": "ROUTES.md",

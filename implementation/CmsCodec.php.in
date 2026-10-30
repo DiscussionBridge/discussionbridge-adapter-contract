@@ -76,7 +76,7 @@ final class Codec
         }
         $manifest = json_decode($bytes, true, 512, JSON_THROW_ON_ERROR);
         // The exact trusted manifest identifies every runtime member, including
-        // Composer's loader, classes, Unicode data and upstream licenses.
+        // Private bootstrap, classes, Unicode data and upstream licenses.
         foreach ($manifest['members'] as $member) {
             $content = @file_get_contents($base . $member['path']);
             if ($content === false || strlen($content) !== $member['bytes'] || hash('sha256', $content) !== $member['sha256']) {

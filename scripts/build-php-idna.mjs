@@ -105,6 +105,33 @@ const bridgePath = join(root, 'implementation/php-idna-bridge.php.in');
 writeFileSync(join(scoped, 'bridge.php'), readFileSync(bridgePath));
 run([composer, 'dump-autoload', '--working-dir=' + scoped, '--no-dev', '--classmap-authoritative', '--no-plugins', '--no-scripts', '--no-interaction'], root);
 
+// Composer unconditionally adds its global InstalledVersions map entry even
+// though PHP-Scoper made that class private. Correct both generated maps, then
+// bootstrap only this authoritative private class set. Registering Composer's
+// global ClassLoader also leaks the private installed.php packages into the
+// host's InstalledVersions census, even when a host autoloader masks the class
+// collision. Keep the upstream generated metadata/license as provenance, but
+// never execute that global engine/bootstrap for this private runtime.
+for (const name of ['autoload_classmap.php', 'autoload_static.php']) {
+  const file = join(scoped, 'vendor/composer', name);
+  const before = readFileSync(file, 'utf8');
+  const oldName = "'Composer\\\\InstalledVersions'";
+  if (before.split(oldName).length !== 2) throw new Error('Unexpected Composer helper map');
+  writeFileSync(file, before.replace(oldName, `'${prefix.replaceAll('\\', '\\\\')}\\\\Composer\\\\InstalledVersions'`));
+}
+const autoloadPath = join(root, 'implementation/php-idna-autoload.php.in');
+const autoloadTemplate = readFileSync(autoloadPath, 'utf8');
+if (autoloadTemplate.split('%PRIVATE_RUNTIME_ID%').length !== 2) throw new Error('Unexpected private bootstrap template');
+const bootstrapIdentity = hash(Buffer.from(JSON.stringify({
+  namespace: prefix, template_sha256: hash(Buffer.from(autoloadTemplate)),
+  members: members(scoped).filter(path => path !== 'vendor/autoload.php').map(path => {
+    const bytes = readFileSync(join(scoped, path));
+    return { path, bytes: bytes.length, sha256: hash(bytes) };
+  }),
+})));
+writeFileSync(join(scoped, 'vendor/autoload.php'), autoloadTemplate.replace('%PRIVATE_RUNTIME_ID%', bootstrapIdentity));
+run(['-n', '-r', '$map=require $argv[1]; foreach ($map as $class=>$file) { if (!str_starts_with($class,$argv[2]."\\\\") || !is_file($file)) throw new RuntimeException("Invalid private class map"); } echo "Private authoritative class map: ".count($map).PHP_EOL;', join(scoped, 'vendor/composer/autoload_classmap.php'), prefix], root);
+
 const runtimeMembers = members(scoped).map(path => {
   const bytes = readFileSync(join(scoped, path));
   return { path, bytes: bytes.length, sha256: hash(bytes) };
@@ -113,16 +140,17 @@ const provenance = {
   format: 1,
   component: 'discussionbridge-v4-private-idna',
   namespace: prefix,
+  bootstrap_identity: bootstrapIdentity,
   php_minimum: '8.1',
   additional_mandatory_extensions: [],
   runtime_packages: lock.packages.map(({ name, version, source, license }) => ({ name, version, source, license })),
   build_only_tool: { name: scoper.name, version: scoper.version, source: scoper.source },
-  inputs: ['php-dependencies/composer.json', 'php-dependencies/composer.lock', 'tools/php-idna/composer.json', 'tools/php-idna/composer.lock', 'tools/php-idna/scoper.inc.php', 'implementation/php-idna-bridge.php.in', 'scripts/build-php-idna.mjs',
+  inputs: ['php-dependencies/composer.json', 'php-dependencies/composer.lock', 'tools/php-idna/composer.json', 'tools/php-idna/composer.lock', 'tools/php-idna/scoper.inc.php', 'implementation/php-idna-bridge.php.in', 'implementation/php-idna-autoload.php.in', 'scripts/build-php-idna.mjs',
     'tools/unicode17/INPUTS.json', ...nfcInputs.members.map(item => item.path), 'fixtures/unicode17/LICENSE.txt', 'implementation/php-contextj.php.in'].map(path => {
     const bytes = readFileSync(join(root, path));
     return { path, bytes: bytes.length, sha256: hash(bytes) };
   }),
-  transformations: ['fixed private namespace; PHP-8.1 parser/printer target', 'bind Rowbot Normalizer and two UTF8 functions privately; suppress ambient Normalizer alias', 'replace exactly one source-hashed ContextJ method with current-occurrence UTF8 byte-offset validation, including virama advancement', 'disable package-global polyfill bootstrap; add two explicit-UTF8 private bridges', 'regenerate six private NFC/data maps with unchanged pinned Symfony compiler and official Unicode17 inputs; preserve both licenses', 'regenerate ordinary authoritative Composer autoload from scoped package metadata'],
+  transformations: ['fixed private namespace; PHP-8.1 parser/printer target', 'bind Rowbot Normalizer and two UTF8 functions privately; suppress ambient Normalizer alias', 'replace exactly one source-hashed ContextJ method with current-occurrence UTF8 byte-offset validation, including virama advancement', 'disable package-global polyfill bootstrap; add two explicit-UTF8 private bridges', 'regenerate six private NFC/data maps with unchanged pinned Symfony compiler and official Unicode17 inputs; preserve both licenses', 'regenerate authoritative class map from scoped package metadata; bind private Composer helper consistently', 'use closed private bootstrap without registering global Composer engine or package metadata'],
   upstream_members: upstream,
   members: runtimeMembers,
 };

@@ -60,6 +60,10 @@ inputs, not the host intl extension. No prototype/global-polyfill patch, new
 mandatory hosting extension, runtime Composer/npm or network lookup is required.
 See src/js-idna/DEPENDENCIES.json, src/php/idna/DEPENDENCIES.json and the PHP README.
 Normal builds verify committed bytes offline; dependency refresh is explicit.
+The PHP private bootstrap uses only its authoritative private class map; it does
+not register global Composer classes or expose private packages in a host's
+Composer inventory. Composer load-order and repeated absent-class controls use
+pinned actual Composer class bodies, not a mocked replacement implementation.
 
 The private dependency integrations carry declared ContextJ corrections, not
 unchanged upstream validation code. Exactly one source-hashed block/method in

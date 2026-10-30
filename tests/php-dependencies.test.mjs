@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -51,6 +52,42 @@ test('ordinary copied PHP runtime needs its exact complete bundle and refuses ch
   } finally {
     assert.equal(dirname(resolve(directory)), resolve(tmpdir()));
     assert.ok(basename(directory).startsWith('discussionbridge-idna-'));
+    rmSync(directory, { recursive: true });
+  }
+});
+
+test('actual private bootstrap coexists with absent, earlier, later and cold host Composer without changing its package census', () => {
+  // Exact unmodified Composer 2.8.1 class bodies, copied from the ordinary
+  // locked-runtime Composer output; the accompanying upstream license ships.
+  // This is a real class engine/API with synthetic host data, not a class stub.
+  for (const [name, expected] of Object.entries({
+    'InstalledVersions.php': '21f4ba19e7859cb3f85b8b1680c970ee25d972546c1606dcae0e7e5f43f626f0',
+    'ClassLoader.php': 'd4b2313e562edf942838ec316d983c1a3459ca67da3e5658e861200b0b3693c2',
+    LICENSE: 'c8cce4b6b9729f264ffdf9296d505d63432497feeed1f586d1902b942197e024',
+  })) assert.equal(createHash('sha256').update(readFileSync(join(root, 'tests/fixtures/composer', name))).digest('hex'), expected);
+  const directory = mkdtempSync(join(tmpdir(), 'discussionbridge-composer-'));
+  try {
+    cpSync(join(root, 'src/php/idna'), join(directory, 'idna'), { recursive: true });
+    for (const mode of ['absent', 'host-before', 'host-after', 'cold-host', 'two-copies']) {
+      const result = run(join(root, 'tests/php-composer-coexistence.php'), mode, join(directory, 'idna'));
+      assert.equal(result.status, 0, mode + ': ' + (result.stderr || result.stdout));
+      const value = JSON.parse(result.stdout);
+      assert.equal(value.result, 'isolated');
+      assert.ok(value.checks >= 10);
+    }
+    const changed = join(directory, 'changed-idna');
+    cpSync(join(root, 'src/php/idna'), changed, { recursive: true });
+    const file = join(changed, 'vendor/autoload.php');
+    const original = readFileSync(file, 'utf8');
+    const invalid = original.replace(/(\$runtimeIdentity = ')[a-f0-9]{64}(';)/, '$1' + '0'.repeat(64) + '$2');
+    assert.notEqual(invalid, original);
+    writeFileSync(file, invalid);
+    const refused = run(join(root, 'tests/php-composer-coexistence.php'), 'conflicting-copy', changed);
+    assert.equal(refused.status, 0, refused.stderr || refused.stdout);
+    assert.ok(JSON.parse(refused.stdout).checks >= 10);
+  } finally {
+    assert.equal(dirname(resolve(directory)), resolve(tmpdir()));
+    assert.ok(basename(directory).startsWith('discussionbridge-composer-'));
     rmSync(directory, { recursive: true });
   }
 });

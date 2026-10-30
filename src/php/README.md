@@ -14,6 +14,15 @@ upstream MIT licenses retained. It does not install public polyfill functions or
 an ambient Normalizer alias. See idna/DEPENDENCIES.json for exact pins, original
 source hashes, build inputs, transformations and shipped member hashes.
 
+The authoritative private bootstrap does not register Composer's global engine
+or publish private package metadata through a host Composer installation.
+Repeated unrelated class queries remain harmless. Identical byte-copied private
+bundles share one verified bootstrap; a different private runtime already loaded
+under the same namespace is refused rather than mixed. Tests use pinned real
+Composer 2.8.1 class bodies (with their license), synthetic host package data via
+the real API, and absent/before/after/cold-host load orders. No runtime Composer
+installation is needed for these checks or by the codec's consumers.
+
 Public API: route, hasType, validate, defaults, parseJson, parseQuery, parseRequest,
 validateRoute, validateResponse, decodeResponse, encodeJson, semanticIdentity,
 nativeOwnershipReceiptSha256, urlAuthority; generatedReadMore, measureToFullEnvelope,
