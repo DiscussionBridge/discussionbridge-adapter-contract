@@ -61,7 +61,7 @@ $run = static function (string $name, callable $callback) use (&$passed, &$failu
 };
 
 $run('single V4 identities/count', function () use ($root, $examples, $schema, $check): void {
-    $check(count($examples) === 58);
+    $check(count($examples) === 60);
     $check(count($schema->routes) === 37);
     $check(count(get_object_vars($schema->types)) === 173);
     $check(hash_file('sha256', $root . '/src/cms-schema.json') === Codec::SCHEMA_SHA256);

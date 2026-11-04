@@ -1177,6 +1177,25 @@
           }
         ]
       }
+    },
+    {
+      "id": "policy_history_query",
+      "type": "PolicyHistoryQuery",
+      "value": { "after_policy_revision": "policy:r1", "through_policy_revision": "policy:r3" }
+    },
+    {
+      "id": "policy_history_page",
+      "type": "PolicyHistoryPage",
+      "value": {
+        "connection_id": "dbc_aaaaaaaaaaaaaaaaaaaaaaaa",
+        "after_policy_revision": "policy:r1",
+        "through_policy_revision": "policy:r3",
+        "items": [
+          { "previous_policy_revision": "policy:r1", "policy_revision": "policy:r2", "author_ids": [], "taxonomy_ids": [] },
+          { "previous_policy_revision": "policy:r2", "policy_revision": "policy:r3", "author_ids": ["selected-author"], "taxonomy_ids": ["selected-tag"] }
+        ],
+        "next_policy_revision": null
+      }
     }
   ]
 }

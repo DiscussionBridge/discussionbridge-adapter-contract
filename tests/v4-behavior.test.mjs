@@ -39,7 +39,7 @@ test('single V4 grammar has no old route/init/unmarked/adoption/profile surface'
   assert.equal(amended.cmsSchema.types.ContentHtml.utf8_maximum_bytes,49152);
 });
 
-test('all current V4 author-positive shapes validate',()=>{assert.equal(fixtures.length,58);for(const item of fixtures)amended.validateCms(item.type,item.value);});
+test('all current V4 author-positive shapes validate',()=>{assert.equal(fixtures.length,60);for(const item of fixtures)amended.validateCms(item.type,item.value);});
 
 test('actual safe 40000-quote article exceeds JSON envelope, truthful candidate fits both caps', () => {
   assert.ok(input.source_content_bytes <= 49152);
