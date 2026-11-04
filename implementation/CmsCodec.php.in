@@ -536,6 +536,16 @@ final class Codec
                     || $value->native_baseline->native_id !== $value->verification->native_id || $value->native_baseline->canonical_url !== $value->verification->url)) $this->fail($path . '.native_baseline');
             }
         }
+        if ($name === 'PolicyHistoryPage') {
+            $previous = $value->after_policy_revision;
+            $seen = [$previous];
+            foreach ($value->items as $item) {
+                if ($item->previous_policy_revision !== $previous || in_array($item->policy_revision, $seen, true) || $previous === $value->through_policy_revision) $this->fail($path);
+                $previous = $item->policy_revision; $seen[] = $previous;
+            }
+            if ($value->next_policy_revision === null ? $previous !== $value->through_policy_revision :
+                count($value->items) === 0 || $value->next_policy_revision !== $previous || $previous === $value->through_policy_revision) $this->fail($path);
+        }
         if ($name === 'AttentionInspectionPage' || $name === 'AttentionRecoveryPage') {
             $previous = null;
             foreach ($value->items as $item) {

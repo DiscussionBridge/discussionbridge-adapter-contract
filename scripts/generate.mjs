@@ -11,7 +11,7 @@ const sourceBytes = readFileSync(resolve(root, 'normative/CONTRACT.json'));
 const source = JSON.parse(sourceBytes);
 if (source.wire_version !== 'v4' || source.release_version !== null || source.status !== 'implementation_candidate_not_exact_approved_not_frozen') throw new Error('Invalid V4 candidate declaration');
 if (source.types.Url.domain_policy.unicode_version !== jsIdna.unicode_version) throw new Error('Mismatched V4 domain policy data');
-if (source.routes.length !== 36 || source.routes.some((route, index) => route.id !== 'V4-' + String(index+1).padStart(2,'0') || !route.path.startsWith('/discussion-bridge/v4/'))) throw new Error('Inconsistent single V4 route set');
+if (source.routes.length !== 37 || source.routes.some((route, index) => route.id !== 'V4-' + String(index+1).padStart(2,'0') || !route.path.startsWith('/discussion-bridge/v4/'))) throw new Error('Inconsistent single V4 route set');
 if (source.types.MappingAdopt || source.types.ToExcerpt || source.types.Policy.fields.existing_record_adoption || Object.keys(source.types.ToRepresentation.variants).join(',') !== 'full,generated_excerpt') throw new Error('Earlier-development grammar in active V4 source');
 const identity = { path: 'normative/CONTRACT.json', bytes: sourceBytes.length, sha256: hash(sourceBytes) };
 const schema = {

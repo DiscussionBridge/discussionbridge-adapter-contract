@@ -62,8 +62,8 @@ $run = static function (string $name, callable $callback) use (&$passed, &$failu
 
 $run('single V4 identities/count', function () use ($root, $examples, $schema, $check): void {
     $check(count($examples) === 58);
-    $check(count($schema->routes) === 36);
-    $check(count(get_object_vars($schema->types)) === 169);
+    $check(count($schema->routes) === 37);
+    $check(count(get_object_vars($schema->types)) === 173);
     $check(hash_file('sha256', $root . '/src/cms-schema.json') === Codec::SCHEMA_SHA256);
 });
 foreach (['https://xn--bcher-kva.example/', 'https://bücher.example/', 'https://é.example/', 'https://例え.テスト/', 'https://127.1/', 'https://0x7f000001/', 'https://0x7f.0.0.1/', 'https://0177.0.0.1/', 'https://publisher.example/', 'https://127.0.0.1/', 'https://[::1]/'] as $origin) {
@@ -524,5 +524,5 @@ foreach ($failures as $failure) {
     fwrite(STDERR, 'FAIL ' . $failure . PHP_EOL);
 }
 echo 'PHP ' . PHP_VERSION . ': ' . $passed . ' passed, ' . count($failures) . ' failed; '
-    . count($examples) . ' V4 author positives; 36 typed route envelopes; offline only.' . PHP_EOL;
+    . count($examples) . ' V4 author positives; 37 typed route envelopes; offline only.' . PHP_EOL;
 exit(count($failures) === 0 ? 0 : 1);

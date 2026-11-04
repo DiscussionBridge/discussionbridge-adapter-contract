@@ -32,7 +32,7 @@ final class InvalidNumericValue {}
 
 final class Codec
 {
-    public const SCHEMA_SHA256 = 'e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0';
+    public const SCHEMA_SHA256 = 'b6ab0efa3247f9c93a76ccb591a2ed9a5b0fd4805427f87e67c72a23b88edd0a';
     public const IDNA_SHA256 = '478d6e5c8f96255f7124e5bd0d28f79975d4b8466fea097ef2edb2fb1151c282';
     public const IMPLEMENTATION_VERSION = '0.4.0-alpha.1';
     public const CANDIDATE_ID = 'discussionbridge-v4-core-20261029-r7';
@@ -535,6 +535,16 @@ final class Codec
                 if ($value->mode === 'settle_restored_baseline' && ($value->native_baseline === null || $value->verification === null
                     || $value->native_baseline->native_id !== $value->verification->native_id || $value->native_baseline->canonical_url !== $value->verification->url)) $this->fail($path . '.native_baseline');
             }
+        }
+        if ($name === 'PolicyHistoryPage') {
+            $previous = $value->after_policy_revision;
+            $seen = [$previous];
+            foreach ($value->items as $item) {
+                if ($item->previous_policy_revision !== $previous || in_array($item->policy_revision, $seen, true) || $previous === $value->through_policy_revision) $this->fail($path);
+                $previous = $item->policy_revision; $seen[] = $previous;
+            }
+            if ($value->next_policy_revision === null ? $previous !== $value->through_policy_revision :
+                count($value->items) === 0 || $value->next_policy_revision !== $previous || $previous === $value->through_policy_revision) $this->fail($path);
         }
         if ($name === 'AttentionInspectionPage' || $name === 'AttentionRecoveryPage') {
             $previous = null;

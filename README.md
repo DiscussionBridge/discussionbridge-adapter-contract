@@ -6,7 +6,7 @@ release_version is null. Phil selected V4 and removed earlier development and
 deployment compatibility; exact candidate approval, freeze and release are separate.
 
 normative/CONTRACT.json is the single authoritative current candidate. It contains
-169 closed named types, 36 Content Connection routes, exact transport/errors/work
+173 closed named types, 37 Content Connection routes, exact transport/errors/work
 transitions, generated excerpt and source-move semantics, current protected native
 admin interfaces, recovered direct functional decisions and their source descriptors.
 CANDIDATE.json and ARTIFACTS.json identify generated outputs. Historical source

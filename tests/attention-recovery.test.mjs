@@ -32,7 +32,7 @@ for (let i = 0; i < cases.length; i++) {
 }
 
 test('additive extension retains closed existing routes and exact native-admin bound', () => {
-  assert.equal(cmsSchema.routes.length, 36);
+  assert.equal(cmsSchema.routes.length, 37);
   for (const name of ['Connection', 'Work', 'Claim']) assert.equal(cmsSchema.types[name].unknown_fields, 'reject');
   assert.deepEqual(Object.keys(cmsSchema.types.Claim.fields), ['mutation_id', 'mapping_id']);
   assert.equal(cmsSchema.types.AttentionCheckSelections.maximum_items, 25);

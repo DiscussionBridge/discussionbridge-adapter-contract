@@ -25,8 +25,8 @@ const excerpt = () => amended.createGeneratedExcerpt(input, complete, authored);
 test('single V4 grammar has no old route/init/unmarked/adoption/profile surface',()=>{
   assert.equal(amended.wireVersion,'v4'); assert.equal(amended.implementationVersion,'0.4.0-alpha.1');
   assert.equal(amended.candidateId,source.candidate_id);
-  assert.equal(amended.cmsSchema.routes.length,36);
-  assert.equal(Object.keys(amended.cmsSchema.types).length,169);
+  assert.equal(amended.cmsSchema.routes.length,37);
+  assert.equal(Object.keys(amended.cmsSchema.types).length,173);
   assert.deepEqual(Object.keys(amended.cmsSchema.types.ToRepresentation.variants),['full','generated_excerpt']);
   assert.equal(amended.cmsSchema.types.MappingAdopt,undefined);assert.equal(amended.cmsSchema.types.ToExcerpt,undefined);
   assert.equal(amended.cmsSchema.types.Policy.fields.existing_record_adoption,undefined);

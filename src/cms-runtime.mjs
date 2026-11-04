@@ -931,10 +931,10 @@ var DiscussionBridgeIdnaPrivate = (() => {
 export const implementationVersion = '0.4.0-alpha.1';
 export const candidateId = 'discussionbridge-v4-core-20261029-r7';
 export const wireVersion = 'v4';
-export const specIdentity = Object.freeze({"path":"normative/CONTRACT.json","bytes":190024,"sha256":"808042688cbde88fac0acdf1187e4cb8c251e13025bfcf09cf3a3c361ca02003"});
+export const specIdentity = Object.freeze({"path":"normative/CONTRACT.json","bytes":193897,"sha256":"98d7904e987fbe306a51632d1fb37d6f78564915d127145027b992ec9a2723dc"});
 export const cmsSchemaIdentity = Object.freeze({
   path: 'cms-schema.json',
-  sha256: 'e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0',
+  sha256: 'b6ab0efa3247f9c93a76ccb591a2ed9a5b0fd4805427f87e67c72a23b88edd0a',
 });
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const schemaBytes = readFileSync(new URL('./cms-schema.json', import.meta.url));
@@ -1235,6 +1235,16 @@ const checkSemantics = (name, value, path) => {
       if (work.work_id === value.predecessor_work_id || work.attempt_cycle === value.predecessor_attempt_cycle || work.state !== 'pending' || work.attempt !== 0 || work.retry_at !== null || work.last_failure_code !== null) fail(`${path}.work`);
       if (value.mode === 'settle_restored_baseline' && (value.native_baseline === null || value.verification === null || value.native_baseline.native_id !== value.verification.native_id || value.native_baseline.canonical_url !== value.verification.url)) fail(`${path}.native_baseline`);
     }
+  }
+  if (name === 'PolicyHistoryPage') {
+    let previous = value.after_policy_revision;
+    const seen = new Set([previous]);
+    for (const item of value.items) {
+      if (item.previous_policy_revision !== previous || seen.has(item.policy_revision) || previous === value.through_policy_revision) fail(path);
+      previous = item.policy_revision; seen.add(previous);
+    }
+    if (value.next_policy_revision === null ? previous !== value.through_policy_revision :
+      value.items.length === 0 || value.next_policy_revision !== previous || previous === value.through_policy_revision) fail(path);
   }
   if (name === 'AttentionInspectionPage' || name === 'AttentionRecoveryPage') {
     if (value.items.some((item, i) => i > 0 && item.sequence <= value.items[i - 1].sequence) ||

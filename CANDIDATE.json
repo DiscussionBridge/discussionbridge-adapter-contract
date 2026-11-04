@@ -6,8 +6,8 @@
   "release_version": null,
   "normative": {
     "path": "normative/CONTRACT.json",
-    "bytes": 190024,
-    "sha256": "808042688cbde88fac0acdf1187e4cb8c251e13025bfcf09cf3a3c361ca02003"
+    "bytes": 193897,
+    "sha256": "98d7904e987fbe306a51632d1fb37d6f78564915d127145027b992ec9a2723dc"
   },
   "routes": [
     "V4-01",
@@ -45,22 +45,23 @@
     "V4-33",
     "V4-34",
     "V4-35",
-    "V4-36"
+    "V4-36",
+    "V4-37"
   ],
   "schema": {
     "path": "src/cms-schema.json",
-    "bytes": 117047,
-    "sha256": "e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0"
+    "bytes": 120857,
+    "sha256": "b6ab0efa3247f9c93a76ccb591a2ed9a5b0fd4805427f87e67c72a23b88edd0a"
   },
   "javascript": {
     "path": "src/cms-runtime.mjs",
-    "bytes": 338600,
-    "sha256": "acdfddf574910fb7e6cf2e2fe6837b3d266e8d93f1d96cee5e7699122d779076"
+    "bytes": 339201,
+    "sha256": "8fe7b3339b56bf47aa21a7d0c8a8fc9dc68d056430545fa513e4a69a0f88cbd8"
   },
   "php": {
     "path": "src/php/CmsCodec.php",
-    "bytes": 56195,
-    "sha256": "502df4f0324ac9b65c0068f1025d71290d149522e98a29382763816f01a20555",
+    "bytes": 56920,
+    "sha256": "909606cf0e6876050d861191e03b07c3a8688dbb7a5ccb7273e3b5f70ad2b738",
     "namespace": "DiscussionBridge\\CmsV4"
   },
   "php_dependencies": {

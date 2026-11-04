@@ -40,6 +40,7 @@ Generated from normative/CONTRACT.json. Content Connection authorization and cur
 | V4-34 | POST | /discussion-bridge/v4/attention-inspections/{inspection_id}/report.json | AttentionInspectionReport | AttentionInspectionResult | 200 |
 | V4-35 | GET | /discussion-bridge/v4/work/recoveries.json | query AttentionFeedQuery | AttentionRecoveryPage | 200 |
 | V4-36 | POST | /discussion-bridge/v4/work/recoveries/{recovery_id}/claim.json | AttentionRecoveryClaim | Lease | 200, 204 |
+| V4-37 | GET | /discussion-bridge/v4/policy-history.json | query PolicyHistoryQuery | PolicyHistoryPage | 200 |
 
 ## Protected native interfaces
 
