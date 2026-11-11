@@ -1,9 +1,13 @@
-# DiscussionBridge V4 core candidate
+# DiscussionBridge Adapter Protocol
 
-This clean candidate is one protocol: V4. Its unpublished development package
-version is 0.4.0-alpha.1, candidate discussionbridge-v4-core-20261029-r7, and
-release_version is null. Phil selected V4 and removed earlier development and
-deployment compatibility; exact candidate approval, freeze and release are separate.
+This repository defines the DiscussionBridge V4 wire contract and maintains
+the generated runtimes and conformance fixtures used by the component repos.
+
+The [R7 source baseline](https://github.com/DiscussionBridge/discussionbridge-adapter-contract/tree/09d77c0209835c2d996aad294d161f167c7bd838) is
+`discussionbridge-v4-core-20261029-r7` at commit `09d77c0`.
+[`CANDIDATE.json`](CANDIDATE.json) records the implementation version
+`0.4.0-alpha.1` and its null contract release version. Component source
+tags are listed in the [DiscussionBridge organization profile](https://github.com/DiscussionBridge).
 
 normative/CONTRACT.json is the single authoritative current candidate. It contains
 169 closed named types, 36 Content Connection routes, exact transport/errors/work
