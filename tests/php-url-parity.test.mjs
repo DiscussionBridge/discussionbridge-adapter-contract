@@ -10,8 +10,8 @@ test('private IDNA validates Unicode and ACE hosts without rewriting original UR
   const results = runPhpFixture('php-urls.php', urls);
   for (const [index, url] of urls.entries()) {
     const valid = index < cases.valid.length;
-    // Phil approved the fixed UTS46 policy. Native host parsers may accept
-    // malformed ACE/Bidi inputs and are no longer the IDNA acceptance oracle.
+    // Both implementations use the pinned UTS #46 policy. Native host parsers
+    // may accept malformed ACE labels or labels that violate bidi rules.
     if (valid) {
       assert.equal(validateCms('Url', url), url);
       assert.deepEqual(results[index], { accepted: true, value: url }, url);
